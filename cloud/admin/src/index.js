@@ -219,9 +219,11 @@ ${banner}
   (<code>1.10.0</code> sorterar före <code>1.9.7</code>), och viktigare: en
   hårdvaruändring följer inte versionsgränsen. LED:en kopplades in mitt i
   <code>v1.10.0</code>, och kameran justerades färdigt en kvart senare än så.
-  Uppmätt mot motor <code>79d22250</code>: bildruta 1161 (19:52) ger passning
-  0,745 och underkänns, 1162 (20:06:18) ger 0,982 och läses. Den gränsen syns
-  bara i tiden.</p>
+  Uppmätt mot motor <code>79d22250</code>: bildruta 1161 ger passning 0,745 och
+  underkänns, 1162 ger 0,982 och läses — fjorton minuter senare. Den gränsen
+  syns bara i tiden.
+  <b>Tiderna på sidan är din lokala tid</b>, inte UTC, och fältet nedan jämförs
+  mot samma. Skriv alltså av det du ser i tabellen.</p>
   <div class="bar">
     <label class="liten">Från och med
       <input id="frantid" type="text" size="21" placeholder="2026-08-22T20:00:00"></label>
@@ -235,8 +237,8 @@ ${banner}
   <table class="liten" id="epoktab">
   <thead><tr><th>Firmware</th><th>Första bilden</th><th>Sista bilden</th><th>Bilder</th></tr></thead>
   <tbody>${epochs.map((e) => `<tr><td>v${escapeHtml(e.fw)}</td>
-    <td class="t">${escapeHtml(e.first_seen.replace('T', ' ').slice(0, 19))}</td>
-    <td class="t">${escapeHtml(e.last_seen.replace('T', ' ').slice(0, 19))}</td>
+    <td class="t" data-utc="${escapeHtml(e.first_seen)}"></td>
+    <td class="t" data-utc="${escapeHtml(e.last_seen)}"></td>
     <td class="num">${e.n}</td></tr>`).join('')}</tbody>
   </table>
 </details>
@@ -249,7 +251,7 @@ betyder att en omkalibrering ändrat svaret för en bild som inte ändrats.</p>
 <div class="wrap">
 <table>
 <thead><tr><th title="Radens id i databasen — samma nummer som i felsökning">#</th>
-<th>Tid (UTC)</th><th>Orsak</th><th>Vridning</th><th>RSSI</th>
+<th id="tidrubrik">Tid</th><th>Orsak</th><th>Vridning</th><th>RSSI</th>
 <th title="Äldsta värdet från en ANNAN motorversion. Tomt om bara en motor sett bilden.">Tidigare motor</th>
 <th title="Värdet från motorn som körs nu">Avläst</th></tr></thead>
 <tbody id="rows">
@@ -352,7 +354,7 @@ async function select(i,{scroll}={}){
   const tr=rows[i]; tr.classList.add('sel'); sel=i;
   if(scroll) tr.scrollIntoView({block:'nearest'});
   document.getElementById('meta').textContent=
-    tr.dataset.tid.replace('T',' ').slice(0,19)+' UTC · '+tr.dataset.orsak+
+    (tr.dataset.lokal||'').replace('T',' ')+' · '+tr.dataset.orsak+
     (tr.dataset.vrid?' · vridning '+(tr.dataset.vrid>0?'+':'')+tr.dataset.vrid+'°':'')+
     (tr.dataset.rssi?' · '+tr.dataset.rssi+' dBm':'')+
     (tr.dataset.fw?' · v'+tr.dataset.fw:'');
@@ -385,7 +387,51 @@ addEventListener('keydown',e=>{
   if(e.key==='ArrowDown'||e.key==='j'){ e.preventDefault(); select(sel+1,{scroll:true}); }
   if(e.key==='ArrowUp'||e.key==='k'){ e.preventDefault(); select(sel-1,{scroll:true}); }
 });
-/* The cutoff is one ISO8601 string, and rows carry theirs in data-tid, so the
+/* Everything a human reads or types on this page is LOCAL time. The server
+   speaks UTC, which is right for storage and wrong for a person deciding
+   where an epoch begins.
+
+   Doing it by halves is the trap. The epoch filter compares strings, so if
+   the table showed local while the comparison used UTC, a cutoff typed off
+   the screen would be wrong by the offset — silently, and by two hours here
+   for most of the year. So the conversion happens once, here, and nothing
+   downstream knows about UTC: rows get data-lokal, the firmware options get
+   local values, and the filter compares local against local.
+
+   Built from Date parts rather than toLocaleString, because the comparison
+   depends on the exact shape. toLocaleString('sv-SE') happens to produce
+   "2026-08-22 23:06:18" today, but a locale that is missing or falls back
+   gives "8/22/2026, 11:06:18 PM", which sorts as nonsense and would break the
+   filter without breaking the page. */
+const pad=n=>String(n).padStart(2,'0');
+function lokal(iso){
+  const d=new Date(iso);
+  if(isNaN(d)) return '';
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+
+         pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+}
+for(const tr of rows){
+  const iso=tr.dataset.tid; if(!iso) continue;
+  tr.dataset.lokal=lokal(iso);
+  const td=tr.querySelector('td.t');
+  if(td) td.textContent=tr.dataset.lokal.replace('T',' ');
+}
+for(const td of document.querySelectorAll('#epoktab td.t'))
+  td.textContent=lokal(td.dataset.utc).replace('T',' ');
+for(const o of document.getElementById('franfw').options){
+  if(!o.value) continue;
+  const l=lokal(o.value);
+  o.textContent=o.textContent.replace(/\([^)]*\)/, '('+l.replace('T',' ').slice(0,16)+')');
+  o.value=l;
+}
+{ // name the zone in the header, so nobody has to assume which local this is
+  const z=Intl.DateTimeFormat().resolvedOptions().timeZone||'lokal tid';
+  const h=document.getElementById('tidrubrik'); if(h) h.textContent='Tid ('+z+')';
+  const ph=document.getElementById('frantid');
+  if(ph) ph.placeholder=lokal(new Date().toISOString()).slice(0,10)+'T20:00:00';
+}
+
+/* The cutoff is one ISO8601 string, and rows carry theirs in data-lokal, so the
    comparison is a plain string compare — ISO8601 sorts chronologically by
    construction, which is the whole reason to hold the boundary as a time
    rather than as a firmware version. Remembered per browser: picking the
@@ -409,7 +455,7 @@ const EPOK_RE=/^\d{4}-\d{2}(-\d{2}([T ]\d{2}(:\d{2}(:\d{2}(\.\d{1,3})?)?)?Z?)?)?
 const cutoffRaw=()=>document.getElementById('frantid').value.trim();
 const cutoffOk=()=>{ const c=cutoffRaw(); return !c || EPOK_RE.test(c); };
 const cutoff=()=>{ const c=cutoffRaw(); return EPOK_RE.test(c) ? c.replace(' ','T') : ''; };
-function inEpoch(tr){ const c=cutoff(); return !c || (tr.dataset.tid||'') >= c; }
+function inEpoch(tr){ const c=cutoff(); return !c || (tr.dataset.lokal||'') >= c; }
 function updateCount(){
   const raw=cutoffRaw(), c=cutoff(), ok=cutoffOk();
   const a=document.getElementById('all'), b=document.getElementById('allt');
