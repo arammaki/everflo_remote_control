@@ -421,7 +421,7 @@ for(const td of document.querySelectorAll('#epoktab td.t'))
 for(const o of document.getElementById('franfw').options){
   if(!o.value) continue;
   const l=lokal(o.value);
-  o.textContent=o.textContent.replace(/\([^)]*\)/, '('+l.replace('T',' ').slice(0,16)+')');
+  o.textContent=o.textContent.replace(/\\([^)]*\\)/, '('+l.replace('T',' ').slice(0,16)+')');
   o.value=l;
 }
 { // name the zone in the header, so nobody has to assume which local this is
@@ -451,7 +451,7 @@ for(const o of document.getElementById('franfw').options){
    "2026-08-22 20:06" reads correctly to a human and compares wrong: rows carry
    a T, 'T' (0x54) beats ' ' (0x20), so the time part would be ignored and only
    the date would bite. */
-const EPOK_RE=/^\d{4}-\d{2}(-\d{2}([T ]\d{2}(:\d{2}(:\d{2}(\.\d{1,3})?)?)?Z?)?)?$/;
+const EPOK_RE=/^\\d{4}-\\d{2}(-\\d{2}([T ]\\d{2}(:\\d{2}(:\\d{2}(\\.\\d{1,3})?)?)?Z?)?)?$/;
 const cutoffRaw=()=>document.getElementById('frantid').value.trim();
 const cutoffOk=()=>{ const c=cutoffRaw(); return !c || EPOK_RE.test(c); };
 const cutoff=()=>{ const c=cutoffRaw(); return EPOK_RE.test(c) ? c.replace(' ','T') : ''; };
