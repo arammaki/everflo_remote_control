@@ -203,7 +203,7 @@ ${banner}
   <button id="prev">↑ Föregående</button>
   <button id="next">↓ Nästa</button>
   <button id="all">${pending ? `Analysera ${pending} rader` : 'Alla är analyserade'}</button>
-  <button id="allt">Räkna om alla</button>
+  <button id="allt">Analysera om alla</button>
   <span class="liten" id="progress"></span>
 </div>
 
@@ -463,9 +463,16 @@ function updateCount(){
   f.style.background = ok ? '' : '#fdd';
   a.disabled=b.disabled=!ok;
   if(!ok){ a.textContent='Datumet går inte att tolka'; return; }
+  /* Same verb on both buttons, deliberately: "analysera" and "räkna om" read
+     as two different operations, and they are not — one skips rows this
+     engine has already done, the other redoes them. Both carry their count,
+     so the epoch's effect is visible before anything runs. */
   const n=rows.filter(tr=>tr.dataset.key && !tr.dataset.nu && inEpoch(tr)).length;
+  const total=rows.filter(tr=>tr.dataset.key && inEpoch(tr)).length;
   a.textContent = n ? 'Analysera '+n+' rader'+(c?' från '+c.slice(0,16):'')
                     : (c ? 'Inget kvar i den epoken' : 'Alla är analyserade');
+  b.textContent = 'Analysera om alla '+total+' rader';
+  b.disabled = !ok || !total;
   try{ raw ? localStorage.setItem('ev_epok',raw) : localStorage.removeItem('ev_epok'); }catch(e){}
 }
 try{ const c=localStorage.getItem('ev_epok'); if(c) document.getElementById('frantid').value=c; }catch(e){}
