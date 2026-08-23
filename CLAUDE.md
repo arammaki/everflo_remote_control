@@ -358,10 +358,64 @@ camera pose with its own light is nowhere near it, and every frame reports
 zero tilt deviation and under a pixel of dx/dy.
 
 The bands moved with the camera: ball 246..278 -> **253..285**, anchor
-222..250 -> **233..261**, window 120..455 -> **125..466**, BASE_TILT
+222..250 -> **233..261**, window 120..455 -> **125..445** (YBOT was 466 for
+one night — see "Daylight is a second lighting regime"), BASE_TILT
 -0.0209 -> **+0.066** (3.78 degrees, confirmed against a line drawn along the
 tube by hand: 3.7). Each was measured over the sweep, not carried over — see
 the comments at each constant for what was tried and what it cost.
+
+### Daylight is a second lighting regime, and the night reference refuses it
+Discovered the first morning after the WS2812 calibration (2026-08-23).
+As daylight grows, auto-exposure rebalances and the scene stops matching the
+night reference two ways, on different schedules:
+
+- **At dawn (~06:15-06:50)** the LED's glow at the tube's foot goes darker
+  relative to the reference and reads as a rival blob ramping through
+  y 446..465 — through the resting ball's rows. Fixed in v1.10.9: YBOT
+  466 -> 445 evicts the ramp, costs nothing measurable (sweep identical down
+  to YBOT 440; the clipped resting ball still reads 0.20 -> "Under 0,3"; the
+  patient's flows are 1.5+ by decision 2026-08-23). Buys ~45 min at dawn and
+  the mirror of it at dusk.
+- **In full daylight (from ~07:00)** registration itself collapses, 0.98 ->
+  0.60, because the whole scene is lit differently. No peak window fixes
+  that, and the reg gate is RIGHT to refuse: at reg 0.6 dy cannot be
+  trusted, and a plausible number with an untrustworthy dy is the one output
+  this engine must never produce. Do NOT lower the gate — it was chosen by
+  the negative suite (occlusions must be refused), not by the sweep.
+
+**The fix for daytime is a second reference, not a lower gate.** Nearly all
+of a calibration is geometry — CAL, bands, tilt, window are bound to the
+camera pose, which did not move (dx=0.0 all morning). Only REF_PNG is bound
+to the lighting. So REF_NIGHT and REF_DAY share every constant; the engine
+tries both and keeps the one that registers best. Hypothesis tested
+2026-08-23 against the morning's own frames: a pseudo-reference built from
+eight bright frames took registration from 0.60 to 0.98-0.996 and dissolved
+the rival entirely (it is a night-reference artefact, not a thing in the
+scene). The residual failures were contrast 0.08-0.09 — a ghost ball baked
+into the pseudo-reference because the bright frames all had the ball at one
+position, which is precisely what a real REF_DAY must avoid.
+
+**Done the same day, in v1.10.9** — the 2-3 days of collection turned out
+unnecessary because the morning's own press window (06:51-07:16) had the knob
+being turned through half the scale: fifteen uploaded frames with the ball at
+varied positions, median-erased exactly like a sweep. REF_PNG_DAY sits next
+to REF_PNG in `balldetector.js`; analyze() runs both and keeps the better
+registration; the result carries `ref:'natt'|'dag'`. Measured on all 57
+frames then available: the night sweep picks night 23/23 with readings
+unchanged to the last digit, and the morning corpus reads 34/34 with a
+seamless handover — night takes pre-dawn, day takes the rest, the known
+1.75-span reads 1.72-1.75 across the boundary. `validate_engine.mjs` loads
+BOTH references now, so a day reference that out-registered night on night
+frames would surface as reading drift rather than hide behind the harness.
+
+**Validation debt, still open:** afternoon and evening sun angles are
+untested (the corpus ends 09:00), and the 2026-08-16/17 history says low sun
+is exactly when artefacts appear. Frames accumulate every 15 minutes; score
+them offline before trusting a full day. Failure looks like refusals, not
+wrong numbers — the gates are unchanged. Building a REF_DAY from uploads
+needs the ball at VARIED positions in the stack: a cluster at one position
+leaves a ghost ball that eats contrast at exactly that row (measured:
+0.08-0.09 against the 0.10 gate).
 
 ### The engine has one source: `balldetector.js`
 Edit the detection engine **only** in `balldetector.js`, then run

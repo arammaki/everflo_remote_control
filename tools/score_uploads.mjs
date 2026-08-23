@@ -118,18 +118,27 @@ function setConst(src, name, value) {
   return lines.join('\n');
 }
 
-/** Loads the engine, optionally with constants overridden, and primes REF. */
+/** Loads the engine, optionally with constants overridden, and primes BOTH
+    references the way loadRef() does. Both matters: this tool's one job is
+    "what will the phone show", and the phone selects between night and day
+    per frame — a night-only harness would report daylight frames as refused
+    while the phone reads them. */
 async function load(overrides, tag) {
   let src = readFileSync(ENGINE, 'utf8');
   for (const [k, v] of Object.entries(overrides)) src = setConst(src, k, v);
   writeFileSync(join(work, `engine-${tag}.mjs`), src +
-    '\nexport function __setREF(r){ REF = r; }\n' +
+    '\nexport function __setREFS(n, d){ REF = n; REF_DAY = d; }\n' +
     'export { T,toGray,flatfield,buildRef,analyze,judge };\n');
   const E = await import(pathToFileURL(join(work, `engine-${tag}.mjs`)).href);
-  const refPng = join(work, `ref-${tag}.png`);
-  writeFileSync(refPng, Buffer.from(
-    src.match(/const REF_PNG="data:image\/png;base64,([^"]+)"/)[1], 'base64'));
-  E.__setREF(E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(refPng, 'ref' + tag))))));
+  const build = (b64, name) => {
+    const png = join(work, name + '.png');
+    writeFileSync(png, Buffer.from(b64, 'base64'));
+    return E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(png, name)))));
+  };
+  const night = build(src.match(/const REF_PNG="data:image\/png;base64,([^"]+)"/)[1],
+                      'ref-' + tag);
+  const dayM = src.match(/const REF_PNG_DAY="data:image\/png;base64,([^"]+)"/);
+  E.__setREFS(night, dayM ? build(dayM[1], 'refday-' + tag) : null);
   return E;
 }
 

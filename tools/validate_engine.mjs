@@ -56,6 +56,7 @@ const toBmp = (src, name) => {
 const src = readFileSync(ENGINE, 'utf8');
 writeFileSync(join(work, 'engine.mjs'), src +
   '\nexport function __setREF(r){ REF = r; }\n' +
+  '\nexport function __setREFS(n, d){ REF = n; REF_DAY = d; }\n' +
   'export { T,toGray,flatfield,buildRef,analyze,judge };\n');
 const E = await import(pathToFileURL(join(work, 'engine.mjs')).href);
 
@@ -80,11 +81,23 @@ function readBmp(path) {
   return { data, width: w, height: h };
 }
 
-// Rebuild REF the way loadRef() does, from the engine's own embedded PNG.
+// Rebuild BOTH references the way loadRef() does, from the engine's own
+// embedded PNGs. Both, deliberately: the labelled sweep is a night sweep, so
+// this also proves the selection picks the night reference for night frames —
+// a day reference that somehow out-registered it on sweep frames would show
+// up here as readings drifting, not stay hidden behind a single-ref harness.
 const refPng = join(work, 'ref.png');
 writeFileSync(refPng, Buffer.from(
   src.match(/const REF_PNG="data:image\/png;base64,([^"]+)"/)[1], 'base64'));
-E.__setREF(E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(refPng, 'ref'))))));
+const night = E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(refPng, 'ref')))));
+const dayMatch = src.match(/const REF_PNG_DAY="data:image\/png;base64,([^"]+)"/);
+let day = null;
+if (dayMatch) {
+  const dayPng = join(work, 'ref_day.png');
+  writeFileSync(dayPng, Buffer.from(dayMatch[1], 'base64'));
+  day = E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(dayPng, 'refday')))));
+}
+E.__setREFS(night, day);
 
 const files = readdirSync(imageDir)
   .filter((f) => /^bild_([0-9.]+|min)(max)?L_.*\.jpe?g$/i.test(f)).sort();
