@@ -574,6 +574,25 @@ without a press means someone turned the knob by hand. All three were used to
 choose YTOP/YBOT. Tolerance is about 0.05 L/min, not zero — the ball floats
 and genuinely bobs that much (seen as 4.95 / 5.00 / 4.97 in one still span).
 
+Two "Osäker" rows on the first REF_DAY afternoon (ids 1323/1324, 15:26-27
+local) taught a lesson about jumping to stories. The obvious explanations —
+a float still bobbing 5 s after its -90 step, or the photo catching the NEXT
+press (nothing blocks the motor during capture, deliberately, and the 6 s row
+gap proves a press landed ~1 s after 1324's photo) — are both plausible and
+both WRONG here: the blob's half-width is 27-30 rows, identical to sharp
+frames, so nothing was moving. Measured instead: a standing artefact at
+y=309 that exists only in afternoon light (absent 10:00, present 0.050 from
+~13:30, 0.065 by 15:30 local), which bites only when the ball's own peak
+runs weak (0.13-0.16 around y 230-250, against 0.21-0.30 elsewhere). Same
+family as the historic 12:51-13:09 UTC artefacts. Id 1325 passed at 6.6x
+only because its ball stood close enough to the artefact to fall inside the
+ambiguity metric's 60-row exclusion zone.
+
+Watch item: afternoon margins run thin (floor 4.1-4.5x against the 3.0
+gate on healthy frames). If sunnier afternoons push the artefact up,
+rebuild REF_DAY with afternoon frames in the stack — the corpus
+accumulates on its own. Failure stays refusals, never wrong numbers.
+
 Beware the third check when using the second: id 218 (2026-08-16 13:09 UTC)
 looks like a confidently wrong reading of 4.37 against a "truth" of 2.63 from
 its span, and is nothing of the sort — the ball really had moved to 4.3 and
