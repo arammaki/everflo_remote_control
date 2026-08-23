@@ -588,10 +588,21 @@ family as the historic 12:51-13:09 UTC artefacts. Id 1325 passed at 6.6x
 only because its ball stood close enough to the artefact to fall inside the
 ambiguity metric's 60-row exclusion zone.
 
-Watch item: afternoon margins run thin (floor 4.1-4.5x against the 3.0
-gate on healthy frames). If sunnier afternoons push the artefact up,
-rebuild REF_DAY with afternoon frames in the stack — the corpus
-accumulates on its own. Failure stays refusals, never wrong numbers.
+That watch item fired the same evening: by 17:31 the artefact reached 0.100
+and refused two more frames (1338/1339, ball at 4.8 where its peak runs
+weak — engine's hidden readings 4.83/4.80 against the span's known 4.80, so
+availability lost, accuracy not). REF_DAY was rebuilt that night as v1.10.10
+with the whole daylit day in the stack, 25 frames 06:52-19:52: the artefact
+dissolves, 117 of the day's 118 uploads read, no reading moved more than
+0.052, night sweep still picks night 23/23. The one remaining refusal
+(1339, 17:31, 1.9x) is the day's worst-lit frame refusing honestly.
+
+Still true and worth keeping: a frame can go dark for one frame (1324: tube
+149 -> 131 while the LED glare held still — a shadow or cloud, not
+exposure), and a ball at 4+ sits where the LED's reflection band washes its
+contrast down to 0.13-0.17. Both make thin margins in poor light; both fail
+as refusals. The dusk handover measured 2026-08-23: day reference carries to
+19:52, night takes over at 20:07, no gap.
 
 Beware the third check when using the second: id 218 (2026-08-16 13:09 UTC)
 looks like a confidently wrong reading of 4.37 against a "truth" of 2.63 from
