@@ -89,8 +89,27 @@ function label(flow, state) {
 }
 const good = (state) => state === 'ok' || state === 'max' || state === 'below';
 
-function renderPage(rows, now, epochs) {
-  const latest = rows[0];
+/* `latest` is the newest reading in the database, not rows[0]: on page 2 the
+   first row is hours old and the banner would call a healthy device dead. */
+/* Newest first, so "older" is the next page. The row count in the label is
+   the whole table's, so the reader knows how deep the archive goes. */
+function navHtml(nav) {
+  const { page, limit, total, pages } = nav;
+  const link = (p, text) => p < 1 || p > pages || p === page
+    ? `<span class="liten dim">${text}</span>`
+    : `<a class="liten" href="?page=${p}&limit=${limit}">${text}</a>`;
+  const first = total ? (page - 1) * limit + 1 : 0;
+  const last = Math.min(total, page * limit);
+  return `<div class="bar nav">
+  ${link(page - 1, '← Nyare')}
+  <span class="liten">${total ? `rad ${first}–${last} av ${total}` : 'inga rader'} ·
+    sida ${page} av ${pages} ·
+    per sida ${[100, 200, 500].map((n) => n === limit ? `<b>${n}</b>`
+      : `<a href="?page=1&limit=${n}">${n}</a>`).join(' / ')}</span>
+  ${link(page + 1, 'Äldre →')}
+</div>`;
+}
+function renderPage(rows, now, epochs, latest, nav) {
   const age = latest ? now - Date.parse(latest.received_at) : null;
   // Uploads are every 15 min; nothing for 40 means something is wrong.
   const stale = age === null || age > 40 * 60 * 1000;
@@ -164,6 +183,8 @@ function renderPage(rows, now, epochs) {
        padding:4px 10px;font-variant-numeric:tabular-nums}
  .chip b{font-weight:700;color:var(--warn)}
  .bar{display:flex;gap:8px;align-items:center;margin:10px 0 4px;flex-wrap:wrap}
+ .nav{justify-content:space-between;align-items:center}
+ .dim{color:#bbb}
  button{font:inherit;padding:6px 12px;border:1px solid var(--line);background:#fff;
         border-radius:8px;cursor:pointer}
  button:disabled{opacity:.5;cursor:default}
@@ -248,6 +269,7 @@ här i webbläsaren av motorn <code>${ENGINE_VERSION}</code> och sparas per moto
 visar inte vad enheten läste när bilden kom in, för det vet sidan inte. Gul understrykning
 betyder att en omkalibrering ändrat svaret för en bild som inte ändrats.</p>
 
+${navHtml(nav)}
 <div class="wrap">
 <table>
 <thead><tr><th title="Radens id i databasen — samma nummer som i felsökning">#</th>
@@ -259,6 +281,7 @@ ${list}
 </tbody>
 </table>
 </div>
+${navHtml(nav)}
 
 <p class="liten">Bilden är facit. Siffran är en bekvämlighet ovanpå den, och motorn
 säger hellre ifrån än gissar.</p>
@@ -633,6 +656,18 @@ export default {
        from some OTHER engine. The `engine <> ?1` matters — without it a frame
        analysed once fills both columns with the same number, which reads as
        "it said this then and says this now" when nothing was ever compared. */
+    /* ?page=N&limit=M, newest first. Clamped: a limit is a page weight, not a
+       way to pull the whole archive into one tab. */
+    const limit = Math.min(500, Math.max(25, parseInt(url.searchParams.get('limit'), 10) || PAGE_SIZE));
+    const { total } = await env.DB.prepare('SELECT COUNT(*) AS total FROM readings').first();
+    /* Clamped to what exists: a hand-typed or stale ?page= past the end would
+       otherwise render an empty table with both links dead — a dead end with
+       no way back — and a row range like "19601-1780 av 1780". */
+    const pages = Math.max(1, Math.ceil(total / limit));
+    const page = Math.min(pages, Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1));
+    const latest = await env.DB.prepare(
+      'SELECT received_at FROM readings ORDER BY received_at DESC LIMIT 1').first();
+
     const { results } = await env.DB.prepare(
       `SELECT r.id, r.received_at, r.reason, r.image_key,
               r.position, r.press_degrees, r.rssi, r.fw,
@@ -643,8 +678,8 @@ export default {
          LEFT JOIN analyses f ON f.reading_id = r.id AND f.engine <> ?1
               AND f.analysed_at = (SELECT MIN(analysed_at) FROM analyses
                                     WHERE reading_id = r.id AND engine <> ?1)
-        ORDER BY r.received_at DESC LIMIT ?2`
-    ).bind(ENGINE_VERSION, PAGE_SIZE).all();
+        ORDER BY r.received_at DESC LIMIT ?2 OFFSET ?3`
+    ).bind(ENGINE_VERSION, limit, (page - 1) * limit).all();
 
     /* When each firmware version was first and last seen. This is the table
        that lets a human pick a boundary they can reason about: the LED went in
@@ -660,7 +695,7 @@ export default {
         ORDER BY first_seen DESC`
     ).all();
 
-    return new Response(renderPage(results, Date.now(), epochs), {
+    return new Response(renderPage(results, Date.now(), epochs, latest, { page, limit, total, pages }), {
       headers: { 'content-type': 'text/html; charset=utf-8' },
     });
   },
