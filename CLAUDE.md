@@ -635,6 +635,15 @@ contrast down to 0.13-0.17. Both make thin margins in poor light; both fail
 as refusals. The dusk handover measured 2026-08-23: day reference carries to
 19:52, night takes over at 20:07, no gap.
 
+**A span can also end without a press: the machine gets switched off.** She
+turns the concentrator off when she goes out, so the float drops to its stop
+and comes back up when she returns — 4.65, then 0.26, then 3.50 across two
+periodic frames on 2026-08-26 (ids 1829-1831), no press between them and
+nothing wrong. In the log that looks exactly like a knob turned by hand, and
+both are real. So a span that straddles an outing is not one knob position:
+check the picture before treating a jump as an engine fault, and do not use
+such a span as an anchor.
+
 Beware the third check when using the second: id 218 (2026-08-16 13:09 UTC)
 looks like a confidently wrong reading of 4.37 against a "truth" of 2.63 from
 its span, and is nothing of the sort — the ball really had moved to 4.3 and
