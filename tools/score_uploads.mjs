@@ -127,7 +127,7 @@ async function load(overrides, tag) {
   let src = readFileSync(ENGINE, 'utf8');
   for (const [k, v] of Object.entries(overrides)) src = setConst(src, k, v);
   writeFileSync(join(work, `engine-${tag}.mjs`), src +
-    '\nexport function __setREFS(n, d){ REF = n; REF_DAY = d; }\n' +
+    '\nexport function __setREFS(n, d, e){ REF = n; REF_DAY = d; REF_EVENING = e; }\n' +
     'export { T,toGray,flatfield,buildRef,analyze,judge };\n');
   const E = await import(pathToFileURL(join(work, `engine-${tag}.mjs`)).href);
   const build = (b64, name) => {
@@ -137,8 +137,11 @@ async function load(overrides, tag) {
   };
   const night = build(src.match(/const REF_PNG="data:image\/png;base64,([^"]+)"/)[1],
                       'ref-' + tag);
-  const dayM = src.match(/const REF_PNG_DAY="data:image\/png;base64,([^"]+)"/);
-  E.__setREFS(night, dayM ? build(dayM[1], 'refday-' + tag) : null);
+  const extra = (name, file) => {
+    const m = src.match(new RegExp(`const ${name}="data:image/png;base64,([^"]+)"`));
+    return m ? build(m[1], file + '-' + tag) : null;
+  };
+  E.__setREFS(night, extra('REF_PNG_DAY', 'refday'), extra('REF_PNG_EVENING', 'refeve'));
   return E;
 }
 
@@ -175,16 +178,41 @@ for (const id of ids) {
 const base = runs[0], cand = runs[1] ?? runs[0];
 const B = new Map(base.map((o) => [o.id, o])), C = new Map(cand.map((o) => [o.id, o]));
 
-/* A span is a press frame and every non-press frame after it: one knob position. */
-const spans = (rows) => {
+/* A span is a press frame and every non-press frame after it: one knob
+   position — but ONLY if every frame between them is present. meta.json lists
+   what the database has; the directory holds what was downloaded. A press row
+   with no image is invisible here, and its span silently merges with the one
+   before, so two different knob positions get compared as if they were one.
+   Measured 2026-08-26: an incomplete download reported a 1.93 L/min spread
+   for a span that actually reads 3.45/3.45/3.44. Spans with a gap are marked
+   and excluded from the agreement check rather than believed. */
+const spans = (rows, gapAfter) => {
   const out = []; let s = [];
-  for (const o of rows) { if (o.reason === 'press' && s.length) { out.push(s); s = []; } s.push(o); }
+  for (const o of rows) {
+    if (s.length && (o.reason === 'press' || (gapAfter && gapAfter.has(s[s.length - 1].id)))) {
+      out.push(s); s = [];
+    }
+    s.push(o);
+  }
   if (s.length) out.push(s);
   return out;
 };
 
+/* Ids that are followed, in the database, by a row whose image we do not
+   have. A span may not continue across one: the missing row can be a press,
+   and then two knob positions would be compared as if they were one. */
+const gapAfter = (() => {
+  const present = new Set(ids);
+  const g = new Set();
+  const all = JSON.parse(readFileSync(join(dir, 'meta.json'), 'utf8'))
+    .map((r) => r.id).sort((a, b) => a - b);
+  for (let i = 0; i < all.length - 1; i++)
+    if (present.has(all[i]) && !present.has(all[i + 1])) g.add(all[i]);
+  return g;
+})();
+
 const anchor = new Map();   // id -> hypothesised truth, for frames the baseline refused
-for (const s of spans(base)) {
+for (const s of spans(base, gapAfter)) {
   const ok = s.filter((o) => o.ok && o.flow != null);
   if (!ok.length) continue;
   const a = ok.reduce((t, o) => t + o.flow, 0) / ok.length;
@@ -212,7 +240,7 @@ for (const [id, truth] of anchor) {
 }
 
 let worstSpread = 0, worstSpreadId = 0, checked = 0;
-for (const s of spans(cand)) {
+for (const s of spans(cand, gapAfter)) {
   const f = s.filter((o) => o.ok && o.flow != null).map((o) => o.flow);
   if (f.length < 2) continue;
   checked++;
@@ -228,6 +256,8 @@ console.log(`\n${ids.length} uploaded frames` +
   (Object.keys(patch).length ? `, candidate ${JSON.stringify(patch)}` : ', engine as committed'));
 console.log(`  read        ${acc.length}, refused ${cand.length - acc.length}` +
             ` (baseline refused ${base.filter((o) => !o.ok).length})`);
+if (gapAfter.size) console.log(`  corpus      incomplete: ${gapAfter.size} gap(s);` +
+  ` spans are cut at each, so no span straddles a frame we do not have`);
 console.log(`  gates       ambiguity >= ${min((o) => o.margin).toFixed(2)}x, ` +
             `registration >= ${min((o) => o.reg).toFixed(3)}, ` +
             `contrast >= ${min((o) => o.peak).toFixed(3)}, extent <= ${max((o) => o.spread)}`);

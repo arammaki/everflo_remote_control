@@ -417,6 +417,37 @@ needs the ball at VARIED positions in the stack: a cluster at one position
 leaves a ghost ball that eats contrast at exactly that row (measured:
 0.08-0.09 against the 0.10 gate).
 
+### Evening is a third regime (v1.10.11)
+Late afternoon and dusk are neither day nor night: low sun through the window,
+and the LED's share of the light rising as it fades. Against REF_DAY the
+evening frames read HIGH as registration slid toward 0.8, and the gates began
+taking frames by fractions — id 1519 missed registration by 0.014 with a
+hidden 4.75 against its neighbour's 4.74, id 1521 missed contrast by 0.008
+with a hidden 4.05 against 4.03. Seven of the eight refusals were confirmed
+against the pictures by the user before this went in.
+
+It is not only availability: id 1516 put the ball at y=337 where its span
+neighbours sat at y=342. A five-pixel POSITION error, not a calibration
+offset — that is what a reference from the wrong regime does once
+registration is poor enough, and it is why the fix is a reference rather than
+a looser gate.
+
+`analyze()` now walks a list of references (`refList()`) instead of a pair, so
+a fourth costs one line. Selection is unchanged: best registration wins, and
+the result carries `ref:'natt'|'dag'|'kväll'`. Cost is one registration search
+per reference; the flatfield, which dominates, is computed once and shared.
+
+Measured over 482 frames — the 23-frame night sweep and both upload corpora:
+night sweep unchanged (mean 0.029, worst 0.110, 0 refused, night wins 23/23),
+23-24 Aug 135 -> 137 of 140 read, 24-26 Aug 313 -> 319 of 321. No frame lost
+anywhere, no reading moved.
+
+**A caution about span "truth", learned here.** A claim like "the neighbours
+say 2.02" is worthless if the neighbours came from the candidate engine — that
+is circular. When a whole span shifts together the span cannot say whether the
+shift is right; only the tube can. The user caught exactly this mistake in a
+draft of this note.
+
 ### The engine has one source: `balldetector.js`
 Edit the detection engine **only** in `balldetector.js`, then run
 `node build_webui.mjs`. The script inlines it verbatim into both HTML

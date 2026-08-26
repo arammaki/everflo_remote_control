@@ -56,7 +56,7 @@ const toBmp = (src, name) => {
 const src = readFileSync(ENGINE, 'utf8');
 writeFileSync(join(work, 'engine.mjs'), src +
   '\nexport function __setREF(r){ REF = r; }\n' +
-  '\nexport function __setREFS(n, d){ REF = n; REF_DAY = d; }\n' +
+  '\nexport function __setREFS(n, d, e){ REF = n; REF_DAY = d; REF_EVENING = e; }\n' +
   'export { T,toGray,flatfield,buildRef,analyze,judge };\n');
 const E = await import(pathToFileURL(join(work, 'engine.mjs')).href);
 
@@ -90,14 +90,16 @@ const refPng = join(work, 'ref.png');
 writeFileSync(refPng, Buffer.from(
   src.match(/const REF_PNG="data:image\/png;base64,([^"]+)"/)[1], 'base64'));
 const night = E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(refPng, 'ref')))));
-const dayMatch = src.match(/const REF_PNG_DAY="data:image\/png;base64,([^"]+)"/);
-let day = null;
-if (dayMatch) {
-  const dayPng = join(work, 'ref_day.png');
-  writeFileSync(dayPng, Buffer.from(dayMatch[1], 'base64'));
-  day = E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(dayPng, 'refday')))));
-}
-E.__setREFS(night, day);
+/* Every reference the engine carries, because the selection is per frame:
+   a harness holding fewer than the phone does reports a different engine. */
+const extra = (name, file) => {
+  const m = src.match(new RegExp(`const ${name}="data:image/png;base64,([^"]+)"`));
+  if (!m) return null;
+  const png = join(work, file + '.png');
+  writeFileSync(png, Buffer.from(m[1], 'base64'));
+  return E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(png, file)))));
+};
+E.__setREFS(night, extra('REF_PNG_DAY', 'refday'), extra('REF_PNG_EVENING', 'refeve'));
 
 const files = readdirSync(imageDir)
   .filter((f) => /^bild_([0-9.]+|min)(max)?L_.*\.jpe?g$/i.test(f)).sort();
