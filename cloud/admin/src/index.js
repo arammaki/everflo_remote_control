@@ -403,11 +403,29 @@ function remember(tr,r,v){
              dx:+r.dx.toFixed(1), dy:+r.dy.toFixed(1), spread:r.spread}});
   if(queue.length>=25) flush();
 }
+/* Brings a row into view WITHOUT scrollIntoView, which scrolls every
+   scrollable ancestor — the page included — to satisfy itself. On a laptop
+   the table has its own scroll box, so the page must not move at all: the
+   picture sits above the table and every arrow key was nudging it off the
+   screen. On a phone the table is the page, and the row is centred in what
+   is left below the sticky block. Keyboard and buttons both come through
+   here. */
+function reveal(tr){
+  const wrap=document.querySelector('.wrap');
+  if(getComputedStyle(wrap).overflowY==='auto'){
+    const wr=wrap.getBoundingClientRect(), tr_=tr.getBoundingClientRect();
+    wrap.scrollTop += (tr_.top - wr.top) - (wrap.clientHeight/2 - tr_.height/2);
+  } else {
+    const st=document.getElementById('sticky').getBoundingClientRect().bottom;
+    const tr_=tr.getBoundingClientRect();
+    scrollBy({top: tr_.top - (st + (innerHeight - st)/2 - tr_.height/2)});
+  }
+}
 async function select(i,{scroll}={}){
   if(i<0||i>=rows.length) return;
   rows.forEach(t=>t.classList.remove('sel'));
   const tr=rows[i]; tr.classList.add('sel'); sel=i;
-  if(scroll) tr.scrollIntoView({block:'center'});
+  if(scroll) reveal(tr);
   document.getElementById('meta').textContent=
     (tr.dataset.lokal||'').replace('T',' ')+' · '+tr.dataset.orsak+
     (tr.dataset.vrid?' · vridning '+(tr.dataset.vrid>0?'+':'')+tr.dataset.vrid+'°':'')+
