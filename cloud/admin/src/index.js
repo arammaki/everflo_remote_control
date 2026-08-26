@@ -205,24 +205,56 @@ function renderPage(rows, now, epochs, latest, nav) {
  /* A frame that reads differently now than it did then. */
  td.avl.andrad{box-shadow:inset 0 -2px 0 #b8860b}
  .wrap{max-height:58vh;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
- @media (max-width:720px){ .top{flex-direction:column} .shot{flex:1 1 auto;width:100%;max-width:320px} }
+ .chips{margin:6px 0 2px}
+ /* On a phone the table is the page, and the picture must not leave the
+    screen while stepping through rows: the picture, the reading and the
+    step buttons stick to the top, the table scrolls underneath, and a
+    selected row scrolls to just below the sticky block (scroll-margin-top
+    is set from its measured height). The picture is capped at 30vh and put
+    beside the number rather than above it, so the block stays short. */
+ @media (max-width:720px){
+   #sticky{position:sticky;top:0;z-index:5;background:#f4f4f2;padding:6px 0 6px;
+           margin:0 -16px;padding-left:16px;padding-right:16px;
+           border-bottom:1px solid var(--line)}
+   .top{gap:12px;margin:0 0 6px}
+   .shot{flex:0 0 auto;width:auto}
+   canvas{width:auto;height:30vh;max-width:40vw}
+   #flow{font-size:2rem}
+   #reason{font-size:.82rem;margin:2px 0 6px}
+   #meta{font-size:.78rem;margin-bottom:0}
+   .step{margin:0}
+   .step button{flex:1 1 0;min-height:44px;font-size:1rem}
+   .wrap{max-height:none;overflow:visible;border:0;border-radius:0;background:transparent}
+   th{top:var(--sticky,0px)}
+   tbody tr{scroll-margin-top:calc(var(--sticky,0px) + 6px)}
+   /* Vridning and RSSI are in the meta line for the selected row, so the
+      table can drop them and fit the width; seconds go the same way. */
+   th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none}
+   .sek{display:none}
+   table{font-size:.82rem} th,td{padding:6px 5px}
+   body{overflow-x:hidden}
+ }
 </style></head><body>
 <h1>EverFlo — logg</h1>
 ${banner}
 
+<div id="sticky">
 <div class="top">
   <div class="shot"><canvas id="cv" width="480" height="640"></canvas></div>
   <div class="info">
     <div id="flow">–<small> L/min</small></div>
     <div id="reason"></div>
     <div id="meta"></div>
-    <div class="chips" id="chips"></div>
   </div>
 </div>
-
-<div class="bar">
+<div class="bar step">
   <button id="prev">↑ Föregående</button>
   <button id="next">↓ Nästa</button>
+</div>
+</div>
+<div class="chips" id="chips"></div>
+
+<div class="bar">
   <button id="all">${pending ? `Analysera ${pending} rader` : 'Alla är analyserade'}</button>
   <button id="allt">Analysera om alla</button>
   <span class="liten" id="progress"></span>
@@ -375,7 +407,7 @@ async function select(i,{scroll}={}){
   if(i<0||i>=rows.length) return;
   rows.forEach(t=>t.classList.remove('sel'));
   const tr=rows[i]; tr.classList.add('sel'); sel=i;
-  if(scroll) tr.scrollIntoView({block:'nearest'});
+  if(scroll) tr.scrollIntoView({block:'center'});
   document.getElementById('meta').textContent=
     (tr.dataset.lokal||'').replace('T',' ')+' · '+tr.dataset.orsak+
     (tr.dataset.vrid?' · vridning '+(tr.dataset.vrid>0?'+':'')+tr.dataset.vrid+'°':'')+
@@ -404,6 +436,16 @@ async function select(i,{scroll}={}){
   }
 }
 rows.forEach((tr,i)=>tr.addEventListener('click',()=>select(i)));
+/* The sticky block's height feeds scroll-margin-top on the rows and the
+   sticky offset of the header row, so a selected row lands just under the
+   picture instead of behind it. Measured, because the picture is sized in vh
+   and the reason line wraps. */
+function measureSticky(){
+  const h=document.getElementById('sticky').offsetHeight;
+  document.documentElement.style.setProperty('--sticky', h+'px');
+}
+measureSticky(); addEventListener('resize', measureSticky);
+new ResizeObserver(measureSticky).observe(document.getElementById('sticky'));
 document.getElementById('prev').onclick=()=>select(sel-1,{scroll:true});
 document.getElementById('next').onclick=()=>select(sel+1,{scroll:true});
 addEventListener('keydown',e=>{
@@ -437,7 +479,8 @@ for(const tr of rows){
   const iso=tr.dataset.tid; if(!iso) continue;
   tr.dataset.lokal=lokal(iso);
   const td=tr.querySelector('td.t');
-  if(td) td.textContent=tr.dataset.lokal.replace('T',' ');
+  if(td){ const l=tr.dataset.lokal;
+    td.innerHTML=l.slice(0,10)+' '+l.slice(11,16)+'<span class="sek">'+l.slice(16,19)+'</span>'; }
 }
 for(const td of document.querySelectorAll('#epoktab td.t'))
   td.textContent=lokal(td.dataset.utc).replace('T',' ');
