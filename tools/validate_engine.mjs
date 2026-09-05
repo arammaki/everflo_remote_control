@@ -38,9 +38,15 @@ const TOLERANCE = 0.2;
 const here = dirname(fileURLToPath(import.meta.url));
 const ENGINE = join(here, '..', 'balldetector.js');
 
-const imageDir = process.argv[2];
+const args = process.argv.slice(2);
+/* The negative direction of the same harness: point it at frames that MUST be
+   refused — a different camera pose, an occlusion, a garbage frame — and it
+   fails when any of them produces a number. Same decode, same references, so
+   the two directions cannot drift apart. */
+const expectRejected = args.includes('--expect-rejected');
+const imageDir = args.find((a) => !a.startsWith('--'));
 if (!imageDir) {
-  console.error('Usage: node tools/validate_engine.mjs <directory with bild_*.jpg>');
+  console.error('Usage: node tools/validate_engine.mjs <dir with bild_*.jpg> [--expect-rejected]');
   process.exit(2);
 }
 
@@ -101,43 +107,87 @@ const extra = (name, file) => {
 };
 E.__setREFS(night, extra('REF_PNG_DAY', 'refday'), extra('REF_PNG_EVENING', 'refeve'));
 
-const files = readdirSync(imageDir)
-  .filter((f) => /^bild_([0-9.]+|min)(max)?L_.*\.jpe?g$/i.test(f)).sort();
+/* Three naming generations live in the saved sweeps, and a filter that
+   silently drops the ones it does not recognise is worse than one that fails
+   loudly: the three it dropped here were the resting stop, the top mark, and
+   the frame taken past the end of the scale — the only frames that reach the
+   "Under 0,3" and Max states, which is to say the only ones that would catch
+   YTOP or YBOT being moved far enough to make those states unreachable.
+   Measured 2026-09-05: 20 of the 23 frames in the 2026-08-22 sweep were being
+   scored, and the summary line said "20 read" without saying 3 were skipped.
+
+     bild_2.5L_...       a labelled value
+     bild_minL_...       the resting stop (sweeps up to 2026-08-16)
+     bild_0_minL_...     the resting stop (2026-08-22 sweep)
+     bild_maxL_...       the top mark, unlabelled (older sweeps)
+     bild_5.7maxL_...    the top mark with its value
+     bild_5.7_maxL_...   ditto (2026-08-22 sweep)
+     bild_over_maxL_...  deliberately past the end of the printed scale */
+function parseName(file) {
+  const m = file.match(/^bild_(.+?)L_.*\.jpe?g$/i);
+  if (!m) return null;
+  const s = m[1];
+  const min = /min$/i.test(s), max = /max$/i.test(s), over = /^over_/i.test(s);
+  const rest = s.replace(/(^over)?_?(min|max)$/i, '');
+  // The resting stop has no true value — the ball is against its stop, not at
+  // a flow — so a numeric part there ("0_min") is a name, not a label.
+  const value = !min && /^[0-9]*\.?[0-9]+$/.test(rest) ? Number(rest) : null;
+  return { name: s, min, max, over, value };
+}
+
+const files = readdirSync(imageDir).filter((f) => parseName(f)).sort();
 if (!files.length) {
   console.error(`No bild_*.jpg found in ${imageDir}`);
   process.exit(2);
 }
 
-console.log('label   read   diff  | contrast  unamb  match  shift  spread | verdict');
+console.log('label      read   diff  | contrast  unamb  match  shift  spread | verdict');
 let sum = 0, n = 0, worst = 0, failures = 0;
 
 for (const f of files) {
-  const m = f.match(/^bild_([0-9.]+|min)(max)?L_/i);
-  const label = m[1], isMax = !!m[2];
-  const r = E.analyze(readBmp(toBmp(join(imageDir, f), label)));
+  const p = parseName(f);
+  const label = p.name;
+  const r = E.analyze(readBmp(toBmp(join(imageDir, f), label.replace(/\W/g, '_'))));
   const b = E.judge(r);
   const verdict = !b.ok ? 'REJECTED' : b.maxState ? 'Max' : b.bottomState ? 'Below 0.5' : 'ok';
 
-  // 'min' is the ball at rest: there is no true value to compare against, it
-  // only has to produce a reading rather than a refusal. Everything else,
-  // including the frame at the max mark, is compared numerically — the sweep
-  // now covers the whole physical range, so nothing up there is extrapolated.
+  /* What each kind of frame has to produce:
+       a labelled value  a reading within TOLERANCE of the label
+       min               a reading, any reading — the ball is against its stop,
+                         so there is no true value to compare against
+       max, unlabelled   a reading; the top mark carries no number here
+       over_max          the Max state, not a number. A frame taken past the
+                         printed scale that comes back with a flow means the
+                         y<Y_MAX_STATE guard has stopped guarding.
+     In --expect-rejected mode every frame must be REJECTED instead: that is
+     what a wrong camera pose, an occlusion or a garbage frame has to do. */
   let diff = '';
-  if (verdict !== 'ok' && verdict !== 'Below 0.5') { failures++; }
-  else if (label !== 'min') {
-    const d = r.flow - Number(label);
+  if (expectRejected) {
+    if (verdict !== 'REJECTED') failures++;
+  } else if (p.over) {
+    if (verdict !== 'Max') failures++;
+  } else if (verdict !== 'ok' && verdict !== 'Below 0.5') {
+    failures++;
+  } else if (p.value != null) {
+    const d = r.flow - p.value;
     diff = (d >= 0 ? '+' : '') + d.toFixed(2);
     sum += Math.abs(d); n++; worst = Math.max(worst, Math.abs(d));
     if (Math.abs(d) > TOLERANCE) failures++;
   }
 
   console.log(
-    `${label.padEnd(6)} ${verdict === 'ok' ? r.flow.toFixed(2).padStart(5) : '  -  '} ${diff.padStart(6)} |` +
+    `${label.padEnd(10)} ${verdict === 'ok' ? r.flow.toFixed(2).padStart(5) : '  -  '} ${diff.padStart(6)} |` +
     ` ${r.peak.toFixed(3).padStart(8)} ${r.margin.toFixed(1).padStart(5)}x ${r.reg.toFixed(2).padStart(6)}` +
     ` ${r.dy.toFixed(1).padStart(6)} ${String(r.spread).padStart(7)} | ${verdict}` +
     (verdict === 'REJECTED' ? ' - ' + b.reason.slice(0, 50) : ''));
 }
 
-console.log(`\nmean ${(sum / n).toFixed(3)} L/min, worst ${worst.toFixed(3)}, ` +
-            `${n} read, ${failures} outside tolerance or rejected`);
+/* Says how many frames were SEEN, not only how many were scored numerically:
+   the difference between those two numbers is where the skipped frames hid. */
+console.log(expectRejected
+  ? `\n${files.length} frames, ${files.length - failures} rejected as required, ` +
+    `${failures} produced a reading`
+  : `\n${files.length} frames, mean ${n ? (sum / n).toFixed(3) : '-'} L/min over the ` +
+    `${n} with a labelled value, worst ${worst.toFixed(3)}, ` +
+    `${failures} outside tolerance or rejected`);
 process.exit(failures ? 1 : 0);

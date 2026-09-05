@@ -577,10 +577,34 @@ negative and tolerance cases are the part `validate_engine.mjs` does not
 cover, and `reg >= 0.75` in particular was chosen by that negative
 suite, not by the sweep.
 
-**In this repo**: `node tools/validate_engine.mjs <dir with bild_*.jpg>`
-runs the real `balldetector.js` against the labelled images and fails
-(non-zero) on any rejection or a reading more than 0.2 L/min off its
-label. No npm packages, no browser — it decodes with macOS `sips`. Run it
+**In this repo, with its images** (added 2026-09-05): `test/sweep-2026-08-22/`
+holds the 23 labelled frames the current calibration is built from, and
+`node tools/validate_engine.mjs test/sweep-2026-08-22` runs the real
+`balldetector.js` against them, failing (non-zero) on any rejection or a
+reading more than 0.2 L/min off its label. The repo had contained everything
+DERIVED from that sweep — `REF_PNG`, the bands, `BASE_TILT`, `CAL` — and
+nothing to derive it from, so the harness had no data and a recalibration had
+nothing to be compared against.
+
+`test/negative-old-poses/` is the same harness pointed the other way:
+`--expect-rejected` fails when any frame produces a reading. It holds the 78
+frames of the 2026-08-13/15/16 sweeps, from three camera poses that no longer
+exist. Their labels are worthless now, which is what makes them useful — a
+frame from the wrong pose must be REFUSED. All 78 are, at registration
+0.29-0.58 against the 0.75 gate. That covers ONE case of the Playwright
+negative suite below; garbage, occlusions, shifts, rotation and the whole
+tolerance suite are still uncovered, and are now constructible from the sweep.
+
+**A filter that silently drops what it does not recognise.** Until 2026-09-05
+the file filter was `bild_([0-9.]+|min)(max)?L_`, which matched neither
+`bild_0_minL_`, `bild_5.7_maxL_` nor `bild_over_maxL_` — the three frames of
+the 2026-08-22 sweep that carry a STATE rather than a value. So the two
+states this engine can reach besides a number, `Max` and "Under 0,3", were the
+only two nothing tested, on a harness whose summary said "20 read" without
+saying that 3 were skipped. They pass: the resting stop reads 0.20 -> "Under
+0,3", the top mark 5.76 against a 5.7 label, and the past-the-end frame `Max`
+at y=146.7. Mean over the 21 frames with a numeric label is 0.030, worst
+0.110 — the same numbers as before plus `5.7_max`'s +0.06. No npm packages, no browser — it decodes with macOS `sips`. Run it
 after every engine change. Measured 2026-08-16 against the second
 sweep: mean 0.031 L/min, worst 0.078, 24 read, 0 rejected. The first sweep
 now fails three frames against it, which is correct — it is a different
@@ -650,8 +674,12 @@ its span, and is nothing of the sort — the ball really had moved to 4.3 and
 the picture shows it. An anchor from a span is a hypothesis. Look at the
 frame before believing it over the engine.
 
-The labelled images themselves are not in the repo (they are the user's);
-the Playwright suite that does leave-one-out lives outside it too.
+The labelled images are in the repo since 2026-09-05 (see above); the
+Playwright suite that does leave-one-out still lives outside it. The repo is
+public, and the images went in with that said out loud and agreed — they show
+a flow meter, a 3D-printed cup and an LED on a worktop, and a sweep walks the
+whole scale deliberately, so it carries no information about what flow the
+patient actually uses. The uploaded archive in R2 would; that stays out.
 
 ### An engine's calibration has an epoch, and it is a time
 A detection engine is calibrated against one camera pose and one lighting, so
