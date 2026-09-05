@@ -479,17 +479,28 @@ peak + centroid -> quadratic calibration. Never remove the quality
 gates (registration >=0.75, contrast >=0.10, ambiguity >=3.0x,
 |dx| and |dy| <=20 px, extent <=75 rows): the engine must say "no reading"
 rather than output a plausible wrong number — it reads oxygen flow for
-a patient. States: y<150 (Y_MAX_STATE) -> "Max", a sanity guard only —
-the sweep labels the whole physical range, min (y=434, reads 0.25) up to
-6 L/min (y=139), so nothing the knob can reach is extrapolated any more.
-flow < 0.3 -> "Under 0,3" — the test is on the FLOW, not on y, so it moves
-with the calibration rather than needing a second constant kept in step.
-(y=439 is where that lands today, which is why YBOT is bounded below by it.)
+a patient. Two states besides a number, and both are measured against the
+checked-in sweep rather than asserted (2026-09-05):
+
+- `y < Y_MAX_STATE` (150) -> **"Max"**, a sanity guard only. The frame taken
+  deliberately past the printed scale sits at y=146.7 and returns Max; the top
+  mark sits at y=154.4 and returns 5.76 as a number. The boundary is about
+  5.86 L/min, so nothing the knob can reach is extrapolated — but only just:
+  the top mark is 4 px above the Max boundary and 2 px above `Y_CAL_MIN-2`,
+  where `judge()` would start calling a reading extrapolated. A camera nudge
+  of a few pixels moves the sweep's top frame across one of those lines, and
+  `validate_engine.mjs` prints `ok (extrapolated)` or fails on `Max` when it
+  does. That is the intended alarm, not a spurious failure.
+- `flow < 0.3` -> **"Under 0,3"**. The test is on the FLOW, not on y, so it
+  follows the calibration instead of needing a second constant kept in step by
+  hand. With today's `CAL` it lands at y=434.7, and the resting stop measures
+  y=440.7 reading 0.20 — comfortably inside it.
 
 **The peak search window is the ball's physical range, not the picture's.**
-`YTOP=120, YBOT=455` (reference rows; dy is already removed when the difference
+`YTOP=125, YBOT=445` (reference rows; dy is already removed when the difference
 profile is built, so the window does not move with the camera). The ball cannot
-leave y 139 (6 L/min) .. 435 (its resting stop) and its blob is about 20 rows
+leave y 154 (5.8 L/min, the top mark) .. 441 (its resting stop) and its blob
+is about 20 rows
 wide, so everything outside is by construction not the ball. Letting it compete
 cost two whole afternoons: from 2026-08-16 13:09 and 2026-08-17 12:51 UTC low
 sun put a bright edge just under the old `YTOP=60`, and its clipped tail beat
@@ -501,7 +512,8 @@ specular highlight is blown out in the reference and dull in flat light — it w
 excluded). Measured: YTOP 100..125 and YBOT 445..460 are one flat plateau, all
 164 uploads read, worst ambiguity 4.1x. Outside it the failure is immediate —
 YBOT 470 loses 8 frames, YTOP 90 loses 3, YTOP 130 clips the 6 L/min frame.
-YTOP must stay under Y_MAX_STATE (150) and YBOT over Y_CAL_MAX+12 (439) or
+YTOP must stay under Y_MAX_STATE (150) and YBOT below the row where the
+calibration crosses 0.3 L/min (y=434.7 today) or
 those two states become unreachable.
 
 **Registration is where this will break next.** Once the window stopped
@@ -592,16 +604,31 @@ nothing to be compared against.
 `--expect-rejected` fails when any frame produces a reading. It holds the 78
 frames of the 2026-08-13/15/16 sweeps, from three camera poses that no longer
 exist. Their labels are worthless now, which is what makes them useful — a
-frame from the wrong pose must be REFUSED. All 78 are — but NOT all of them
-by registration, and the difference is the interesting part. Registration runs
-0.224 to 0.785 across the set, median 0.592, and **two frames clear the 0.75
-gate**; what refuses those two is ambiguity (1.5x and 2.6x against the 3.0
-gate), with spread as a second line on one of them (159 rows). So the gate
-that catches a wrong camera pose is not always the one named after it, and
-anything that loosens ambiguity has to be measured against this set rather
-than reasoned about. Both candidate changes on the table 2026-09-05 were:
-neither the ball-shaped-rival criterion nor a next-reference fallback leaks a
-single one of the 78, alone or together.
+frame from the wrong pose must be REFUSED. All 78 are. Registration runs
+0.224 to 0.785 across the set, median 0.589, and two frames clear the 0.75
+gate — but they are caught by dy saturating at -40 and by spread at 159 rows,
+so nothing gets through.
+
+**Measure each gate separately; `judge()`'s text cannot tell you which one
+matters.** It returns on the first gate that fires and tests margin before
+dx/dy, so a frame that fails BOTH prints "två lika starka kandidater" and
+reads as an ambiguity catch. Evaluating all five gates independently over the
+78 (2026-09-05):
+
+| gate | refuses | is the ONLY gate refusing |
+|---|---|---|
+| registration | 76 | **8** |
+| ambiguity | 49 | 0 |
+| shift | 24 | 0 |
+| spread | 24 | 0 |
+| contrast | 0 | 0 |
+
+So this set constrains registration, and nothing else: remove the ambiguity
+gate entirely and it still leaks none of the 78. Which means it is NOT
+evidence about a change to ambiguity — the two candidates of 2026-09-05, a
+ball-shaped-rival criterion and a next-reference fallback, both leak zero
+here, and that says almost nothing about the first of them. The occlusion and
+garbage cases are what would.
 
 That covers ONE case of the Playwright negative suite below; garbage,
 occlusions, shifts, rotation and the whole tolerance suite are still

@@ -12,8 +12,13 @@
    Requires macOS `sips` (built in) and nothing else — no npm packages,
    no browser. Files are named bild_<label>L_<timestamp>.jpg, and the label
    says what the frame must produce — see parseName() for the forms and for
-   what each one asserts. A label this tool does not recognise is a hard
-   error, never a skip.
+   what each one asserts. A file that starts with bild_ and cannot be parsed
+   is a hard error, never a skip: an image is either asserted about or it
+   stops the run.
+
+   --expect-rejected takes ANY image, labelled or not. A garbage frame, an
+   occluded one or a rotated one has no flow to name, and demanding a label
+   there would have made the next half of the negative suite unbuildable.
 
    Two honest limitations:
 
@@ -159,31 +164,50 @@ function parseName(file) {
   return { name: s, expect: null, value: null };      // recognised shape, unknown label
 }
 
-const files = readdirSync(imageDir).filter((f) => parseName(f)).sort();
-if (!files.length) {
-  console.error(`No bild_*.jpg found in ${imageDir}`);
+let entries;
+try {
+  entries = readdirSync(imageDir);
+} catch (e) {
+  // Misuse, not a failed validation: a typo in the path must not report as an
+  // engine regression on a tool whose whole job is to be a gate.
+  console.error(`Cannot read ${imageDir}: ${e.code === 'ENOENT' ? 'no such directory' : e.message}`);
   process.exit(2);
 }
-const unknown = files.filter((f) => !parseName(f).expect);
-if (unknown.length) {
-  console.error(`Unrecognised label in: ${unknown.join(', ')}\n` +
-                'Add the form to parseName() or rename the file — this tool ' +
-                'will not run over frames it cannot assert anything about.');
+const images = entries.filter((f) => /\.jpe?g$/i.test(f)).sort();
+const files = expectRejected ? images : images.filter((f) => parseName(f)).sort();
+if (!files.length) {
+  console.error(`No ${expectRejected ? 'images' : 'bild_*.jpg'} found in ${imageDir}`);
   process.exit(2);
+}
+if (!expectRejected) {
+  /* Two ways a frame could go unasserted, and both stop the run. The first is
+     a label shape parseName() knows nothing about; the second is a name that
+     misses the bild_<label>L_ shape entirely — a lost underscore, or a save
+     that fell back to the control panel's default label — which the filter
+     above would drop in silence. That silent drop is the bug this tool has
+     now had twice, so it is checked rather than reasoned about. */
+  const bad = images.filter((f) => { const p = parseName(f); return !p || !p.expect; });
+  if (bad.length) {
+    console.error(`Cannot tell what these frames must produce: ${bad.join(', ')}\n` +
+                  'Add the form to parseName() or rename the file — this tool ' +
+                  'will not run over frames it cannot assert anything about.');
+    process.exit(2);
+  }
 }
 
 console.log('label      read   diff  | contrast  unamb  match  shift  spread | verdict');
 let sum = 0, n = 0, worst = 0, failures = 0;
 
 for (const f of files) {
-  const p = parseName(f);
+  const p = parseName(f) ?? { name: f.replace(/\.jpe?g$/i, '').slice(0, 20), expect: null, value: null };
   const label = p.name;
   const r = E.analyze(readBmp(toBmp(join(imageDir, f), label.replace(/\W/g, '_'))));
   const b = E.judge(r);
   // The engine's own wording, so a verdict here can be grepped for in the log
   // and on the page the patient reads.
-  const verdict = !b.ok ? 'REJECTED' : b.maxState ? 'Max' : b.bottomState ? 'Under 0,3' : 'ok';
-  const read = verdict === 'ok' || verdict === 'Under 0,3';
+  const verdict = !b.ok ? 'REJECTED' : b.maxState ? 'Max' : b.bottomState ? 'Under 0,3'
+                : b.extrapolated ? 'ok (extrapolated)' : 'ok';
+  const read = verdict.startsWith('ok') || verdict === 'Under 0,3';
 
   /* --expect-rejected turns the assertion around: every frame must be
      REJECTED, which is what a wrong camera pose, an occlusion or a garbage
@@ -203,7 +227,7 @@ for (const f of files) {
   }
 
   console.log(
-    `${label.padEnd(10)} ${verdict === 'ok' ? r.flow.toFixed(2).padStart(5) : '  -  '} ${diff.padStart(6)} |` +
+    `${label.padEnd(10)} ${read && verdict !== 'Under 0,3' ? r.flow.toFixed(2).padStart(5) : '  -  '} ${diff.padStart(6)} |` +
     ` ${r.peak.toFixed(3).padStart(8)} ${r.margin.toFixed(1).padStart(5)}x ${r.reg.toFixed(2).padStart(6)}` +
     ` ${r.dy.toFixed(1).padStart(6)} ${String(r.spread).padStart(7)} | ${verdict}` +
     (verdict === 'REJECTED' ? ' - ' + b.reason.slice(0, 50) : ''));
