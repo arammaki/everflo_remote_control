@@ -643,11 +643,13 @@ only two nothing tested, on a harness whose summary said "20 read" without
 saying that 3 were skipped. They pass: the resting stop reads 0.20 -> "Under
 0,3", the top mark 5.76 against a 5.7 label, and the past-the-end frame `Max`
 at y=146.7. Mean over the 21 frames with a numeric label is 0.030, worst
-0.110 — the same numbers as before plus `5.7_max`'s +0.06. No npm packages, no browser — it decodes with macOS `sips`. Run it
-after every engine change. Measured 2026-08-16 against the second
-sweep: mean 0.031 L/min, worst 0.078, 24 read, 0 rejected. The first sweep
-now fails three frames against it, which is correct — it is a different
-camera pose.
+0.110 — the same numbers as before plus `5.7_max`'s +0.06.
+
+No npm packages, no browser — it decodes with macOS `sips`. Run it after every
+engine change. The 2026-08-16 figures this paragraph used to quote (mean
+0.031, worst 0.078, 24 read) were the SECOND sweep against the calibration of
+its day; that sweep now lives in `test/negative-old-poses/` and is refused in
+full, which is correct — it is a different camera pose.
 
 The sips decoder and the browser's now have a much stronger result behind
 them than "lands on the labels": run over the same 124 uploaded frames the
