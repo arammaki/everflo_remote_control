@@ -87,7 +87,8 @@ node tools/publish_firmware.mjs status | disarm
 
 node build_webui.mjs              # after ANY edit to balldetector.js
 node build_webui.mjs --check      # run before committing
-node tools/validate_engine.mjs <dir>   # engine vs labelled bild_*.jpg
+node tools/validate_engine.mjs test/sweep-2026-08-22              # must read
+node tools/validate_engine.mjs test/negative-old-poses --expect-rejected
 node tools/score_uploads.mjs <dir>     # engine vs real uploaded frames
 
 cd cloud && npx wrangler deploy   # ingest Worker

@@ -10,9 +10,10 @@
    silently disable a quality gate, and neither shows up in a diff.
 
    Requires macOS `sips` (built in) and nothing else — no npm packages,
-   no browser. Files must be named bild_<flow>L_<timestamp>.jpg, where
-   <flow> is the reading, optionally followed by "max" for the frame
-   with the knob at its stop, which must read as Max and not as a number.
+   no browser. Files are named bild_<label>L_<timestamp>.jpg, and the label
+   says what the frame must produce — see parseName() for the forms and for
+   what each one asserts. A label this tool does not recognise is a hard
+   error, never a skip.
 
    Two honest limitations:
 
@@ -44,7 +45,18 @@ const args = process.argv.slice(2);
    fails when any of them produces a number. Same decode, same references, so
    the two directions cannot drift apart. */
 const expectRejected = args.includes('--expect-rejected');
-const imageDir = args.find((a) => !a.startsWith('--'));
+// A misspelt flag must not run the opposite assertion in silence.
+const badFlag = args.find((a) => a.startsWith('--') && a !== '--expect-rejected');
+if (badFlag) {
+  console.error(`Unknown option ${badFlag}`);
+  process.exit(2);
+}
+const dirs = args.filter((a) => !a.startsWith('--'));
+if (dirs.length > 1) {
+  console.error(`One directory at a time, got: ${dirs.join(', ')}`);
+  process.exit(2);
+}
+const imageDir = dirs[0];
 if (!imageDir) {
   console.error('Usage: node tools/validate_engine.mjs <dir with bild_*.jpg> [--expect-rejected]');
   process.exit(2);
@@ -116,28 +128,47 @@ E.__setREFS(night, extra('REF_PNG_DAY', 'refday'), extra('REF_PNG_EVENING', 'ref
    Measured 2026-09-05: 20 of the 23 frames in the 2026-08-22 sweep were being
    scored, and the summary line said "20 read" without saying 3 were skipped.
 
-     bild_2.5L_...       a labelled value
-     bild_minL_...       the resting stop (sweeps up to 2026-08-16)
-     bild_0_minL_...     the resting stop (2026-08-22 sweep)
-     bild_maxL_...       the top mark, unlabelled (older sweeps)
-     bild_5.7maxL_...    the top mark with its value
-     bild_5.7_maxL_...   ditto (2026-08-22 sweep)
-     bild_over_maxL_...  deliberately past the end of the printed scale */
+   So the label is parsed into what the frame must PRODUCE, and an
+   unrecognised label stops the run. Accepting it and quietly having nothing
+   to compare against would put the same hole back one level down — a frame
+   named bild_2,5L_... with a comma would then be listed, never checked, and
+   the run would still be green.
+
+     bild_2.5L_...       'value'    read within TOLERANCE of 2.5
+     bild_minL_...       'reading'  the resting stop (sweeps up to 2026-08-16)
+     bild_0_minL_...     'reading'  the resting stop (2026-08-22 sweep). The
+                                    ball is against its stop, not at a flow,
+                                    so the 0 is a name and not a label.
+     bild_maxL_...       'reading'  the top mark, unlabelled (older sweeps)
+     bild_5.7maxL_...    'value'    the top mark with its value
+     bild_5.7_maxL_...   'value'    ditto (2026-08-22 sweep)
+     bild_over_maxL_...  'max'      deliberately past the end of the printed
+                                    scale: the Max state, NOT a number. A
+                                    number here means the y<Y_MAX_STATE guard
+                                    has stopped guarding. */
 function parseName(file) {
   const m = file.match(/^bild_(.+?)L_.*\.jpe?g$/i);
   if (!m) return null;
   const s = m[1];
-  const min = /min$/i.test(s), max = /max$/i.test(s), over = /^over_/i.test(s);
-  const rest = s.replace(/(^over)?_?(min|max)$/i, '');
-  // The resting stop has no true value — the ball is against its stop, not at
-  // a flow — so a numeric part there ("0_min") is a name, not a label.
-  const value = !min && /^[0-9]*\.?[0-9]+$/.test(rest) ? Number(rest) : null;
-  return { name: s, min, max, over, value };
+  if (/^over_max$/i.test(s)) return { name: s, expect: 'max', value: null };
+  if (/^(\d+(\.\d+)?_)?min$/i.test(s)) return { name: s, expect: 'reading', value: null };
+  if (/^max$/i.test(s)) return { name: s, expect: 'reading', value: null };
+  const mx = s.match(/^(\d+(?:\.\d+)?)_?max$/i);
+  if (mx) return { name: s, expect: 'value', value: Number(mx[1]) };
+  if (/^\d+(\.\d+)?$/.test(s)) return { name: s, expect: 'value', value: Number(s) };
+  return { name: s, expect: null, value: null };      // recognised shape, unknown label
 }
 
 const files = readdirSync(imageDir).filter((f) => parseName(f)).sort();
 if (!files.length) {
   console.error(`No bild_*.jpg found in ${imageDir}`);
+  process.exit(2);
+}
+const unknown = files.filter((f) => !parseName(f).expect);
+if (unknown.length) {
+  console.error(`Unrecognised label in: ${unknown.join(', ')}\n` +
+                'Add the form to parseName() or rename the file — this tool ' +
+                'will not run over frames it cannot assert anything about.');
   process.exit(2);
 }
 
@@ -149,26 +180,22 @@ for (const f of files) {
   const label = p.name;
   const r = E.analyze(readBmp(toBmp(join(imageDir, f), label.replace(/\W/g, '_'))));
   const b = E.judge(r);
-  const verdict = !b.ok ? 'REJECTED' : b.maxState ? 'Max' : b.bottomState ? 'Below 0.5' : 'ok';
+  // The engine's own wording, so a verdict here can be grepped for in the log
+  // and on the page the patient reads.
+  const verdict = !b.ok ? 'REJECTED' : b.maxState ? 'Max' : b.bottomState ? 'Under 0,3' : 'ok';
+  const read = verdict === 'ok' || verdict === 'Under 0,3';
 
-  /* What each kind of frame has to produce:
-       a labelled value  a reading within TOLERANCE of the label
-       min               a reading, any reading — the ball is against its stop,
-                         so there is no true value to compare against
-       max, unlabelled   a reading; the top mark carries no number here
-       over_max          the Max state, not a number. A frame taken past the
-                         printed scale that comes back with a flow means the
-                         y<Y_MAX_STATE guard has stopped guarding.
-     In --expect-rejected mode every frame must be REJECTED instead: that is
-     what a wrong camera pose, an occlusion or a garbage frame has to do. */
+  /* --expect-rejected turns the assertion around: every frame must be
+     REJECTED, which is what a wrong camera pose, an occlusion or a garbage
+     frame has to do. Otherwise the label says what to assert. */
   let diff = '';
   if (expectRejected) {
     if (verdict !== 'REJECTED') failures++;
-  } else if (p.over) {
+  } else if (p.expect === 'max') {
     if (verdict !== 'Max') failures++;
-  } else if (verdict !== 'ok' && verdict !== 'Below 0.5') {
+  } else if (!read) {
     failures++;
-  } else if (p.value != null) {
+  } else if (p.expect === 'value') {
     const d = r.flow - p.value;
     diff = (d >= 0 ? '+' : '') + d.toFixed(2);
     sum += Math.abs(d); n++; worst = Math.max(worst, Math.abs(d));
@@ -188,6 +215,6 @@ console.log(expectRejected
   ? `\n${files.length} frames, ${files.length - failures} rejected as required, ` +
     `${failures} produced a reading`
   : `\n${files.length} frames, mean ${n ? (sum / n).toFixed(3) : '-'} L/min over the ` +
-    `${n} with a labelled value, worst ${worst.toFixed(3)}, ` +
+    `${n} with a labelled value, worst ${n ? worst.toFixed(3) : '-'}, ` +
     `${failures} outside tolerance or rejected`);
 process.exit(failures ? 1 : 0);

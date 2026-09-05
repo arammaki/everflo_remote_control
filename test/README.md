@@ -32,8 +32,11 @@ The sweeps from 2026-08-13, 08-15 and 08-16, from three camera poses that no
 longer exist. Their labels were true when they were taken and are worthless
 now, which is exactly what makes them useful: a frame from the wrong camera
 pose must be **refused**, not read, and these are real frames rather than
-synthetic ones. Measured 2026-09-05: all 78 refused, registration 0.29–0.58
-against the 0.75 gate.
+synthetic ones. Measured 2026-09-05: all 78 refused — but registration runs
+0.224–0.785 and **two of them clear the 0.75 gate**. Those two are refused by
+ambiguity instead (1.5× and 2.6× against 3.0). Worth knowing before touching
+the ambiguity gate: on this set it is sometimes the only thing standing
+between a wrong camera pose and a plausible number.
 
 Do NOT run the plain harness over this directory — without `--expect-rejected`
 it reports 78 failures, which is the correct answer to the wrong question.
