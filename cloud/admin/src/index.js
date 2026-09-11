@@ -109,7 +109,7 @@ function navHtml(nav) {
   ${link(page + 1, 'Äldre →')}
 </div>`;
 }
-function renderPage(rows, now, epochs, latest, nav) {
+function renderPage(rows, now, latest, nav) {
   const age = latest ? now - Date.parse(latest.received_at) : null;
   // Uploads are every 15 min; nothing for 40 means something is wrong.
   const stale = age === null || age > 40 * 60 * 1000;
@@ -281,18 +281,12 @@ ${banner}
     <label class="liten">Från och med
       <input id="frantid" type="text" size="21" placeholder="2026-08-22T20:00:00"></label>
     <label class="liten">eller från firmware
-      <select id="franfw"><option value="">— välj —</option>${
-        epochs.map((e) => `<option value="${escapeHtml(e.first_seen)}">v${
-          escapeHtml(e.fw)} (${escapeHtml(e.first_seen.replace('T', ' ').slice(0, 16))})</option>`).join('')
-      }</select></label>
+      <select id="franfw"><option value="">— välj —</option></select></label>
     <button id="franrensa" class="liten">Rensa</button>
   </div>
   <table class="liten" id="epoktab">
   <thead><tr><th>Firmware</th><th>Första bilden</th><th>Sista bilden</th><th>Bilder</th></tr></thead>
-  <tbody>${epochs.map((e) => `<tr><td>v${escapeHtml(e.fw)}</td>
-    <td class="t" data-utc="${escapeHtml(e.first_seen)}"></td>
-    <td class="t" data-utc="${escapeHtml(e.last_seen)}"></td>
-    <td class="num">${e.n}</td></tr>`).join('')}</tbody>
+  <tbody><tr><td colspan="4" class="liten">Öppna panelen för att hämta listan.</td></tr></tbody>
   </table>
 </details>
 <p class="liten">Klicka på en rad eller stega med piltangenterna. Avläsningen räknas ut
@@ -511,14 +505,38 @@ for(const tr of rows){
   if(td){ const l=tr.dataset.lokal;
     td.innerHTML=l.slice(0,10)+' '+l.slice(11,16)+'<span class="sek">'+l.slice(16,19)+'</span>'; }
 }
-for(const td of document.querySelectorAll('#epoktab td.t'))
-  td.textContent=lokal(td.dataset.utc).replace('T',' ');
-for(const o of document.getElementById('franfw').options){
-  if(!o.value) continue;
-  const l=lokal(o.value);
-  o.textContent=o.textContent.replace(/\\([^)]*\\)/, '('+l.replace('T',' ').slice(0,16)+')');
-  o.value=l;
+/* The firmware list is a full GROUP BY over every reading — measured as a
+   table scan plus two temp b-trees — and it feeds a panel that is collapsed
+   on every load. Fetched when the panel is first opened instead, which is the
+   only time anyone looks at it. The values are stored as LOCAL time, matching
+   the rest of the page and the field the operator types into. */
+let epokLaddad=false;
+async function laddaEpoker(){
+  if(epokLaddad) return; epokLaddad=true;
+  const tb=document.querySelector('#epoktab tbody');
+  const sel=document.getElementById('franfw');
+  tb.innerHTML='<tr><td colspan="4" class="liten">Hämtar …</td></tr>';
+  let list;
+  try{ const r=await fetch('/epoker'); if(!r.ok) throw 0; list=await r.json(); }
+  catch(e){ epokLaddad=false;
+    tb.innerHTML='<tr><td colspan="4" class="liten">Listan kunde inte hämtas. Fäll ihop och öppna igen.</td></tr>';
+    return; }
+  tb.innerHTML=list.map(e=>{
+    const f=lokal(e.first_seen).replace('T',' '), l=lokal(e.last_seen).replace('T',' ');
+    return '<tr><td>v'+esc(e.fw)+'</td><td class="t">'+esc(f)+'</td><td class="t">'+esc(l)
+         + '</td><td class="num">'+e.n+'</td></tr>';
+  }).join('') || '<tr><td colspan="4" class="liten">Inga firmwareversioner i loggen.</td></tr>';
+  for(const e of list){
+    const l=lokal(e.first_seen);
+    const o=document.createElement('option');
+    o.value=l; o.textContent='v'+e.fw+' ('+l.replace('T',' ').slice(0,16)+')';
+    sel.appendChild(o);
+  }
 }
+function esc(x){ return String(x).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+document.getElementById('epok').addEventListener('toggle',e=>{
+  if(e.target.open) laddaEpoker();
+});
 { // name the zone in the header, so nobody has to assume which local this is
   const z=Intl.DateTimeFormat().resolvedOptions().timeZone||'lokal tid';
   const h=document.getElementById('tidrubrik'); if(h) h.textContent='Tid ('+z+')';
@@ -678,6 +696,31 @@ function clean(x) {
   return { id: x.id, flow, state: x.state, engine, quality: cleanQuality(x.quality) };
 }
 
+/* D1 bills rows READ, and on 2026-09-11 this Worker hit the free tier's daily
+   limit and threw 1101 on every request — with no way to say which query had
+   spent it, because nothing recorded the one number D1 hands back. Every
+   statement now goes through here: `meta.rows_read` is summed for the request
+   and logged once. Observability is enabled on this Worker, so the line shows
+   up in `wrangler tail` and in the dashboard.
+
+   `.first()` is not used any more anywhere: it returns the row without the
+   meta, so a query run that way is invisible to this. The helper's first()
+   runs .all() and takes results[0], which is the same answer plus the cost. */
+function meter(env) {
+  const m = { read: 0, written: 0, n: 0 };
+  m.all = async (stmt) => {
+    const r = await stmt.all();
+    m.n++;
+    m.read += r.meta?.rows_read ?? 0;
+    m.written += r.meta?.rows_written ?? 0;
+    return r;
+  };
+  m.first = async (stmt) => (await m.all(stmt)).results?.[0] ?? null;
+  m.log = (what) => console.log(
+    `d1 ${what}: ${m.read} rows read, ${m.written} written, ${m.n} queries`);
+  return m;
+}
+
 export default {
   async fetch(request, env) {
     const denied = requireAccess(request);
@@ -727,10 +770,36 @@ export default {
               flow = excluded.flow, state = excluded.state,
               quality = excluded.quality, analysed_at = excluded.analysed_at`
       );
-      await env.DB.batch(items.map((i) =>
+      const res = await env.DB.batch(items.map((i) =>
         stmt.bind(i.id, i.engine, i.flow, i.state, i.quality, now)));
+      /* An upsert READS the row it may replace, so a full re-analysis of the
+         archive costs reads as well as writes — which is the half that is easy
+         to forget when a sweep suddenly stops working. */
+      const read = res.reduce((a, r) => a + (r.meta?.rows_read ?? 0), 0);
+      const written = res.reduce((a, r) => a + (r.meta?.rows_written ?? 0), 0);
+      console.log(`d1 analys: ${read} rows read, ${written} written, ${items.length} upserts`);
       return new Response(JSON.stringify({ stored: items.length }), {
         headers: { 'content-type': 'application/json' },
+      });
+    }
+
+    /* When each firmware version was first and last seen — the table that lets
+       a human pick a boundary they can reason about. Its own endpoint since
+       2026-09-11: it is a GROUP BY over every reading, and running it on every
+       page load for a panel that is collapsed by default was the largest
+       avoidable read on the page. */
+    if (url.pathname === '/epoker') {
+      const db = meter(env);
+      const { results } = await db.all(env.DB.prepare(
+        `SELECT fw, MIN(received_at) AS first_seen, MAX(received_at) AS last_seen,
+                COUNT(*) AS n
+           FROM readings
+          WHERE fw IS NOT NULL AND fw <> ''
+          GROUP BY fw
+          ORDER BY first_seen DESC`));
+      db.log('epoker');
+      return new Response(JSON.stringify(results), {
+        headers: { 'content-type': 'application/json; charset=utf-8' },
       });
     }
 
@@ -756,7 +825,8 @@ export default {
     /* ?page=N&limit=M, newest first. Clamped: a limit is a page weight, not a
        way to pull the whole archive into one tab. */
     const limit = Math.min(500, Math.max(25, parseInt(url.searchParams.get('limit'), 10) || PAGE_SIZE));
-    const { total } = await env.DB.prepare('SELECT COUNT(*) AS total FROM readings').first();
+    const db = meter(env);
+    const { total } = await db.first(env.DB.prepare('SELECT COUNT(*) AS total FROM readings'));
     /* Clamped to what exists: a hand-typed or stale ?page= past the end would
        otherwise render an empty table with both links dead — a dead end with
        no way back — and a row range like "19601-1780 av 1780". */
@@ -785,10 +855,23 @@ export default {
       /* Both halves in one statement, and the EXISTS half is load-bearing:
          before_n = 0 means "absent" AND "newest row", which are opposite
          answers. */
-      const at = await env.DB.prepare(
-        `SELECT (SELECT COUNT(*) FROM readings, (SELECT received_at AS t FROM readings WHERE id = ?1) AS w
-                  WHERE received_at > w.t OR (received_at = w.t AND id > ?1)) AS before_n,
-                EXISTS(SELECT 1 FROM readings WHERE id = ?1) AS ok`).bind(wanted).first();
+      /* Two terms rather than one OR, for legibility rather than for speed:
+         SQLite plans the OR form as MULTI-INDEX OR and uses the covering
+         index either way, so a review claim that it full-scans the table was
+         wrong and this is not the saving it looked like. Verified with
+         EXPLAIN QUERY PLAN on the checked-in schema.
+
+         The second term is almost always zero — no two readings share a
+         timestamp in the archive today — but it is what makes the count agree
+         with the table's `ORDER BY received_at DESC, id DESC` when one
+         appears. Checked against a five-row fixture with a deliberate tie:
+         ranks come out 0,1,2,3,4 in exactly the order the table renders. */
+      const at = await db.first(env.DB.prepare(
+        `WITH w AS (SELECT received_at AS t FROM readings WHERE id = ?1)
+         SELECT (SELECT COUNT(*) FROM readings WHERE received_at > (SELECT t FROM w))
+              + (SELECT COUNT(*) FROM readings WHERE received_at = (SELECT t FROM w) AND id > ?1)
+                AS before_n,
+                EXISTS(SELECT 1 FROM w) AS ok`).bind(wanted));
       if (at.ok) {
         goTo = wanted;
         const onPage = Math.floor(at.before_n / limit) + 1;
@@ -800,10 +883,10 @@ export default {
         }
       }
     }
-    const latest = await env.DB.prepare(
-      'SELECT received_at FROM readings ORDER BY received_at DESC LIMIT 1').first();
+    const latest = await db.first(env.DB.prepare(
+      'SELECT received_at FROM readings ORDER BY received_at DESC LIMIT 1'));
 
-    const { results } = await env.DB.prepare(
+    const { results } = await db.all(env.DB.prepare(
       `SELECT r.id, r.received_at, r.reason, r.image_key,
               r.position, r.press_degrees, r.rssi, r.fw,
               n.flow AS flow_nu, n.state AS state_nu,
@@ -814,23 +897,15 @@ export default {
               AND f.analysed_at = (SELECT MIN(analysed_at) FROM analyses
                                     WHERE reading_id = r.id AND engine <> ?1)
         ORDER BY r.received_at DESC, r.id DESC LIMIT ?2 OFFSET ?3`
-    ).bind(ENGINE_VERSION, limit, (page - 1) * limit).all();
+    ).bind(ENGINE_VERSION, limit, (page - 1) * limit));
 
     /* When each firmware version was first and last seen. This is the table
        that lets a human pick a boundary they can reason about: the LED went in
        with one version, the camera moved with another, and those events are
        what actually invalidate an older engine's calibration. Ordered newest
        first because the boundary you want is nearly always a recent one. */
-    const { results: epochs } = await env.DB.prepare(
-      `SELECT fw, MIN(received_at) AS first_seen, MAX(received_at) AS last_seen,
-              COUNT(*) AS n
-         FROM readings
-        WHERE fw IS NOT NULL AND fw <> ''
-        GROUP BY fw
-        ORDER BY first_seen DESC`
-    ).all();
-
-    return new Response(renderPage(results, Date.now(), epochs, latest, { page, limit, total, pages, goTo }), {
+    db.log(`page ${page} limit ${limit}${goTo ? ' id ' + goTo : ''}`);
+    return new Response(renderPage(results, Date.now(), latest, { page, limit, total, pages, goTo }), {
       headers: { 'content-type': 'text/html; charset=utf-8' },
     });
   },

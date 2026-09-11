@@ -815,6 +815,47 @@ pose, as it is meant to. The filter keeps the table readable; it is not what
 keeps the numbers honest. And `analyses` is keyed `(reading_id, engine)`, so
 re-analysing never overwrites what an older engine said about a frame.
 
+### D1 bills rows READ, and the page has to be able to say how many
+On 2026-09-11 the admin Worker started throwing 1101 on every request. The
+exception was `D1_ERROR: exceeded D1's free tier daily row read limit` — on
+the FIRST statement of the handler, before any of that day's changes ran, so
+the deploy was innocent and a rollback would not have helped. The quota resets
+at midnight UTC and the page came back on its own.
+
+**What consumed it is not known**, and that is the actual finding. Adding up
+the day's harvesting — a dozen full sweeps over `readings` joined to
+`analyses`, 1361 upserts, a handful of `COUNT`/`GROUP BY` — lands around fifty
+thousand rows, not five million. Nothing recorded the one number that would
+have answered it: D1 returns `meta.rows_read` on every statement and this
+Worker threw it away.
+
+So every statement now goes through `meter()`, which sums `rows_read` and
+`rows_written` for the request and logs one line. Observability is enabled, so
+it shows in `wrangler tail` and in the dashboard. `.first()` is no longer used
+anywhere in the Worker — it returns the row WITHOUT the meta, so a query run
+that way is invisible to the meter, and the test harness throws if anything
+calls it.
+
+**The firmware list moved to its own endpoint** (`GET /epoker`). It is a
+`GROUP BY` over every reading — measured as `SCAN readings` plus two temp
+b-trees — and it was running on every page load to fill a `<details>` panel
+that is collapsed by default. It is now fetched when the panel is first
+opened. Page load went from four statements to three.
+
+Measured plans on the checked-in schema, worth knowing before optimising the
+wrong thing: the main rows query is cheap (`SCAN r USING COVERING INDEX
+readings_received_at`, stopping at LIMIT, with index seeks for both joins and
+the correlated subquery). The `?id=` rank query uses the covering index in
+both its old OR form and its current two-term form — a review claim that the
+OR defeated the index was wrong.
+
+**Analysing often costs less than analysing seldom.** A re-analysis is charged
+per row touched, so a sweep over a fortnight of frames costs what a hundred
+daily sweeps cost — except the daily ones spread across a hundred quota
+windows and the fortnight lands in one. And harvest metadata ONCE per
+investigation: re-querying the same rows for each sub-step is where this
+session's reads actually went.
+
 ### The control panel is two columns on a laptop
 `#cols` wraps `#view` (rotation/mirror, the picture, the reading, the quality
 line) and `#panel` (everything else). One column below 920 px — the phone
