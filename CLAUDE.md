@@ -448,6 +448,55 @@ is circular. When a whole span shifts together the span cannot say whether the
 shift is right; only the tube can. The user caught exactly this mistake in a
 draft of this note.
 
+### When the best-registering reference refuses, ask the next (v1.10.12)
+`analyze()` sorts the references by registration and takes the best, exactly as
+before. What is new is one branch: if `judge()` refuses that one, the next best
+is tried, then the third, and the first that passes EVERY gate on its own
+answers instead. The result carries `fallback:true` when that happened.
+
+**Why registration alone is not enough to pick a reference.** It is measured on
+the ANCHOR band, the scale ticks at x 233-261. The ball band is at x 253-285,
+and the artefact that actually decides these frames sits at the foot of the
+tube where the LED is. The two are decoupled: a reference can match the ticks
+best by a thousandth and still be wrong about the foot. At dawn on 2026-08-30,
+frame 2386 had night 0.901 against day 0.897 and read 1.61; frame 2387,
+fifteen minutes later and 1.4% brighter, had night 0.899 against day 0.900 and
+was refused. Day refused every frame in that window; night read all of them.
+A thousandth decided between a reading and a refusal, and the losing reference
+had the answer.
+
+**It cannot change a reading, only produce one that was missing.** The best
+registration still answers whenever it can, so no accepted frame is affected —
+verified on 1013 frames, largest movement 0.00005 L/min, which is rounding.
+The night sweep is unchanged to the last digit and night still wins 23/23.
+
+**What it spends is the protection of being asked once.** A frame that must be
+refused now has to be refused by all three references instead of one. The 78
+wrong-pose frames in `test/negative-old-poses/` do NOT exercise that — the
+winner is by definition the best-registering, so if it is under the reg gate
+the others are too, and none of the 78 leaks with or without this. The
+occlusion, garbage and rotation cases would exercise it, and they are not
+built yet. That is the known gap. `--expect-rejected` takes unlabelled images
+precisely so they can be added.
+
+Measured: 2026-08-22..09-05, 40 refusals of 1431 -> 7; 09-05..09-11, 26 of
+1053 -> 9. No new refusals in either. The 9 that remain are one hour on
+2026-09-07 with a second lamp lit — see the note above about what an
+invalidated lighting looks like. Every rescued reading was checked against its
+press span or against the signed turn the device logged: 17 of 17 agree, and
+the 2026-09-09 evening sequence reproduces nine consecutive logged turns with
+the right sign and magnitude.
+
+**The rejected alternative, and why.** The other candidate was to measure
+ambiguity and spread on the ball rather than on the whole profile — a rival
+counts only if it is narrow enough to be a ball. It scored slightly better on
+the older corpus (4 refusals against 7) and slightly worse on the newer (11
+against 9), and it moves no reading at all, which is its real attraction. It
+was not taken because it loosens the ambiguity gate, and measuring each gate
+independently over the 78 wrong-pose frames shows ambiguity is never the only
+gate refusing any of them: the set cannot say whether loosening it is safe.
+Revisit once the occlusion cases exist.
+
 ### The engine has one source: `balldetector.js`
 Edit the detection engine **only** in `balldetector.js`, then run
 `node build_webui.mjs`. The script inlines it verbatim into both HTML
