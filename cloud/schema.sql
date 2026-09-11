@@ -58,7 +58,8 @@ CREATE TABLE IF NOT EXISTS analyses (
   engine       TEXT    NOT NULL,
   flow         REAL,               -- L/min, NULL unless state='ok'
   state        TEXT    NOT NULL,   -- 'ok'|'max'|'below'|'uncertain'|'no-reading'
-  quality      TEXT,               -- JSON: reg, peak, margin, dx, dy, spread —
+  quality      TEXT,               -- JSON: reg, peak, margin, dx, dy, spread,
+                                   -- and since v1.10.12 ref + fallback —
                                    -- what answers "why did it stop reading"
                                    -- months later without refetching images
   analysed_at  TEXT    NOT NULL,   -- ISO8601

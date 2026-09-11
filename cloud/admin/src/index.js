@@ -360,7 +360,7 @@ function chips(r){
        second. A reading from a reference that did not register best is the
        first thing to look at when one sits a few hundredths off its
        neighbours, so it belongs beside the numbers rather than nowhere. */
-    f('referens',r.ref+(r.fallback?' (reserv)':''),!r.fallback);
+    (r.ref?f('referens',r.ref+(r.fallback?' (reserv)':''),!r.fallback):'');
 }
 /* One shape for both the table cell and the row written to the database. */
 function verdict(r,b){
@@ -406,7 +406,12 @@ function remember(tr,r,v){
   queue.push({id:Number(tr.dataset.id), flow:v.flow, state:v.state, engine:MOTOR,
     quality:{reg:+r.reg.toFixed(3), peak:+r.peak.toFixed(3), margin:+r.margin.toFixed(1),
              dx:+r.dx.toFixed(1), dy:+r.dy.toFixed(1), spread:r.spread,
-             ref:r.ref, fallback:!!r.fallback}});
+             /* Only what this engine actually said. A page running a cached
+                pre-v1.10.12 /motor.js has no fallback concept, and writing
+                false there would be indistinguishable from "the
+                best-registering reference answered". */
+             ...(r.ref?{ref:r.ref}:{}),
+             ...(typeof r.fallback==='boolean'?{fallback:r.fallback}:{})}});
   if(queue.length>=25) flush();
 }
 /* Brings a row into view WITHOUT scrollIntoView, which scrolls every
@@ -620,7 +625,15 @@ if(goTo!=null){
   try{ const u=new URL(location.href); u.searchParams.delete('id');
        history.replaceState(null,'',u.pathname+u.search+u.hash); }catch(e){}
 }
-if(rows.length) select(wantIx>=0 ? wantIx : 0, wantIx>=0 ? {scroll:true} : undefined);
+if(rows.length){
+  select(wantIx>=0 ? wantIx : 0, wantIx>=0 ? {scroll:true} : undefined);
+  /* select() reveals before it fills #meta and #reason, so on the narrow
+     layout the sticky block grows under the row it just scrolled to. Harmless
+     when you arrowed there — you know where you are — but on a cold jump it
+     lands the frame you asked for behind the picture. One more reveal after
+     the block has its real height. */
+  if(wantIx>=0) requestAnimationFrame(()=>requestAnimationFrame(()=>reveal(rows[wantIx])));
+}
 </script>
 </body></html>`;
 }
@@ -761,14 +774,22 @@ export default {
        the old frame back. An id that does not exist is ignored rather than
        reported — it is a convenience for pasting an id from a report, not an
        API, and a dead-end error page would be worse than page 1. */
-    const wanted = parseInt(url.searchParams.get('id'), 10);
+    /* Digits only. parseInt is too forgiving here: '1e3' becomes 1, '4070.9'
+       becomes 4070 and '12abc' becomes 12, each a real row that passes every
+       guard below and opens the WRONG frame in silence. This page is used to
+       adjudicate readings, so a wrong frame is worse than no frame. */
+    const raw = url.searchParams.get('id');
+    const wanted = /^[0-9]{1,15}$/.test(raw ?? '') ? Number(raw) : NaN;
     let goTo = null;
     if (Number.isInteger(wanted) && wanted > 0) {
+      /* Both halves in one statement, and the EXISTS half is load-bearing:
+         before_n = 0 means "absent" AND "newest row", which are opposite
+         answers. */
       const at = await env.DB.prepare(
-        `SELECT COUNT(*) AS before_n FROM readings, (SELECT received_at AS t FROM readings WHERE id = ?1) AS w
-          WHERE received_at > w.t OR (received_at = w.t AND id > ?1)`).bind(wanted).first();
-      const exists = await env.DB.prepare('SELECT 1 AS ok FROM readings WHERE id = ?1').bind(wanted).first();
-      if (exists) {
+        `SELECT (SELECT COUNT(*) FROM readings, (SELECT received_at AS t FROM readings WHERE id = ?1) AS w
+                  WHERE received_at > w.t OR (received_at = w.t AND id > ?1)) AS before_n,
+                EXISTS(SELECT 1 FROM readings WHERE id = ?1) AS ok`).bind(wanted).first();
+      if (at.ok) {
         goTo = wanted;
         const onPage = Math.floor(at.before_n / limit) + 1;
         if (onPage !== page) {

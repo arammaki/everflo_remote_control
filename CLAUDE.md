@@ -433,9 +433,9 @@ registration is poor enough, and it is why the fix is a reference rather than
 a looser gate.
 
 `analyze()` now walks a list of references (`refList()`) instead of a pair, so
-a fourth costs one line. Selection is best registration wins, and the result
-carries `ref:'natt'|'dag'|'kväll'` — with one exception added in v1.10.12, see
-"When the best-registering reference refuses, ask the next" below. Cost is one registration search
+a fourth costs one line. Selection is by best registration, and the result
+carries `ref:'natt'|'dag'|'kväll'` — with one exception added in v1.10.12,
+see "When the best-registering reference refuses, ask the next" below. Cost is one registration search
 per reference; the flatfield, which dominates, is computed once and shared.
 
 Measured over 482 frames — the 23-frame night sweep and both upload corpora:
