@@ -146,7 +146,8 @@ const REF_PNG="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAAKACAAAAABho/S
    the stack, and the per-pixel median erases the ball exactly the way the
    night reference's sweep does. Everything geometric (CAL, bands, tilt,
    window) is shared with the night reference; only the lighting differs.
-   analyze() runs against both and keeps the one that registers best.
+   analyze() runs against every reference and keeps the best-registering
+   one that produces a reading.
 
    v2 of this image, same day as v1. The first build used morning frames
    only, and by 15:30 a standing artefact stood at y=312 in the difference —
@@ -350,14 +351,18 @@ function analyze(imgData, opts){
      reading and a refusal, and the losing reference had the answer.
 
      Each fallback still passes every gate on its own — judge() is the same
-     function the caller will run — so this loosens nothing. What it does
-     spend is the protection of being asked once: a frame that must be refused
-     now has to be refused by all three references instead of one. The 78
-     wrong-pose frames in test/negative-old-poses/ do not exercise that (the
-     winner IS the best-registering, so if it is under the reg gate the others
-     are too, and none leaks), and the occlusion and garbage cases that would
-     are not built yet. That is the known gap; see the Testing section of
-     CLAUDE.md.
+     function the caller will run — so no gate is loosened. What IS loosened is
+     the system: a frame that must be refused now has to be refused three times
+     instead of once, so the false-accept surface is three references wide.
+
+     That is measurable, and the 78 wrong-pose frames in
+     test/negative-old-poses/ measure it: all 78 enter this loop, none is
+     rescued, and the highest registration any non-top reference reaches is
+     0.664 against the 0.75 gate. (Two of the 78 have a top reference ABOVE
+     the reg gate, refused by ambiguity and spread, so for those the other two
+     references really are judged on all five gates.) What that set cannot
+     speak for is an occlusion or a garbage frame, which are not built yet —
+     see the Testing section of CLAUDE.md.
 
      Measured: 2026-08-22..09-05, 40 refusals -> 7; 09-05..09-11, 26 -> 9, and
      all 9 of those are one hour with a second lamp lit. No new refusals in
@@ -370,8 +375,11 @@ function analyze(imgData, opts){
     }
   }
   best.ref=bestName;
-  // Which reading came from a reference that did NOT register best is the
-  // first thing to look at when one sits a few hundredths off its neighbours.
+  /* Stored with the reading, not just computed: a value from a reference that
+     did NOT register best is the first thing to look at when one sits a few
+     hundredths off its neighbours, and that question gets asked months later
+     from the admin table rather than live. cleanQuality() in the admin Worker
+     whitelists both this and `ref` for exactly that. */
   best.fallback=fallback;
   return best;
 }

@@ -355,7 +355,12 @@ function chips(r){
     f('passning',r.reg.toFixed(2),r.reg>=T.reg)+
     f('skift',r.dx.toFixed(1)+'/'+r.dy.toFixed(1)+' px',Math.abs(r.dx)<=20&&Math.abs(r.dy)<=20)+
     f('lutning',(r.tilt*57.3).toFixed(1)+'°',true)+
-    f('utbredning',r.spread,r.spread<=T.spread);
+    f('utbredning',r.spread,r.spread<=T.spread)+
+    /* Not a gate — which lighting answered, and whether it had to be asked
+       second. A reading from a reference that did not register best is the
+       first thing to look at when one sits a few hundredths off its
+       neighbours, so it belongs beside the numbers rather than nowhere. */
+    f('referens',r.ref+(r.fallback?' (reserv)':''),!r.fallback);
 }
 /* One shape for both the table cell and the row written to the database. */
 function verdict(r,b){
@@ -400,7 +405,8 @@ async function flush(){
 function remember(tr,r,v){
   queue.push({id:Number(tr.dataset.id), flow:v.flow, state:v.state, engine:MOTOR,
     quality:{reg:+r.reg.toFixed(3), peak:+r.peak.toFixed(3), margin:+r.margin.toFixed(1),
-             dx:+r.dx.toFixed(1), dy:+r.dy.toFixed(1), spread:r.spread}});
+             dx:+r.dx.toFixed(1), dy:+r.dy.toFixed(1), spread:r.spread,
+             ref:r.ref, fallback:!!r.fallback}});
   if(queue.length>=25) flush();
 }
 /* Brings a row into view WITHOUT scrollIntoView, which scrolls every
@@ -605,7 +611,16 @@ document.getElementById('all').onclick=()=>sweep(false);
 document.getElementById('allt').onclick=()=>sweep(true);
 addEventListener('beforeunload',()=>{ if(queue.length) navigator.sendBeacon('/analys',
   new Blob([JSON.stringify(queue)],{type:'application/json'})); });
-if(rows.length) select(0);
+/* ?id=N landed us on the right page; select that row and then drop the
+   parameter, so it acts once and never again — a reload or a paging click
+   from here is an ordinary view of this page. */
+const goTo=${JSON.stringify(nav.goTo ?? null)};
+const wantIx=goTo==null ? -1 : rows.findIndex(tr=>Number(tr.dataset.id)===goTo);
+if(goTo!=null){
+  try{ const u=new URL(location.href); u.searchParams.delete('id');
+       history.replaceState(null,'',u.pathname+u.search+u.hash); }catch(e){}
+}
+if(rows.length) select(wantIx>=0 ? wantIx : 0, wantIx>=0 ? {scroll:true} : undefined);
 </script>
 </body></html>`;
 }
@@ -616,6 +631,12 @@ if(rows.length) select(0);
    fails exactly when it is needed. Six known numbers are bounded by
    construction and always parse. */
 const QUALITY = { reg: 3, peak: 3, margin: 1, dx: 1, dy: 1, spread: 0 };
+/* Which lighting answered. Not a number, so it is whitelisted by value rather
+   than bounded by construction — a free string here would be the one field in
+   this row that could carry anything. `fallback` says the best-registering
+   reference REFUSED and this came from the next one (v1.10.12), which is what
+   explains a reading sitting a few hundredths off its span months later. */
+const REFS = new Set(['natt', 'dag', 'kväll']);
 function cleanQuality(q) {
   if (!q || typeof q !== 'object') return null;
   const out = {};
@@ -623,6 +644,8 @@ function cleanQuality(q) {
     const v = q[k];
     if (Number.isFinite(v) && Math.abs(v) < 1e6) out[k] = Number(v.toFixed(dp));
   }
+  if (REFS.has(q.ref)) out.ref = q.ref;
+  if (typeof q.fallback === 'boolean') out.fallback = q.fallback;
   return Object.keys(out).length ? JSON.stringify(out) : null;
 }
 
@@ -725,7 +748,37 @@ export default {
        otherwise render an empty table with both links dead — a dead end with
        no way back — and a row range like "19601-1780 av 1780". */
     const pages = Math.max(1, Math.ceil(total / limit));
-    const page = Math.min(pages, Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1));
+    let page = Math.min(pages, Math.max(1, parseInt(url.searchParams.get('page'), 10) || 1));
+
+    /* ?id=N opens the table on that frame, wherever it is. The list is paged,
+       so the id alone is not enough — the row has to be FOUND first, and a
+       frame from a week ago is several pages back. Its rank is counted with
+       the same ordering the table uses, including the id tie-break, or the
+       arithmetic lands a page off whenever two frames share a timestamp.
+
+       It is a one-shot: the client strips the parameter with replaceState as
+       soon as it has jumped, so reloading, paging or bookmarking does not drag
+       the old frame back. An id that does not exist is ignored rather than
+       reported — it is a convenience for pasting an id from a report, not an
+       API, and a dead-end error page would be worse than page 1. */
+    const wanted = parseInt(url.searchParams.get('id'), 10);
+    let goTo = null;
+    if (Number.isInteger(wanted) && wanted > 0) {
+      const at = await env.DB.prepare(
+        `SELECT COUNT(*) AS before_n FROM readings, (SELECT received_at AS t FROM readings WHERE id = ?1) AS w
+          WHERE received_at > w.t OR (received_at = w.t AND id > ?1)`).bind(wanted).first();
+      const exists = await env.DB.prepare('SELECT 1 AS ok FROM readings WHERE id = ?1').bind(wanted).first();
+      if (exists) {
+        goTo = wanted;
+        const onPage = Math.floor(at.before_n / limit) + 1;
+        if (onPage !== page) {
+          const to = new URL(url);
+          to.searchParams.set('page', String(onPage));
+          to.searchParams.set('id', String(wanted));
+          return Response.redirect(to.toString(), 302);
+        }
+      }
+    }
     const latest = await env.DB.prepare(
       'SELECT received_at FROM readings ORDER BY received_at DESC LIMIT 1').first();
 
@@ -739,7 +792,7 @@ export default {
          LEFT JOIN analyses f ON f.reading_id = r.id AND f.engine <> ?1
               AND f.analysed_at = (SELECT MIN(analysed_at) FROM analyses
                                     WHERE reading_id = r.id AND engine <> ?1)
-        ORDER BY r.received_at DESC LIMIT ?2 OFFSET ?3`
+        ORDER BY r.received_at DESC, r.id DESC LIMIT ?2 OFFSET ?3`
     ).bind(ENGINE_VERSION, limit, (page - 1) * limit).all();
 
     /* When each firmware version was first and last seen. This is the table
@@ -756,7 +809,7 @@ export default {
         ORDER BY first_seen DESC`
     ).all();
 
-    return new Response(renderPage(results, Date.now(), epochs, latest, { page, limit, total, pages }), {
+    return new Response(renderPage(results, Date.now(), epochs, latest, { page, limit, total, pages, goTo }), {
       headers: { 'content-type': 'text/html; charset=utf-8' },
     });
   },

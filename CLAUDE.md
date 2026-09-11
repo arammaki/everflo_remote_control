@@ -433,8 +433,9 @@ registration is poor enough, and it is why the fix is a reference rather than
 a looser gate.
 
 `analyze()` now walks a list of references (`refList()`) instead of a pair, so
-a fourth costs one line. Selection is unchanged: best registration wins, and
-the result carries `ref:'natt'|'dag'|'kväll'`. Cost is one registration search
+a fourth costs one line. Selection is best registration wins, and the result
+carries `ref:'natt'|'dag'|'kväll'` — with one exception added in v1.10.12, see
+"When the best-registering reference refuses, ask the next" below. Cost is one registration search
 per reference; the flatfield, which dominates, is computed once and shared.
 
 Measured over 482 frames — the 23-frame night sweep and both upload corpora:
@@ -471,13 +472,19 @@ verified on 1013 frames, largest movement 0.00005 L/min, which is rounding.
 The night sweep is unchanged to the last digit and night still wins 23/23.
 
 **What it spends is the protection of being asked once.** A frame that must be
-refused now has to be refused by all three references instead of one. The 78
-wrong-pose frames in `test/negative-old-poses/` do NOT exercise that — the
-winner is by definition the best-registering, so if it is under the reg gate
-the others are too, and none of the 78 leaks with or without this. The
-occlusion, garbage and rotation cases would exercise it, and they are not
-built yet. That is the known gap. `--expect-rejected` takes unlabelled images
-precisely so they can be added.
+refused now has to be refused by all three references instead of one, so the
+false-accept surface is three references wide rather than one.
+
+The 78 wrong-pose frames in `test/negative-old-poses/` DO exercise that, which
+is worth stating precisely because an earlier draft of this section claimed the
+opposite. Instrumented 2026-09-11: all 78 enter the fallback loop, none is
+rescued, and the highest registration any non-top reference reaches is **0.664
+against the 0.75 gate** — 0.086 of headroom. Two of the 78 have a top
+reference above the reg gate (refused by ambiguity and by spread, as the
+per-gate table above says), so for those the other two references are judged
+on all five gates and still refuse. What the set cannot speak for is an
+occlusion, a garbage frame or a wrong rotation; those are not built yet, and
+`--expect-rejected` takes unlabelled images precisely so they can be.
 
 Measured: 2026-08-22..09-05, 40 refusals of 1431 -> 7; 09-05..09-11, 26 of
 1053 -> 9. No new refusals in either. The 9 that remain are one hour on
