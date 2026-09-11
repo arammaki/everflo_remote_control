@@ -700,6 +700,22 @@ contrast down to 0.13-0.17. Both make thin margins in poor light; both fail
 as refusals. The dusk handover measured 2026-08-23: day reference carries to
 19:52, night takes over at 20:07, no gap.
 
+**A second lamp invalidates the lighting, and the archive keeps the evidence.**
+On 2026-09-07 between 16:51 and 17:53 local, nine uploaded frames are refused
+with every reference at once: registration falls from 0.95-0.98 to 0.53-0.81
+for night, day AND evening, then recovers completely by 18:04. Nothing else in
+1053 frames over that week comes close — the best reference clears 0.85 on all
+but those nine. The cause was the old floor lamp that used to light the meter
+before the WS2812 went in: someone switched it on for an hour. The lamp has
+since been removed, so this does not recur, and no detection for it was built.
+
+Worth keeping for two reasons. It is what a genuinely invalidated lighting
+looks like in the log — not a wrong number, not one reference disagreeing with
+another, but ALL of them refusing together while the readings they would give
+still agree with each other to 0.01. And brightness is not a signature: those
+frames average 128-143 while frames that read fine either side of them average
+108-137. The gate that caught it was registration, on the scale ticks.
+
 **A span can also end without a press: the machine gets switched off.** She
 turns the concentrator off when she goes out, so the float drops to its stop
 and comes back up when she returns — 4.65, then 0.26, then 3.50 across two
