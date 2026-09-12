@@ -132,5 +132,12 @@ sql(`INSERT INTO firmware (version, r2_key, md5, size, uploaded_at, armed_at)
        size = excluded.size, uploaded_at = excluded.uploaded_at`);
 
 console.log(`Published ${version}, md5 ${md5}. NOT armed.`);
-console.log(`Flash it once by cable or ArduinoOTA and watch it boot, then:`);
+/* Said this way since 2026-09-12. It used to say "flash it once and watch it
+   boot, then arm", which read literally makes the cloud path pointless: next
+   to the unit you do not need it, away from it you can never satisfy it. The
+   condition that matters is whether you could reach the unit tonight if the
+   build does not boot — because that is the one failure this cannot undo. */
+console.log(`Arm it only while you could drive over and fix it: a build that`);
+console.log(`boots but misbehaves you can undo by arming the previous version,`);
+console.log(`but one that does not boot at all needs a USB cable on site.`);
 console.log(`  node tools/publish_firmware.mjs arm ${version}`);

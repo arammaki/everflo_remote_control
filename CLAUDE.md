@@ -952,8 +952,32 @@ the easy thing. `firmware.armed_at` carries this, and a partial unique index
 database rather than of the tool that writes it.
 
 `arm` **is a production action**: the unit installs within 15 minutes and
-reboots. Only ever arm a build that has already been seen to boot over cable or
-ArduinoOTA — there is no rollback, and recovery is a trip with a USB cable.
+reboots.
+
+**The rule is: do not arm unless you are close enough to drive over and fix it**
+(the operator's own words, 2026-09-12). Not "only arm a build you have seen
+boot" — that is what this said until then, and read literally it makes the
+whole cloud path pointless: standing next to the unit you do not need it, and
+away from it you can never satisfy the condition. Arming a fresh build forward
+is a leap no rule removes without a second device to try it on first. If you
+have a spare XIAO on the bench, that is the order that buys something: flash
+the bench, watch it boot, then arm for hers.
+
+**What the old wording was reaching for is the rollback direction, and there
+it is exactly right.** There is no bootloader rollback, so the only way out of
+a bad build from a distance is to arm a DIFFERENT one — and that one has to be
+a build you know boots. Every previous version stays in R2 for this. The
+asymmetry to have clear before arming:
+
+- **Boots but behaves wrong** — the unit reports in, `armed_at` clears, you arm
+  the previous version and it is back within 15 minutes. No trip.
+- **Does not boot at all** — it never reports, the bad build stays armed
+  (correctly — it never landed), and recovery is a trip with a USB cable.
+
+So the question before arming is not "has this image booted somewhere" but
+"if it lands in the second case tonight, can I get there". What a bricked unit
+costs is the remote control, not the oxygen: the driver idles disabled and the
+knob turns by hand.
 
 The loop closes on the device's own report: the ingest handler clears
 `armed_at` when a reading arrives carrying that version. So "armed" means
