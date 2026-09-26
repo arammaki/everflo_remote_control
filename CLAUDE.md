@@ -671,7 +671,8 @@ version, and what to watch:
   y and the tick against the straight-on frames only, leaving out the two it
   then judges (6.75 px), and fit the
   quadratic through the ticks 1..9 (within 0.09 of each). Frames read at an
-  angle are named `<n>_approx`: asserted to read, not to a number.
+  angle are named `<n>_approx`: held to label − 1 .. label + TOLERANCE, never
+  fitted to.
   calibrate.mjs does not do the tick fit yet, and warns rather than let its
   label-fitted snippet be pasted over this preset.
 - **Below 1 L/min there is no number**, only "Under 1": the scale is

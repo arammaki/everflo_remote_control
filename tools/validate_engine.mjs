@@ -193,7 +193,9 @@ if (expectRejected && !E.isCalibrated(presetId)) {
      bild_7.5_approxL_... 'reading' a label known to be approximate — read at an
                                     angle (Platinum above 5, where the motor mount
                                     blocks the front view) or below the calibrated
-                                    range. Must read; no number is asserted.
+                                    range. Must read, within label - 1 ..
+                                    label + TOLERANCE (parallax reads high);
+                                    which state it lands in is not asserted.
      bild_over_maxL_...  'max'      deliberately past the end of the printed
                                     scale: the Max state, NOT a number. A
                                     number here means the y<Y_MAX_STATE guard

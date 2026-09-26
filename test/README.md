@@ -72,7 +72,8 @@ and 5.5 frames were retaken a few minutes later and renamed into sequence.
 Above about 5 L/min the motor mount blocks the front view, so those labels
 were read from the side — parallax, growing toward the top. They are named
 `<n>_approx` (as are 0.5 and 0.75, below the calibrated range) and are
-asserted only to produce a reading. The curve comes from the printed scale,
+held only to a loose bound — between the label
+minus 1 and the label plus the tolerance — and never fitted to. The curve comes from the printed scale,
 not from these labels: see the CAL comment in the preset.
 
 Its `TOLERANCE` is 0.3 L/min, not the default 0.2, and the reason is two

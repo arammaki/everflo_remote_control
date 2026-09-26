@@ -134,7 +134,8 @@ function parseName(file) {
   if (/^(\d+(\.\d+)?_)?min$/i.test(s)) return { name: s, expect: 'rest', value: null };
   if (/^max$/i.test(s)) return { name: s, expect: 'reading', value: null };
   // Read by eye at an angle, or below the calibrated range: the number is
-  // approximate, so the frame is asserted only to produce a reading.
+  // approximate, so it is never fitted to. validate_engine.mjs holds such a
+  // frame to label - 1 .. label + TOLERANCE; here it is reported, not used.
   if (/^\d+(\.\d+)?_approx$/i.test(s)) return { name: s, expect: 'reading', value: null };
   const mx = s.match(/^(\d+(?:\.\d+)?)_?max$/i);
   if (mx) return { name: s, expect: 'value', value: Number(mx[1]) };

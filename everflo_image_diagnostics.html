@@ -344,8 +344,8 @@ const PRESETS={
        straight on (1..5; above ~5 the motor mount blocks the front view and
        the labels were read from the side) — WITHOUT 1.5 and 2.5, so the
        offset does not lean on the two labels it is then used to judge: the
-       other straight-on frames agree with the scale within 0.03. This quadratic lies within 0.09 of
-       every tick from 1 to 9.
+       other straight-on frames agree with the scale within 0.03. This quadratic lies within 0.1 of
+       every tick from 1 to 9 (worst: tick 7, -0.092).
 
        Why the scale and not the labels: parallax. The label-fitted curve read
        up to 0.4 HIGH above 7 (9.30 where the ticks say 8.9) — the pattern a
@@ -373,7 +373,7 @@ const PRESETS={
        2026-08-17. The resting ball reads -1.08. */
     LOW_FLOW:0.8, LOW_LABEL:'Under 1',
     LOW_REASON:"Flödet är under 1 L/min — maskinen larmar för lågt flöde, eller så är den avstängd.",
-    MAX_REASON:"Bollen står ovanför den röda linjen — över 9 L/min sjunker syrehalten.",
+    MAX_REASON:"Bollen står ovanför den röda linjen — maskinen ska inte ställas högre, syrehalten sjunker.",
     /* Her page shows the meter alone: x 250..390, y 95..495, about 1.6x the
        size the whole frame would give it. */
     VIEW_X:250, VIEW_W:140, VIEW_Y:95, VIEW_H:400,
