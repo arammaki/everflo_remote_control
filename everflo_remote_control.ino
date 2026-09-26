@@ -68,7 +68,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.11.0"
+#define FW_VERSION "1.11.1"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -934,6 +934,17 @@ esp_err_t h_ledtest(httpd_req_t *req) {
   httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
   return httpd_resp_send(req, "{\"ok\":true}", HTTPD_RESP_USE_STRLEN);
 }
+/* Ask the cloud for an armed build now rather than within 15 minutes — see
+   fwCheckRequested. Answers at once; the check runs from loop(). */
+volatile bool fwCheckRequested = false;   // read and cleared in loop()
+esp_err_t h_fwcheck(httpd_req_t *req) {
+  if (!pinOK(req)) return httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "pin");
+  fwCheckRequested = true;
+  logLine("Firmware check requested via /api/fw-check");
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+  return httpd_resp_send(req, "{\"ok\":true}", HTTPD_RESP_USE_STRLEN);
+}
 /* The light, adjustable while you watch what it does to the reading.
    GET returns the state; ?on=0|1, ?level=0..255 and ?rgb=RRGGBB set it.
 
@@ -1059,7 +1070,7 @@ esp_err_t h_stream(httpd_req_t *req) {
 void startWebServer() {
   httpd_config_t cfg = HTTPD_DEFAULT_CONFIG();
   cfg.server_port = 80;
-  cfg.max_uri_handlers = 16;   // 13 registered; registration fails silently
+  cfg.max_uri_handlers = 16;   // 14 registered; registration fails silently
                                // above this, so keep headroom over the count
   // Several people may watch at once — /bild is a plain one-shot request
   // with no viewer kickout, so they all get frames. The default is to
@@ -1085,6 +1096,7 @@ void startWebServer() {
     u = {.uri="/bild",          .method=HTTP_GET, .handler=h_snapshot,.user_ctx=NULL}; httpd_register_uri_handler(ctrl_httpd,&u);
     u = {.uri="/api/ui-pulse",   .method=HTTP_GET, .handler=h_uipulse, .user_ctx=NULL}; httpd_register_uri_handler(ctrl_httpd,&u);
     u = {.uri="/api/led-test",  .method=HTTP_GET, .handler=h_ledtest, .user_ctx=NULL}; httpd_register_uri_handler(ctrl_httpd,&u);
+    u = {.uri="/api/fw-check",  .method=HTTP_GET, .handler=h_fwcheck, .user_ctx=NULL}; httpd_register_uri_handler(ctrl_httpd,&u);
     u = {.uri="/api/light",     .method=HTTP_GET, .handler=h_light,   .user_ctx=NULL}; httpd_register_uri_handler(ctrl_httpd,&u);
   }
   if (cameraOK) {
@@ -1192,6 +1204,14 @@ unsigned long lastUpload = 0;
 // would only spend her bandwidth on a question that is almost always "no".
 #define FW_CHECK_INTERVAL_MS 900000UL
 unsigned long lastFwCheck = 0;
+/* Set by /api/fw-check: ask now instead of at the next quarter. It only moves
+   the QUESTION forward — what gets installed is still only a build a person
+   armed, so this cannot start an update by itself. Not honoured within
+   FW_CHECK_MIN_GAP_MS of the last ask: each one blocks loop() for a TLS
+   request, and a page hammering the endpoint must not keep it blocked. The
+   boot-loop guard is untouched — that is lastFwCheck seeded at boot, and the
+   gap below applies from it as well. */
+#define FW_CHECK_MIN_GAP_MS 30000UL
 
 /* Blocks for a few seconds. Same reasoning as pingHealth(): the web server
    has its own task, so only the heartbeat pauses. */
@@ -1667,7 +1687,9 @@ void loop() {
   // offered, and the offer only exists because a person made it. Deliberately
   // after the upload branch: a reading is what she depends on, an update is
   // convenience for me, and the reading goes first when both are due.
-  if (online && millis() - lastFwCheck > FW_CHECK_INTERVAL_MS) {
+  if (online && (millis() - lastFwCheck > FW_CHECK_INTERVAL_MS ||
+                 (fwCheckRequested && millis() - lastFwCheck > FW_CHECK_MIN_GAP_MS))) {
+    fwCheckRequested = false;
     lastFwCheck = millis();
     checkFirmware();
   }
