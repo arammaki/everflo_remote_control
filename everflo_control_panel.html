@@ -399,20 +399,31 @@ const PRESETS={
        a tilt that wanders there is the first suspect. Narrow either way —
        re-measure, never nudge. */
     BASE_TILT:0.03,
-    /* Mean 0.099, worst 0.296 L/min against the labels. Worse than EverFlo's
-       0.030 and mostly the labels: 2.5 sits 5 px from 3.0 where the marks are
-       ~11 px apart, i.e. the knob was set by eye between marks. */
+    /* Mean 0.099, worst 0.296 L/min against the labels. Checked against the
+       PRINTED SCALE (2026-09-27): the ticks sit at y 170 (9), 192, 215, 235,
+       256, 277, 298, 321, 346 (1), 368 (0.5), 391 (0 — where the resting ball
+       sits), and the engine's y reads 6.75 px below the tick. From 1 to 6
+       this curve and the scale agree within ~0.05, so the 1.5 and 2.5
+       residuals are the LABELS (the scale says 1.72 and 2.74 too). Above ~7
+       they part: this curve reads up to 0.4 higher than the scale (9.30 where
+       the ticks say 8.9), following labels set by eye at the dim top of the
+       tube. A curve fitted to ticks 1..9 lies within 0.09 of every tick; it is
+       the candidate if high flows ever matter. Below 1 the scale is stretched
+       and no quadratic follows it. */
     CAL:[4.58895341e-05, -0.0722905849, 20.8001828],
     Y_CAL_MIN:176, Y_CAL_MAX:372,
     /* The ball ON the red line (the sweep's `max` frame) sits at y=171.0 and
        reads 9.78 as a number. Above the line is Max — the machine's own label
        says not to go past it — so the boundary is 5 px above. */
     Y_MAX_STATE:166,
-    /* The bottom state, as on the EverFlo: the ball on its stop or the
-       machine off. The resting ball reads -0.75 here. The machine alarms
-       below 1.0 by itself, so this is not where anything clinical is decided. */
-    LOW_FLOW:0.3, LOW_LABEL:'Under 0,3',
-    LOW_REASON:"Bollen ligger vid eller nära botten — flödet är under 0,3 L/min eller avstängt.",
+    /* The bottom state: the ball on its stop or the machine off. The resting
+       ball reads -0.74; the 0.5 L/min frame reads 0.26, so EverFlo's 0.3 would
+       have shown that flow as "Under 0,3" — the boundary sits under it
+       instead. The machine alarms below 1.0 by itself, so nothing clinical is
+       decided here; "Under 1" tied to that alarm is the alternative on the
+       table (2026-09-27). */
+    LOW_FLOW:0.2, LOW_LABEL:'Under 0,2',
+    LOW_REASON:"Bollen ligger vid eller nära botten — flödet är under 0,2 L/min eller avstängt.",
     MAX_REASON:"Bollen står ovanför den röda linjen — över 9 L/min sjunker syrehalten.",
     /* Her page shows the meter alone: x 250..390, y 95..495, about 1.6x the
        size the whole frame would give it. */

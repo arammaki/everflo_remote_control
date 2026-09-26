@@ -104,16 +104,17 @@
                                   // were built under it — see the light section
 #elif CONCENTRATOR == CONC_PLATINUM9
   #define PRESET_ID       "platinum9"
-  /* Chosen on the unit 2026-09-26, "for now": a knob of another pitch than
-     the EverFlo's, where 39/90/160 turned too far. The same cup fits, and
-     the direction carried over from the EverFlo unchanged. */
+  /* Chosen on the unit 2026-09-26, "for now": the smallest about the
+     EverFlo's, the two larger ones shorter (60/120 against 90/160) on a knob
+     where 1 L/min is ~25 image rows. The same cup fits, and the direction
+     carried over from the EverFlo unchanged. */
   #define DEG_PER_PRESS   40
   #define STEP_MEDIUM     60
   #define STEP_LARGE      120
   #define DIRECTION       -1
-  /* Also not settled: choose it on the panel's slider with the camera on the
-     Platinum, then write it here BEFORE the sweep. The sweep binds the preset
-     to this light, exactly as it bound EverFlo's to 50. */
+  /* The level the 2026-09-26 sweep and its reference were taken at, bound to
+     the preset exactly as EverFlo's references are bound to 50. Change it and
+     the Platinum needs a new sweep. */
   #define LED_LEVEL       50
 #else
   #error "CONCENTRATOR must be CONC_EVERFLO or CONC_PLATINUM9"
@@ -627,8 +628,8 @@ static const char PAGE[] = R"HTML(
     letterboxed back down by object-fit, wasting most of the screen on black. */
  /* min-width is for the stale banner, not the picture. #stale is absolutely
     positioned left:0/right:0 INSIDE this wrapper, and after the crop the
-    wrapper shrink-wraps a 225x640 canvas — on a phone that is about 146 px
-    across, which would break the one warning on this page that has to be read
+    wrapper shrink-wraps a narrow canvas (the preset's crop: 225x640 on the
+    EverFlo, 140x400 on the Platinum) — on a phone about 150 px across, which would break the one warning on this page that has to be read
     at a glance into eight characters a line. The canvas is centred and the
     spare width takes the PAGE's background, not black — the picture then sits
     on the page rather than in a letterbox. Keep this colour and body's the

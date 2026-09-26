@@ -662,6 +662,20 @@ version, and what to watch:
 - Her page crops to the meter (`VIEW_*`, vertical too since 1.11.2), about
   1.6x the size the whole frame gave.
 - Buttons 40/60/120 degrees, chosen on the unit "for now".
+- **The printed scale is a second truth, and it was checked** (2026-09-27).
+  The ticks are found in the anchor band of the reference; the engine's y
+  reads 6.75 px below the tick. From 1 to 6 L/min the curve and the scale
+  agree within ~0.05 — the 1.5 and 2.5 frames' residuals are the labels. Above
+  ~7 the label-fitted curve reads up to 0.4 higher than the scale. The bottom
+  of the scale is stretched (0.5 L/min per ~22 rows under 1). See the CAL
+  comment for the numbers and the tick-fitted alternative.
+- **Open risks, measured nowhere yet:** the engine's pixel constants (the
+  60-row ambiguity exclusion, spread 75, the ±35 centroid window, 20 px
+  shift) were set for EverFlo's ~50 rows per L/min; on the Platinum's ~25
+  the exclusion spans ~2.4 L/min, so a rival that close is invisible to the
+  ambiguity gate. The `max` frame asserts only "a number", and no frame
+  exercises Max above the red line. Every build carries all four references
+  (~560 kB of base64) — fine for now, gateable at build time if it bites.
 
 ### Engine invariants
 Grayscale -> flatfield (3-pass box blur ~ sigma 41) -> horizontal
