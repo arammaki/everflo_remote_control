@@ -100,6 +100,8 @@
   #define STEP_LARGE      160     // her +++ and −−− buttons
   #define DIRECTION       -1      // 1 or -1 when + turns the wrong way
                                   // (-1 since v1.6.2: verified on site)
+  #define LED_LEVEL       50      // ~20% of full. All three EverFlo references
+                                  // were built under it — see the light section
 #elif CONCENTRATOR == CONC_PLATINUM9
   #define PRESET_ID       "platinum9"
   /* NOT MEASURED — copied from the EverFlo so a first build has sane values.
@@ -111,6 +113,10 @@
   #define STEP_MEDIUM     90
   #define STEP_LARGE      160
   #define DIRECTION       -1
+  /* Also not settled: choose it on the panel's slider with the camera on the
+     Platinum, then write it here BEFORE the sweep. The sweep binds the preset
+     to this light, exactly as it bound EverFlo's to 50. */
+  #define LED_LEVEL       50
 #else
   #error "CONCENTRATOR must be CONC_EVERFLO or CONC_PLATINUM9"
 #endif
@@ -122,10 +128,10 @@
                                   // so a bad request cannot spin the knob, not to
                                   // second-guess a deliberate one. Raised from 90
                                   // for calibration work 2026-08-16.
-#if DEG_PER_PRESS < STEP_DEG_MIN || STEP_LARGE > STEP_DEG_MAX || STEP_MEDIUM > STEP_LARGE
+#if DEG_PER_PRESS < STEP_DEG_MIN || DEG_PER_PRESS > STEP_MEDIUM || STEP_MEDIUM > STEP_LARGE || STEP_LARGE > STEP_DEG_MAX
   // A button whose step the clamp silently changes would turn a different
   // amount than its preset says, with nothing on her page to show it.
-  #error "Preset step sizes must satisfy STEP_DEG_MIN <= DEG_PER_PRESS, STEP_MEDIUM <= STEP_LARGE <= STEP_DEG_MAX"
+  #error "Preset step sizes must satisfy STEP_DEG_MIN <= DEG_PER_PRESS <= STEP_MEDIUM <= STEP_LARGE <= STEP_DEG_MAX"
 #endif
 #define MICROSTEPS      8         // TMC2209 standalone: MS1=MS2=GND => 1/8
 #define STEP_PAUSE_US   1800      // µs between microsteps at cruise (lower = faster).
@@ -178,8 +184,9 @@
    identically anyway. Neutral white, so R=G=B and the colour order cannot
    show. 50 was picked on the rig on 2026-08-22, replacing a first guess of
    153; whatever number ends up here is the light the calibration sweep must
-   be taken under, because the sweep is what binds the two together. */
-#define LED_LEVEL       50        // ~20% of full
+   be taken under, because the sweep is what binds the two together.
+   That makes it per machine: LED_LEVEL is defined in the CONCENTRATOR block,
+   beside the preset whose references were built under it. */
 
 /* 1 = simply lit, boot to power-off. This is the default, and the reason is
    the detector rather than convenience.
@@ -677,10 +684,14 @@ const PIN='%PIN%'; const q = PIN ? ('?pin='+PIN) : '';
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{willReadFrequently:true});
 let lastFrameAt=Date.now(), lastAnalysis=0, refReady=false;
 // The machine this firmware was built for. Compiled in, never chosen here.
-try{ usePreset('%PRESET%'); }catch(e){}
-loadRef().then(()=>{refReady=true})
+// Guarded, like everything below that touches the engine: if /motor.js did not
+// load, the picture and the buttons must still work.
+let presetError='';
+try{ usePreset('%PRESET%'); }catch(e){ if(typeof usePreset==='function') presetError='Avläsningen är felinställd i den här versionen. Läs av bilden.'; }
+(typeof loadRef==='function' ? loadRef() : Promise.reject(new Error('no engine')))
+  .then(()=>{refReady=true})
   .catch(()=>{ show('Ingen avläsning','','none');
-    document.getElementById('msg').textContent=
+    document.getElementById('msg').textContent=presetError ||
       'Referensbilden kunde inte läsas in. Bilden visas, men inget värde kan beräknas.'; });
 
 // Same transform the control panel uses; the calibration is bound to it.
@@ -712,7 +723,9 @@ function nextFrame(){ const i=new Image(); i.onload=()=>{ frame(i); setTimeout(n
    this close leaves little margin if the camera slides sideways, and that is
    the right trade: past about 20 px the engine refuses the reading anyway, and
    the control panel still shows the full frame for working out why. */
-const CROP_X=VIEW_X??0, CROP_W=VIEW_W??480;
+// No ?? here: this page must parse on older Safari (before 13.4) too.
+const CROP_X=(typeof VIEW_X!=='undefined' && VIEW_X!=null) ? VIEW_X : 0;
+const CROP_W=(typeof VIEW_W!=='undefined' && VIEW_W!=null) ? VIEW_W : 480;
 cv.width=CROP_W;
 function frame(img){
   lastFrameAt=Date.now();
@@ -782,9 +795,12 @@ esp_err_t sendJson(httpd_req_t *req, bool ok, int applied) {
   char b[128];
   // `steg` is what the firmware actually turned, after its own clamping, so a
   // caller asking for 180 can see it got 180 — or did not. `preset` is the
-  // machine this build was made for; the control panel reads the meter with it.
-  snprintf(b, sizeof(b), "{\"ok\":%s,\"lage\":%d,\"steg\":%d,\"preset\":\"" PRESET_ID "\"}",
-           ok ? "true" : "false", position, applied);
+  // machine this build was made for; the control panel reads the meter with it,
+  // and `buttons` are her three button sizes for that machine, which the panel
+  // uses for its own buttons rather than EverFlo's 39/90/160.
+  snprintf(b, sizeof(b), "{\"ok\":%s,\"lage\":%d,\"steg\":%d,\"preset\":\"" PRESET_ID "\","
+           "\"buttons\":[%d,%d,%d]}",
+           ok ? "true" : "false", position, applied, DEG_PER_PRESS, STEP_MEDIUM, STEP_LARGE);
   httpd_resp_set_type(req, "application/json");
   // CORS on every JSON API, not just /api/steg. The control panel runs from
   // a different origin and today fires the motor calls no-cors, which makes

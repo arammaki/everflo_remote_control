@@ -4,7 +4,7 @@
    it so it actually will.
 
        node tools/publish_firmware.mjs publish <build.bin> <version>
-       node tools/publish_firmware.mjs arm     <version>
+       node tools/publish_firmware.mjs arm     <version> [--switch-machine]
        node tools/publish_firmware.mjs disarm
        node tools/publish_firmware.mjs status
 
@@ -23,6 +23,13 @@
    that does not boot is fixed over USB, at her home. Before arming, flash the
    same .bin over the cable or over ArduinoOTA at least once and watch it come
    up. This tool is for the second unit-visit you avoid, not the first.
+
+   Every build is for one concentrator (CONCENTRATOR in the sketch). `arm`
+   compares the build's machine with the one the unit last reported and
+   refuses a mismatch unless --switch-machine is given: moving the unit to
+   another machine over the air is legitimate — switching back to the EverFlo
+   is the whole point of keeping its preset — but it must be the act you meant,
+   not a rollback that happened to pick the other machine's build.
 
    The version MUST equal the FW_VERSION compiled into the .bin, because that
    is what the device compares against and what the disarm-on-report matches.
@@ -54,6 +61,17 @@ function sql(command) {
     but quoting them properly costs one line and removes the question. */
 const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
 
+/* The machine a stored reading was taken of — the admin page's presetOf().
+   NULL is EverFlo only for firmware from before presets (1.10.13). */
+function presetOf(r) {
+  if (r.preset != null) return r.preset;
+  if (r.fw == null) return 'everflo';
+  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(r.fw);
+  if (!m) return '?';
+  const [a, b, c] = m.slice(1).map(Number);
+  return (a !== 1 ? a < 1 : b !== 10 ? b < 10 : c < 13) ? 'everflo' : '?';
+}
+
 const [verb, ...rest] = process.argv.slice(2);
 
 if (verb === 'status') {
@@ -76,17 +94,28 @@ if (verb === 'disarm') {
 }
 
 if (verb === 'arm') {
-  const version = rest[0];
-  if (!version) { console.error('Usage: arm <version>'); process.exit(2); }
+  const switching = rest.includes('--switch-machine');
+  const version = rest.filter((a) => a !== '--switch-machine')[0];
+  if (!version || rest.some((a) => a.startsWith('--') && a !== '--switch-machine')) {
+    console.error('Usage: arm <version> [--switch-machine]'); process.exit(2);
+  }
   const row = sql(`SELECT version, preset FROM firmware WHERE version = ${q(version)}`)[0];
   if (!row) { console.error(`Version ${version} has not been published.`); process.exit(2); }
+  // Builds published before presets recorded none, and every one was EverFlo.
+  const buildFor = row.preset ?? 'everflo';
+  const last = sql('SELECT preset, fw FROM readings ORDER BY received_at DESC LIMIT 1')[0];
+  const unitIs = last ? presetOf(last) : '?';
+  console.log(`Build ${version} is for ${buildFor}; the unit last reported ${unitIs}.`);
+  if (buildFor !== unitIs && !switching) {
+    console.error('Refusing: that would move the unit to another machine\'s calibration and ' +
+                  'button sizes. If that is what you mean, add --switch-machine.');
+    process.exit(2);
+  }
   // Only one row may be armed — the schema enforces it, so clear first rather
   // than collide with the unique index.
   sql('UPDATE firmware SET armed_at = NULL WHERE armed_at IS NOT NULL');
   sql(`UPDATE firmware SET armed_at = ${q(new Date().toISOString())} WHERE version = ${q(version)}`);
-  // Which machine it was built for, said at the moment it matters: an EverFlo
-  // build on a Platinum reads nothing and turns the knob by EverFlo's steps.
-  console.log(`Armed ${version}, built for ${row.preset ?? 'an unrecorded machine (published before presets)'}.`);
+  console.log(`Armed ${version}, built for ${buildFor}.`);
   console.log('The unit will pick it up within 15 minutes and reboot into it.');
   console.log('It disarms itself once the new firmware reports in. If it never');
   console.log('does, the update did not land and recovery is over USB.');
@@ -128,6 +157,15 @@ if (!preset) {
   process.exit(2);
 }
 console.log(`Built for: ${preset}`);
+/* One version names one build. The R2 key has no machine in it, so a second
+   build of the same version for another machine would silently replace the
+   first — possibly the very image kept for rolling back. Bump FW_VERSION. */
+const existing = sql(`SELECT preset FROM firmware WHERE version = ${q(version)}`)[0];
+if (existing && (existing.preset ?? 'everflo') !== preset) {
+  console.error(`Refusing: ${version} is already published for ${existing.preset ?? 'everflo'}. ` +
+                'Bump FW_VERSION for the other machine\'s build.');
+  process.exit(2);
+}
 
 const md5 = createHash('md5').update(bin).digest('hex');
 const key = `firmware/everflo-${version}.bin`;

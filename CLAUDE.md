@@ -538,7 +538,13 @@ Everything bound to ONE machine seen from ONE camera pose is a preset:
 y→flow curve, the Max and bottom states with their Swedish texts, the device
 page's display crop (`VIEW_X/VIEW_W`) and the lighting references. The sketch
 holds the rest of it: `DEG_PER_PRESS`, `STEP_MEDIUM`, `STEP_LARGE` (her three
-button sizes) and `DIRECTION`, in one block per machine.
+button sizes), `DIRECTION` and `LED_LEVEL`, in one block per machine. The light
+level belongs there because the references were built under it: switching back
+to the EverFlo must bring back the 50 its references were taken at.
+
+A calibrated preset must be complete. `usePreset()` refuses one with a curve
+and any field left null (only the display crop may be null) or no references —
+null compares as 0, so a null `LOW_FLOW` would silently stop the bottom state.
 
 **Chosen in the build, and only there**: `#define CONCENTRATOR` in the sketch.
 Not on the page, not over the API — she cannot switch it, and neither can a
@@ -548,18 +554,29 @@ back is that line, a `FW_VERSION` bump, and a flash.
 
 How each consumer learns the preset — and none of them has a default:
 - **Device page**: the firmware writes it into the page (`%PRESET%`).
-- **Control panel**: asks `/api/status`, which carries `"preset"` since
-  1.10.13. Firmware that does not say is older, and every older build drove an
-  EverFlo — history, not a guess.
+- **Control panel**: asks `/api/status`, which carries `"preset"` and her three
+  button sizes (`"buttons"`) since 1.10.13; the panel fills its step fields from
+  them. Firmware that does not say is older, and every older build drove an
+  EverFlo — history, not a guess. The panel asks again whenever contact drops,
+  because a reflash onto another machine is exactly when it does.
 - **Admin page**: per row, from `readings.preset`, which the device sends with
-  every upload. NULL = uploaded before presets = EverFlo, same reasoning, and
-  deliberately not backfilled. A malformed report is stored as `?`, never as
-  NULL, and the admin page refuses to analyse it.
-- **Diagnostics page**: a select, since it reads saved files with no device.
+  every upload. NULL is EverFlo only when the row's `fw` predates 1.10.13; a
+  NULL from newer firmware (an ingest Worker deployed out of order) names no
+  machine and is refused, like a malformed report, which ingest stores as `?`.
+  Not backfilled. The engine's preset is one global, so `analyse()` selects it
+  again with nothing awaited before `analyze()` — a sweep and a row click run
+  concurrently.
+- **Diagnostics page**: a select, since it reads saved files with no device. It
+  opens on the last choice (EverFlo the first time) — the one place with a
+  starting value, and it is on screen.
 - **Harnesses**: a `PRESET` file in the test directory (`validate_engine.mjs`),
   or the per-row preset in `meta.json` (`score_uploads.mjs`, one machine per run).
 - **`publish_firmware.mjs`** reads the preset out of the `.bin` (its boot-log
-  string) and records it, so `status` and `arm` say which machine a build is for.
+  string) and records it. `arm` compares it with the machine the unit last
+  reported and refuses a mismatch without `--switch-machine`: switching back
+  over the air is legitimate, a rollback that happens to pick the other
+  machine's build is not. `publish` refuses a second machine under one version
+  (the R2 key has no machine in it). `ota_flash.sh` shows both and warns.
 
 **NOT in a preset**: the algorithm and the quality gates — `T`, `TILTS`,
 `SEARCH`, the flatfield. A gate per machine would be a place to lower a
@@ -580,8 +597,9 @@ out bit-identical to v1.10.12. The engine hash changed anyway, so the admin
 page will offer to re-analyse everything once.
 
 **Deploy order, because the ingest INSERT names the new column**: run both
-`ALTER TABLE`s in `cloud/schema.sql` first, then deploy ingest and admin. The
-other way round fails every upload until the column exists.
+`ALTER TABLE`s in `cloud/schema.sql` first, then deploy ingest and admin, and
+only then flash 1.10.13. Ingest before the ALTER fails every upload; firmware
+before the new ingest stores NULL presets, which the admin page then refuses.
 
 ### Calibrating a new concentrator
 The EverFlo calibration of 2026-08-22 is the template; its notes above say why
@@ -591,8 +609,9 @@ each number is what it is. In order:
    was done 2026-08-16, and check that + turns the flow UP. Bump the MINOR
    version: a recalibration is part of the job. Flash.
 2. **Camera and light.** Aim with the device page, which shows the whole frame
-   until a preset has a crop. Settle the LED position BEFORE the sweep — the
-   light is part of the calibration.
+   until a preset has a crop. Settle the LED position and level BEFORE the
+   sweep, and write the level into the machine's `LED_LEVEL` — the light is part
+   of the calibration.
 3. **Sweep.** With the control panel's "Spara bild", in the lighting it will run
    in: the resting stop (`0_min`), every half L/min from the lowest mark to the
    top, the top mark (`<n>_max`) and one past the red line (`over_max`). Put the
@@ -607,8 +626,12 @@ each number is what it is. In order:
    alarms below 1.0 L/min and loses concentration above the red line at 9, so
    `LOW_*` and `MAX_REASON` should say that rather than copy EverFlo's texts.
 6. **Validate**: `node tools/validate_engine.mjs test/<dir>`, and the old
-   suites still green.
-7. **Day and evening references** come afterwards from a day or two of
+   suites still green. (`--expect-rejected` refuses to run against an
+   uncalibrated preset: it would pass without a single gate running.)
+7. **Ship it**: `node build_webui.mjs`, bump `FW_VERSION`, flash, and deploy the
+   admin Worker — until it carries the new engine it reads the machine's frames
+   as uncalibrated.
+8. **Day and evening references** come afterwards from a day or two of
    uploads, ball positions spread (see "Daylight is a second lighting regime").
 
 ### Engine invariants

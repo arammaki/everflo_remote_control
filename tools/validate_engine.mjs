@@ -149,6 +149,13 @@ const refs = E.PRESETS[presetId].refs().map(([dataUrl, name], i) => {
 E.setRefs(refs);
 console.log(`preset ${presetId}: ${E.PRESETS[presetId].name}, ${refs.length} reference(s)` +
             (E.isCalibrated(presetId) ? '' : ' — NOT CALIBRATED, every frame will be refused'));
+/* An uncalibrated preset refuses everything without running a single gate, so
+   a negative suite would come out green while testing nothing. */
+if (expectRejected && !E.isCalibrated(presetId)) {
+  console.error(`--expect-rejected against an uncalibrated preset proves nothing: ${presetId} ` +
+                'refuses every frame before any quality gate runs.');
+  process.exit(2);
+}
 
 /* Three naming generations live in the saved sweeps, and a filter that
    silently drops the ones it does not recognise is worse than one that fails

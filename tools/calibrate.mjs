@@ -159,7 +159,7 @@ if (images.length < 5) {
 /* ---------- engine ---------- */
 const src = readFileSync(ENGINE, 'utf8');
 writeFileSync(join(work, 'engine.mjs'), src +
-  '\nexport { T,W,H,toGray,flatfield,buildRef,analyze,PRESETS,usePreset,setRefs,isCalibrated };\n');
+  '\nexport { T,W,H,toGray,flatfield,buildRef,analyze,PRESETS,PRESET_KEYS,usePreset,setRefs,isCalibrated };\n');
 const E = await import(pathToFileURL(join(work, 'engine.mjs')).href);
 if (!Object.prototype.hasOwnProperty.call(E.PRESETS, presetId)) {
   console.error(`Unknown preset "${presetId}". The engine has: ${Object.keys(E.PRESETS).join(', ')}`);
@@ -201,10 +201,19 @@ if (opt.geometry) {
                 `printed; CLAUDE.md records how EverFlo's were measured.`);
   process.exit(2);
 }
-/* analyze() needs a curve to run at all; y does not depend on it. A temporary
-   identity (flow = y) makes that obvious if it ever leaks into a printout. */
-preset.CAL = [0, 1, 0];
-E.usePreset(presetId);
+/* Measured under a throwaway preset in memory, never the real one: analyze()
+   needs a curve to run at all and usePreset() refuses a curve without every
+   state filled in, but y depends on the geometry alone. The identity curve
+   (flow = y) makes it obvious if one of these values ever leaks into a
+   printout, and the states are set where they can never fire. The reference
+   list is a placeholder for that check; setRefs() supplies the real one below. */
+E.PRESETS.__measure = {
+  name: "measurement", ...Object.fromEntries(GEOMETRY_KEYS.map((k) => [k, preset[k]])),
+  CAL: [0, 1, 0], Y_CAL_MIN: 0, Y_CAL_MAX: H, Y_MAX_STATE: -1,
+  LOW_FLOW: -Infinity, LOW_LABEL: "-", LOW_REASON: "-", MAX_REASON: "-",
+  VIEW_X: null, VIEW_W: null, refs: () => [["placeholder", "natt"]],
+};
+E.usePreset("__measure");
 
 /* ---------- 1. the reference ---------- */
 const frames = images.map((f) => {
@@ -492,26 +501,42 @@ console.log('  Not suggested: the anchor band (AX1/AX2), the row band (RY1/RY2) 
             '  finding a feature, and this tool does not pretend otherwise.');
 
 /* ---------- 5. snippet ---------- */
+/* Generated from the engine's own PRESET_KEYS, so the snippet cannot lack a
+   field usePreset() demands — a hand-written list here once omitted VIEW_X and
+   VIEW_W. Anything this tool does not measure comes from the preset as it
+   stands, and is marked when it is still null: those are decisions for the
+   user (the texts, LOW_FLOW, the display crop), not measurements. */
 const id = presetId.toUpperCase().replace(/[^A-Z0-9]/g, '_');
-const g = Object.fromEntries(GEOMETRY_KEYS.map((k) => [k, preset[k]]));
+const measured = {
+  ...Object.fromEntries(GEOMETRY_KEYS.map((k) => [k, preset[k]])),
+  CAL: CAL.map((c) => Number(c.toPrecision(9))),
+  Y_CAL_MIN: yCalMin, Y_CAL_MAX: yCalMax,
+  Y_MAX_STATE: yMaxState ?? null,
+};
+const candidate = Object.fromEntries(E.PRESET_KEYS.map((k) => [k, k in measured ? measured[k] : preset[k]]));
+const lines = E.PRESET_KEYS.map((k) => {
+  const v = candidate[k];
+  const note = v != null ? '' : k === 'Y_MAX_STATE' ? ' /* no over_max frame in the sweep */'
+             : k.startsWith('VIEW_') ? ' /* optional: null shows the whole frame */' : ' /* decide */';
+  return `    ${k}:${JSON.stringify(v)},${note}`;
+});
 console.log(`
 preset snippet — paste into PRESETS, and the contents of
 ${join(outDir, 'ref.dataurl.txt')}
-as const REF_PNG_${id}="..." below the table. The texts and LOW_FLOW are decisions,
-not measurements: fill them in with the user.
+as const REF_PNG_${id}="..." below the table.
 
   ${presetId}:{
     name:${JSON.stringify(preset.name)},
-    XL:${g.XL}, XR:${g.XR},
-    AX1:${g.AX1}, AX2:${g.AX2},
-    YTOP:${g.YTOP}, YBOT:${g.YBOT},
-    RY1:${g.RY1}, RY2:${g.RY2},
-    BASE_TILT:${g.BASE_TILT},
-    CAL:[${CAL.map((c) => c.toPrecision(9)).join(', ')}],
-    Y_CAL_MIN:${yCalMin}, Y_CAL_MAX:${yCalMax},
-    Y_MAX_STATE:${yMaxState ?? 'null /* no over_max frame */'},
-    LOW_FLOW:${preset.LOW_FLOW ?? 'null /* decide */'}, LOW_LABEL:${JSON.stringify(preset.LOW_LABEL)},
-    LOW_REASON:${JSON.stringify(preset.LOW_REASON)},
-    MAX_REASON:${JSON.stringify(preset.MAX_REASON)},
+${lines.join('\n')}
     refs:()=>[[REF_PNG_${id},'natt']],
   },`);
+/* Would it load? The engine's own check, on the candidate with this run's
+   reference — the same refusal the phone would give, said here instead. */
+E.PRESETS.__candidate = { name: 'candidate', ...candidate,
+  refs: () => [['data:image/png;base64,' + readFileSync(join(outDir, 'ref.png')).toString('base64'), 'natt']] };
+try {
+  E.usePreset('__candidate');
+  console.log('\nThe snippet is complete: usePreset() accepts it.');
+} catch (e) {
+  console.log(`\nNOT READY: ${e.message}. Fill those in before pasting.`);
+}

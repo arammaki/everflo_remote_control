@@ -10,9 +10,10 @@
    <dir> holds the downloaded frames as <reading id>.jpg plus a meta.json
    listing {id, received_at, reason, preset} — see "Fetching" below.
 
-   The preset is per row, as the device reported it. A row without one was
-   uploaded before presets existed, and every such row is an EverFlo frame —
-   that is history, not a default. One run scores one machine: a directory
+   The preset is per row, as the device reported it. A row without one is an
+   EverFlo frame only when its firmware predates presets (1.10.13) — that is
+   history, not a default; the admin page's presetOf() applies the same rule.
+   A NULL from newer firmware names no machine and stops the run. One run scores one machine: a directory
    mixing presets is refused, because a span of "same knob position" cannot
    straddle two concentrators.
 
@@ -43,7 +44,7 @@
    required for R2 or the download silently writes empty files):
 
      npx wrangler d1 execute everflo --remote --json \
-       --command "SELECT id, received_at, reason, preset, image_key FROM readings" \
+       --command "SELECT id, received_at, reason, fw, preset, image_key FROM readings" \
        | sed -n '/^\[/,$p' > meta-raw.json
      # keep the .results array as meta.json, then per row:
      npx wrangler r2 object get everflo-images/<image_key> -J eu --remote \
@@ -168,7 +169,15 @@ if (missing.length) {
   process.exit(2);
 }
 
-const presets = [...new Set(ids.map((id) => meta[id].preset ?? 'everflo'))];
+function presetOf(r) {
+  if (r.preset != null) return r.preset;
+  if (r.fw == null) return 'everflo';
+  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(r.fw);
+  if (!m) return '?';
+  const [a, b, c] = m.slice(1).map(Number);
+  return (a !== 1 ? a < 1 : b !== 10 ? b < 10 : c < 13) ? 'everflo' : '?';
+}
+const presets = [...new Set(ids.map((id) => presetOf(meta[id])))];
 if (presets.length !== 1) {
   console.error(`${dir} mixes presets (${presets.join(', ')}). Score one machine per run.`);
   process.exit(2);

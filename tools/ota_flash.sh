@@ -108,12 +108,24 @@ if [ -n "$WAS" ]; then
 else
   echo "  running   not answering (or its log ring has rotated)"
 fi
+# Which machine the image is for, against which the unit says it drives — the
+# one mistake here that boots perfectly and is still wrong.
+BUILT_FOR="$(grep -aoE 'Concentrator preset: [a-z0-9_-]+' "$BIN" | head -1 | sed 's/.*: //' || true)"
+RUNS_ON="$(curl -4 -s --max-time 5 "http://$ADDR/api/status" 2>/dev/null | sed -n 's/.*"preset":"\([a-z0-9_-]*\)".*/\1/p' || true)"
+if [ -n "$WAS" ] && [ -z "$RUNS_ON" ]; then RUNS_ON="everflo (firmware before presets)"; fi
+echo "  machine   ${BUILT_FOR:-unknown}"
+[ -n "$RUNS_ON" ] && echo "  unit is   $RUNS_ON"
 echo "  image     $BIN"
 echo "  size      $SIZE bytes, md5 $(md5 -q "$BIN")"
 if [ "$ADDR" = "$HOST" ]; then echo "  target    $HOST:3232"; else echo "  target    $HOST:3232 ($ADDR)"; fi
 echo
 echo "  This replaces the running firmware and reboots the unit."
 echo "  There is no rollback; recovery is a USB cable."
+if [ -n "$RUNS_ON" ] && [ "${RUNS_ON%% *}" != "$BUILT_FOR" ]; then
+  echo
+  echo "  WARNING: this build is for $BUILT_FOR, the unit runs $RUNS_ON. That moves it"
+  echo "  to another machine's calibration and button sizes. Only if you mean it."
+fi
 if [ -n "$WAS" ] && [ "$WAS" = "$VERSION" ]; then
   echo
   echo "  NOTE: the unit already reports v$VERSION. Nothing after the transfer"

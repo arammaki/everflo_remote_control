@@ -49,6 +49,13 @@ function intParam(url, name) {
 
 /* Milliseconds are part of the key on purpose: two uploads in the same
    second would otherwise overwrite each other, losing an image silently. */
+function imageKey(now, reason) {
+  const iso = now.toISOString();                 // 2026-08-15T13:49:35.996Z
+  const day = iso.slice(0, 10).replace(/-/g, '/');
+  const stamp = iso.slice(0, 23).replace(/[:.]/g, '-');
+  return `${day}/${stamp}-${reason}.jpg`;
+}
+
 /* The concentrator preset the firmware was built for; the admin page reads the
    frame with it. ABSENT means firmware older than 1.10.13, all of which drove
    an EverFlo, and is stored as NULL — which the admin page reads as EverFlo.
@@ -59,13 +66,6 @@ function presetParam(url) {
   const p = url.searchParams.get('preset');
   if (p === null) return null;
   return /^[a-z0-9_-]{1,32}$/.test(p) ? p : '?';
-}
-
-function imageKey(now, reason) {
-  const iso = now.toISOString();                 // 2026-08-15T13:49:35.996Z
-  const day = iso.slice(0, 10).replace(/-/g, '/');
-  const stamp = iso.slice(0, 23).replace(/[:.]/g, '-');
-  return `${day}/${stamp}-${reason}.jpg`;
 }
 
 export default {

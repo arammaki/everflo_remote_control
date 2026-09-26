@@ -89,6 +89,22 @@ function label(flow, state) {
 }
 const good = (state) => state === 'ok' || state === 'max' || state === 'below';
 
+/* Which preset a stored frame is read with. NULL means EverFlo only when the
+   firmware predates presets (1.10.13) — that is history. A NULL from newer
+   firmware means the row went through an ingest Worker that did not write the
+   column (deployed out of order, or rolled back), and then nobody knows which
+   machine it was: '?' is no preset, and the page refuses to read it rather
+   than guess EverFlo on what may be a Platinum frame. */
+function presetOf(r) {
+  if (r.preset != null) return r.preset;
+  if (r.fw == null) return 'everflo';
+  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(r.fw);
+  if (!m) return '?';
+  const [a, b, c] = m.slice(1).map(Number);
+  const before = a !== 1 ? a < 1 : b !== 10 ? b < 10 : c < 13;
+  return before ? 'everflo' : '?';
+}
+
 /* `latest` is the newest reading in the database, not rows[0]: on page 2 the
    first row is hours old and the banner would call a healthy device dead. */
 /* Newest first, so "older" is the next page. The row count in the label is
@@ -139,16 +155,16 @@ function renderPage(rows, now, latest, nav) {
       data-vrid="${r.press_degrees == null ? '' : r.press_degrees}"
       data-lage="${r.position ?? ''}" data-rssi="${r.rssi ?? ''}"
       data-fw="${escapeHtml(r.fw ?? '')}"
-      data-preset="${escapeHtml(r.preset ?? 'everflo')}">
+      data-preset="${escapeHtml(presetOf(r))}">
       <td class="num id">${r.id}</td>
       <td class="t">${escapeHtml(r.received_at.replace('T', ' ').slice(0, 19))}</td>
       <td>${escapeHtml(r.reason)}</td>
       <td class="num">${turn}</td>
       <td class="num">${r.rssi ?? '—'}</td>
-      <td class="avl da ${r.state_da ? (good(r.state_da) ? 'good' : 'bad') : ''}"
+      <td class="avl da ${r.state_da ? (good(r.state_da) ? 'good' : 'bad') : ''}"${r.state_da === 'below' ? ' data-below="1"' : ''}
           title="${r.engine_da ? 'Motor ' + escapeHtml(r.engine_da) : ''}"
           >${escapeHtml(daText)}</td>
-      <td class="avl nu ${r.state_nu ? (good(r.state_nu) ? 'good' : 'bad') : ''} ${changed ? 'andrad' : ''}"
+      <td class="avl nu ${r.state_nu ? (good(r.state_nu) ? 'good' : 'bad') : ''} ${changed ? 'andrad' : ''}"${r.state_nu === 'below' ? ' data-below="1"' : ''}
           title="${changed ? 'Ändrat: motor ' + escapeHtml(r.engine_da) + ' gav ' + escapeHtml(daText) : ''}"
           >${escapeHtml(nuText)}</td>
     </tr>`;
@@ -377,14 +393,20 @@ function verdict(r,b){
    report) is refused outright: reading it with some other machine's curve
    would put a number in this table that nothing backs. */
 async function analyse(tr,{draw}={}){
+  // The picture first: whatever happens to the reading, the row's own frame is
+  // what the operator must be looking at.
+  const im=await load(tr.dataset.key);
+  const t=orient(im);
+  if(draw){ ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(t,0,0,480,640); }
   const id=tr.dataset.preset;
   if(!Object.prototype.hasOwnProperty.call(PRESETS,id))
     throw new UnknownPreset('Okänd maskin "'+id+'" — den här motorn har inget preset för den.');
   usePreset(id);
   await loadRef();
-  const im=await load(tr.dataset.key);
-  const t=orient(im);
-  if(draw){ ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(t,0,0,480,640); }
+  /* Again, and with nothing awaited between here and judge(): the preset is
+     one global in the engine, and a sweep and a row click run concurrently.
+     Whichever of them awaited last may have switched it to another machine. */
+  usePreset(id);
   const src=(draw?ctx:t.getContext('2d',{willReadFrequently:true})).getImageData(0,0,480,640);
   const r=analyze(src);
   return {r, b:judge(r)};
@@ -478,6 +500,12 @@ async function select(i,{scroll}={}){
   }
 }
 rows.forEach((tr,i)=>tr.addEventListener('click',()=>select(i)));
+/* The server writes the bottom state as EverFlo's "Under 0,3"; the words belong
+   to the machine's preset, which only the engine here knows. */
+document.querySelectorAll('td[data-below]').forEach(td=>{
+  const p=PRESETS[td.parentElement.dataset.preset];
+  if(p && p.LOW_LABEL) td.textContent=p.LOW_LABEL;
+});
 /* The sticky block's height feeds scroll-margin-top on the rows and the
    sticky offset of the header row, so a selected row lands just under the
    picture instead of behind it. Measured, because the picture is sized in vh

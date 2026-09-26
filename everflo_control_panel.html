@@ -439,6 +439,17 @@ function usePreset(id){
   const missing=PRESET_KEYS.filter(k=>!(k in p));
   if(extra.length||missing.length)
     throw new Error('Preset '+id+': unknown '+extra.join(',')+' missing '+missing.join(','));
+  /* Present is not enough once the preset claims a calibration. null compares
+     as 0, so a LOW_FLOW left null would make "r.flow < LOW_FLOW" never true and
+     a switched-off machine would print 0.2 instead of the bottom state — the
+     same silent failure as undefined, one step removed. Only the display crop
+     may stay null: the device page then shows the whole frame. */
+  if(p.CAL){
+    const unset=PRESET_KEYS.filter(k=>k!=='VIEW_X'&&k!=='VIEW_W'&&p[k]==null);
+    if(unset.length||!p.refs().length)
+      throw new Error('Preset '+id+' has a curve but is incomplete: '+
+                      (unset.length?'unset '+unset.join(','):'no references'));
+  }
   ({XL, XR, AX1, AX2, YTOP, YBOT, RY1, RY2, BASE_TILT,
     CAL, Y_CAL_MIN, Y_CAL_MAX, Y_MAX_STATE, LOW_FLOW, LOW_LABEL, LOW_REASON, MAX_REASON,
     VIEW_X, VIEW_W}=p);
@@ -794,7 +805,7 @@ function judge(r){
 /* ---------- shell: polling, display, motor, log (from bolldetektor_3) ---------- */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{willReadFrequently:true});
 let host='', lastFlow=null, timer=null, lastCleanFrame=null, fetchingSince=0, pulseTimer=null;
-let presetFor=null, presetAsking=false, presetUnknown=null;
+let presetFor=null, presetAsking=false, presetUnknown=null, presetError=null;
 try{
   document.getElementById('log').value = localStorage.getItem('ev_logg')||'';
   const h=localStorage.getItem('ev_host'); if(h) document.getElementById('host').value=h;
@@ -832,7 +843,7 @@ function start(){
   try{localStorage.setItem('ev_host',host);}catch(e){}
   if(timer) clearInterval(timer);
   fetchingSince=0;
-  presetFor=null; presetUnknown=null;   // a different host may be a different machine
+  presetFor=null; presetUnknown=null; presetError=null;   // a different host may be a different machine
   timer=setInterval(fetchFrame, 1000);
   fetchFrame();
   if(pulseTimer) clearInterval(pulseTimer);
@@ -860,8 +871,15 @@ async function choosePreset(){
   if(presetAsking) return;
   presetAsking=true;
   const askedFor=host;
+  let j;
   try{
-    const j=await (await fetch('http://'+askedFor+'/api/status')).json();
+    // Same 4 s ceiling as the motor and light calls: a stalled request must
+    // not keep a newly entered host from ever being asked.
+    const ac=new AbortController(); const tm=setTimeout(()=>ac.abort(),4000);
+    try{ j=await (await fetch('http://'+askedFor+'/api/status',{signal:ac.signal})).json(); }
+    finally{ clearTimeout(tm); }
+  }catch(e){ presetAsking=false; return; }   // no contact: asked again on the next frame
+  try{
     const id=typeof j.preset==='string' ? j.preset : 'everflo';
     if(askedFor!==host) return;
     if(!Object.prototype.hasOwnProperty.call(PRESETS,id)){ presetUnknown=id; return; }
@@ -871,7 +889,15 @@ async function choosePreset(){
     presetFor=askedFor;
     document.getElementById('preset').textContent='Maskin: '+PRESETS[id].name+
       (isCalibrated(id) ? '' : ' — inte kalibrerad än, bara bild');
-  }catch(e){ /* no contact: fetchFrame's lostContact() already says so */ }
+    // Her three button sizes for this machine (1.10.13+). The fields here are
+    // not remembered and would otherwise send EverFlo's 39/90/160 to any machine.
+    if(Array.isArray(j.buttons) && j.buttons.length===3 && j.buttons.every(Number.isInteger))
+      ['d1','d2','d3'].forEach((d,i)=>{ document.getElementById(d).value=j.buttons[i]; });
+  }catch(e){
+    // The device answered, so this is not lost contact: the preset itself or its
+    // references are broken in this copy of the page. Say so and stop asking.
+    presetError=e.message;
+  }
   finally{ presetAsking=false; }
 }
 
@@ -964,7 +990,22 @@ async function ledTest(){
 }
 /* No frame = no valid reading. The number must be cleared, otherwise a stale
    value stays on screen and looks current after the device drops off. */
+/* Every path that fails to produce a fresh reading comes through here, so
+   the number on screen can never outlive the frame it came from. */
+function clearReading(statusText){
+  lastFlow=null;
+  const fl=document.getElementById('flow');
+  fl.parentElement.className='big error';
+  fl.textContent='–';
+  document.getElementById('unit').textContent='';
+  document.getElementById('quality').textContent='';
+  document.getElementById('status').textContent=statusText;
+}
 function lostContact(){
+  // The device may come back as a different build — a reflash onto another
+  // machine is exactly when contact drops — so the machine is asked again.
+  presetFor=null; presetUnknown=null; presetError=null;
+  document.getElementById('preset').textContent='';
   lastFlow=null;
   const fl=document.getElementById('flow');
   fl.parentElement.className='big error';
@@ -995,12 +1036,16 @@ function fetchFrame(){
 }
 function runFrame(){
   if(presetUnknown!==null){
-    document.getElementById('status').textContent='Enheten är byggd för maskinen "'+presetUnknown+
-      '", som den här sidan inte känner till. Hämta en nyare kontrollpanel.';
+    clearReading('Enheten är byggd för maskinen "'+presetUnknown+
+      '", som den här sidan inte känner till. Hämta en nyare kontrollpanel.');
+    return;
+  }
+  if(presetError!==null){
+    clearReading('Maskininställningen i den här kontrollpanelen är trasig: '+presetError);
     return;
   }
   if(presetFor!==host || !refsReady()){
-    document.getElementById('status').textContent='Frågar enheten vilken maskin den sitter på …';
+    clearReading('Frågar enheten vilken maskin den sitter på …');
     choosePreset();
     return;
   }
