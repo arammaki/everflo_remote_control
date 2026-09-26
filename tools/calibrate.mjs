@@ -211,7 +211,10 @@ E.PRESETS.__measure = {
   name: "measurement", ...Object.fromEntries(GEOMETRY_KEYS.map((k) => [k, preset[k]])),
   CAL: [0, 1, 0], Y_CAL_MIN: 0, Y_CAL_MAX: H, Y_MAX_STATE: -1,
   LOW_FLOW: -Infinity, LOW_LABEL: "-", LOW_REASON: "-", MAX_REASON: "-",
-  VIEW_X: null, VIEW_W: null, refs: () => [["placeholder", "natt"]],
+  // Every display-crop key the engine knows, null: derived, so a new one
+  // cannot break the measurement the way VIEW_Y/VIEW_H once did.
+  ...Object.fromEntries(E.PRESET_KEYS.filter((k) => k.startsWith("VIEW_")).map((k) => [k, null])),
+  refs: () => [["placeholder", "natt"]],
 };
 E.usePreset("__measure");
 

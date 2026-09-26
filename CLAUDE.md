@@ -638,6 +638,31 @@ each number is what it is. In order:
 8. **Day and evening references** come afterwards from a day or two of
    uploads, ball positions spread (see "Daylight is a second lighting regime").
 
+### The Platinum 9 calibration (v1.11.2, 2026-09-26)
+Everything is in the `platinum9` preset with a comment per number; the short
+version, and what to watch:
+
+- **The ball is dark with a bright highlight** a few pixels to its lower left,
+  and the LED's reflection runs down the tube at x~300. A band centred on the
+  highlight cancels against the dark body (contrast 0.03). The band sits on
+  the dark body, x 312..324.
+- **Margins are thinner than EverFlo's** on every gate: contrast 0.146,
+  ambiguity 4.8x, registration 0.952 (EverFlo 0.173 / 15.9x / 0.982). 9 L/min
+  fit in ~230 rows. Fit mean 0.099, worst 0.296 — mostly label precision.
+- **The tilt is a known disagreement.** A hand-drawn line says 3.3 degrees
+  (tan 0.058); the zero-deviation plateau and the gates say 0.03. The anchor
+  is horizontal ticks, which pin a tilt weakly. First suspect if a later
+  lighting regime starts refusing.
+- **One reference, lit by the LED AND the ceiling lamp** ('kväll'). A dark
+  kitchen at night and daylight are further regimes; build their references
+  from uploads with the ball at varied positions, as was done for EverFlo.
+- **At the red line the ambiguity is thin**: the sweep frame reads at 5.1x,
+  but a real upload at the same position (id 6488) refused at 2.6x. It refuses,
+  it does not misread; a flow she does not use.
+- Her page crops to the meter (`VIEW_*`, vertical too since 1.11.2), about
+  1.6x the size the whole frame gave.
+- Buttons 40/60/120 degrees, chosen on the unit "for now".
+
 ### Engine invariants
 Grayscale -> flatfield (3-pass box blur ~ sigma 41) -> horizontal
 registration (column profile of rows 100-460) -> vertical registration

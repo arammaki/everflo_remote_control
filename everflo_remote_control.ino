@@ -68,7 +68,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.11.1"
+#define FW_VERSION "1.11.2"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -104,14 +104,12 @@
                                   // were built under it — see the light section
 #elif CONCENTRATOR == CONC_PLATINUM9
   #define PRESET_ID       "platinum9"
-  /* NOT MEASURED — copied from the EverFlo so a first build has sane values.
-     The same cup fits (2026-09-26), so the direction probably carries over, but
-     1-9 L/min on a knob of unknown pitch will not match 39° per step. Measure
-     against the ball, as on 2026-08-16, and write the result here. The post-
-     flash check (+ turns the flow UP) settles the direction. */
-  #define DEG_PER_PRESS   39
-  #define STEP_MEDIUM     90
-  #define STEP_LARGE      160
+  /* Chosen on the unit 2026-09-26, "for now": a knob of another pitch than
+     the EverFlo's, where 39/90/160 turned too far. The same cup fits, and
+     the direction carried over from the EverFlo unchanged. */
+  #define DEG_PER_PRESS   40
+  #define STEP_MEDIUM     60
+  #define STEP_LARGE      120
   #define DIRECTION       -1
   /* Also not settled: choose it on the panel's slider with the camera on the
      Platinum, then write it here BEFORE the sweep. The sweep binds the preset
@@ -721,7 +719,7 @@ function show(text,unit,cls){
 }
 function nextFrame(){ const i=new Image(); i.onload=()=>{ frame(i); setTimeout(nextFrame,250); };
   i.onerror=()=>setTimeout(nextFrame,1000); i.src='/bild?t='+Date.now(); }
-/* What she SEES is the meter alone: the preset's VIEW_X/VIEW_W crop of the
+/* What she SEES is the meter alone: the preset's VIEW_* crop of the
    oriented frame (the EverFlo preset explains its numbers). An uncalibrated
    preset has none and shows the whole frame, which is what aiming a camera at
    a new machine needs.
@@ -734,12 +732,16 @@ function nextFrame(){ const i=new Image(); i.onload=()=>{ frame(i); setTimeout(n
 // No ?? here: this page must parse on older Safari (before 13.4) too.
 const CROP_X=(typeof VIEW_X!=='undefined' && VIEW_X!=null) ? VIEW_X : 0;
 const CROP_W=(typeof VIEW_W!=='undefined' && VIEW_W!=null) ? VIEW_W : 480;
-cv.width=CROP_W;
+// Vertical too since 1.11.2: the Platinum's meter fills only part of the
+// height, and cropping to it is what makes it large on her phone.
+const CROP_Y=(typeof VIEW_Y!=='undefined' && VIEW_Y!=null) ? VIEW_Y : 0;
+const CROP_H=(typeof VIEW_H!=='undefined' && VIEW_H!=null) ? VIEW_H : 640;
+cv.width=CROP_W; cv.height=CROP_H;
 function frame(img){
   lastFrameAt=Date.now();
   const t=orient(img);
   ctx.setTransform(1,0,0,1,0,0);
-  ctx.drawImage(t, CROP_X,0,CROP_W,640, 0,0,CROP_W,640);
+  ctx.drawImage(t, CROP_X,CROP_Y,CROP_W,CROP_H, 0,0,CROP_W,CROP_H);
   // Once a second is plenty: the ball moves slowly and analysis costs
   // real work on a phone.
   if(loadError){ sayLoadError(); return; }

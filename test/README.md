@@ -60,3 +60,21 @@ This covers one case of the negative suite described in CLAUDE.md. Garbage
 frames, occlusions, large shifts and wrong rotation are still uncovered, as is
 the tolerance suite that says a 15 px shift, blur or a thin occluder must
 still read about right. Those are constructible from the sweep above.
+
+## `platinum9-sweep-2026-09-26/` — the Invacare Platinum 9's calibration
+
+21 labelled frames, 0 to 9.5 L/min in half steps (6.5 was not taken), the
+resting stop (`0_min`) and the ball ON the red line (`max`, which must read as
+a number — the Max state begins above the line). Taken 2026-09-26
+21:31–21:35 at night with the WS2812 and the kitchen's ceiling lamp on. The 5
+and 5.5 frames were retaken a few minutes later and renamed into sequence.
+
+Its `TOLERANCE` is 0.3 L/min, not the default 0.2: the labels were set by eye
+on 0.5 L/min marks about 11 px apart (EverFlo's were ~29), and the worst
+residual is 0.296 on the 9 frame. The 2.5 frame sits 5 px from the 3.0 frame,
+i.e. between marks. That is how precisely the labels were set, not a looser
+gate — the engine's quality thresholds are the same for every machine.
+
+Cross-checked 2026-09-26: these frames read as `everflo` are refused 21/21,
+and the EverFlo sweep plus the 78 old poses read as `platinum9` are refused
+101/101. A frame from the wrong machine never produces a number.

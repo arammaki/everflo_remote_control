@@ -46,7 +46,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 
-const TOLERANCE = 0.2;
+let TOLERANCE = 0.2;
 const here = dirname(fileURLToPath(import.meta.url));
 const ENGINE = join(here, '..', 'balldetector.js');
 
@@ -90,6 +90,16 @@ if (presetFile !== null && presetFlag !== null && presetFile !== presetFlag) {
   process.exit(2);
 }
 const presetId = presetFlag ?? presetFile;
+/* A sweep may carry its own tolerance against its labels, in a file named
+   TOLERANCE (a number of L/min, on its first line). It is how precisely the
+   labels were set, not how well the engine must read: the Platinum sweep was
+   set by eye on 0.5 L/min marks ~11 px apart, where EverFlo's were ~29 px.
+   Visible in the directory, printed on every run, never loosened in code. */
+try {
+  const t = Number(readFileSync(join(imageDir, 'TOLERANCE'), 'utf8').split('\n')[0].trim());
+  if (!(t > 0 && t < 1)) { console.error(`${imageDir}/TOLERANCE must be a number of L/min between 0 and 1`); process.exit(2); }
+  TOLERANCE = t;
+} catch (e) { if (e.code !== 'ENOENT') throw e; }
 if (!presetId) {
   console.error(`Which concentrator? Put its preset id in ${imageDir}/PRESET, or pass --preset <id>.`);
   process.exit(2);
@@ -147,7 +157,7 @@ const refs = E.PRESETS[presetId].refs().map(([dataUrl, name], i) => {
   return [E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(png, `ref${i}`))))), name];
 });
 E.setRefs(refs);
-console.log(`preset ${presetId}: ${E.PRESETS[presetId].name}, ${refs.length} reference(s)` +
+console.log(`preset ${presetId}: ${E.PRESETS[presetId].name}, ${refs.length} reference(s), tolerance ${TOLERANCE} L/min` +
             (E.isCalibrated(presetId) ? '' : ' — NOT CALIBRATED, every frame will be refused'));
 /* An uncalibrated preset refuses everything without running a single gate, so
    a negative suite would come out green while testing nothing. */
