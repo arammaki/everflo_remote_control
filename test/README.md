@@ -8,6 +8,12 @@ node tools/validate_engine.mjs test/sweep-2026-08-22
 node tools/validate_engine.mjs test/negative-old-poses --expect-rejected
 ```
 
+Every directory carries a `PRESET` file naming the concentrator its frames
+are of (`everflo` for both of these). The harness reads it and refuses to
+run without one: a sweep scored against the wrong machine's calibration is
+refused wholesale, which looks exactly like an engine that has broken. A new
+machine's sweep goes in its own directory with its own `PRESET`.
+
 ## `sweep-2026-08-22/` — the calibration in force
 
 The 23 labelled frames the current engine is built from: `REF_PNG`, the bands,

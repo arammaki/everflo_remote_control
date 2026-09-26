@@ -57,11 +57,12 @@ const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
 const [verb, ...rest] = process.argv.slice(2);
 
 if (verb === 'status') {
-  const rows = sql('SELECT version, size, md5, uploaded_at, armed_at FROM firmware ORDER BY uploaded_at DESC');
+  const rows = sql('SELECT version, preset, size, md5, uploaded_at, armed_at FROM firmware ORDER BY uploaded_at DESC');
   if (!rows.length) { console.log('No firmware published.'); process.exit(0); }
-  console.log('version   size      uploaded              armed');
+  console.log('version   machine     size      uploaded              armed');
   for (const r of rows) {
-    console.log(`${String(r.version).padEnd(9)} ${String(r.size).padStart(8)}  ` +
+    console.log(`${String(r.version).padEnd(9)} ${String(r.preset ?? '-').padEnd(10)} ` +
+                `${String(r.size).padStart(8)}  ` +
                 `${r.uploaded_at.slice(0, 19).replace('T', ' ')}   ` +
                 (r.armed_at ? `ARMED ${r.armed_at.slice(0, 19).replace('T', ' ')}` : '-'));
   }
@@ -77,13 +78,15 @@ if (verb === 'disarm') {
 if (verb === 'arm') {
   const version = rest[0];
   if (!version) { console.error('Usage: arm <version>'); process.exit(2); }
-  const row = sql(`SELECT version FROM firmware WHERE version = ${q(version)}`)[0];
+  const row = sql(`SELECT version, preset FROM firmware WHERE version = ${q(version)}`)[0];
   if (!row) { console.error(`Version ${version} has not been published.`); process.exit(2); }
   // Only one row may be armed — the schema enforces it, so clear first rather
   // than collide with the unique index.
   sql('UPDATE firmware SET armed_at = NULL WHERE armed_at IS NOT NULL');
   sql(`UPDATE firmware SET armed_at = ${q(new Date().toISOString())} WHERE version = ${q(version)}`);
-  console.log(`Armed ${version}.`);
+  // Which machine it was built for, said at the moment it matters: an EverFlo
+  // build on a Platinum reads nothing and turns the knob by EverFlo's steps.
+  console.log(`Armed ${version}, built for ${row.preset ?? 'an unrecorded machine (published before presets)'}.`);
   console.log('The unit will pick it up within 15 minutes and reboot into it.');
   console.log('It disarms itself once the new firmware reports in. If it never');
   console.log('does, the update did not land and recovery is over USB.');
@@ -115,6 +118,17 @@ if (!bin.subarray(0, 64 * 1024).includes(Buffer.from(version, 'ascii'))) {
   process.exit(2);
 }
 
+/* Which concentrator the image was built for, read from the image itself
+   rather than the sketch — the sketch may have been edited since the build.
+   The firmware logs "Concentrator preset: <id>" at boot, so the string is in
+   every build since 1.10.13, and an image without it is refused. */
+const preset = bin.toString('latin1').match(/Concentrator preset: ([a-z0-9_-]{1,32})/)?.[1];
+if (!preset) {
+  console.error('Refusing: no "Concentrator preset:" string in the image — built before 1.10.13?');
+  process.exit(2);
+}
+console.log(`Built for: ${preset}`);
+
 const md5 = createHash('md5').update(bin).digest('hex');
 const key = `firmware/everflo-${version}.bin`;
 
@@ -125,13 +139,13 @@ wrangler(['r2', 'object', 'put', `${BUCKET}/${key}`, '-J', 'eu', '--remote',
           '--file', resolve(binPath), '--content-type', 'application/octet-stream'],
          { stdio: 'inherit' });
 
-sql(`INSERT INTO firmware (version, r2_key, md5, size, uploaded_at, armed_at)
-     VALUES (${q(version)}, ${q(key)}, ${q(md5)}, ${bin.length}, ${q(new Date().toISOString())}, NULL)
+sql(`INSERT INTO firmware (version, r2_key, md5, size, uploaded_at, armed_at, preset)
+     VALUES (${q(version)}, ${q(key)}, ${q(md5)}, ${bin.length}, ${q(new Date().toISOString())}, NULL, ${q(preset)})
      ON CONFLICT(version) DO UPDATE SET
        r2_key = excluded.r2_key, md5 = excluded.md5,
-       size = excluded.size, uploaded_at = excluded.uploaded_at`);
+       size = excluded.size, uploaded_at = excluded.uploaded_at, preset = excluded.preset`);
 
-console.log(`Published ${version}, md5 ${md5}. NOT armed.`);
+console.log(`Published ${version} for ${preset}, md5 ${md5}. NOT armed.`);
 /* Said this way since 2026-09-12. It used to say "flash it once and watch it
    boot, then arm", which read literally makes the cloud path pointless: next
    to the unit you do not need it, away from it you can never satisfy it. The

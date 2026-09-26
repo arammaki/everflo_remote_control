@@ -8,6 +8,12 @@ friction cup. **The camera image is the source of truth — the human always
 verifies visually. Manual override must always work: the motor is
 de-energized except during an actual press.**
 
+From late September 2026 she moves to an **Invacare Platinum 9** (1–9 L/min,
+a higher maximum than the EverFlo's 5). Same principle — a ball in a tube,
+the knob on top — and the same cup fits. Everything tuned for one machine is a
+**preset**, chosen when the firmware is built; see "Concentrator presets".
+The EverFlo's is kept intact so the unit can go back to it.
+
 This is assistive/medical-adjacent equipment intended for real daily use —
 not yet deployed (as of Aug 2026). Correctness and predictability beat
 cleverness. When in doubt: smaller change, bump version, let the user flash
@@ -525,6 +531,85 @@ Why this matters: when the engine was hand-maintained in two places, a
 partial rename left `judge()` reading `T.kontrast` while `T` defined
 `contrast`. The comparison became `value < undefined` — always false —
 and that quality gate silently stopped rejecting anything (2026-08-15).
+
+### Concentrator presets (v1.10.13)
+Everything bound to ONE machine seen from ONE camera pose is a preset:
+`PRESETS` in `balldetector.js` holds the bands, peak window, `BASE_TILT`, the
+y→flow curve, the Max and bottom states with their Swedish texts, the device
+page's display crop (`VIEW_X/VIEW_W`) and the lighting references. The sketch
+holds the rest of it: `DEG_PER_PRESS`, `STEP_MEDIUM`, `STEP_LARGE` (her three
+button sizes) and `DIRECTION`, in one block per machine.
+
+**Chosen in the build, and only there**: `#define CONCENTRATOR` in the sketch.
+Not on the page, not over the API — she cannot switch it, and neither can a
+stray request. A machine swap is a visit anyway (cup, mount, camera, light),
+and a build is the one place a wrong choice cannot quietly persist. Switching
+back is that line, a `FW_VERSION` bump, and a flash.
+
+How each consumer learns the preset — and none of them has a default:
+- **Device page**: the firmware writes it into the page (`%PRESET%`).
+- **Control panel**: asks `/api/status`, which carries `"preset"` since
+  1.10.13. Firmware that does not say is older, and every older build drove an
+  EverFlo — history, not a guess.
+- **Admin page**: per row, from `readings.preset`, which the device sends with
+  every upload. NULL = uploaded before presets = EverFlo, same reasoning, and
+  deliberately not backfilled. A malformed report is stored as `?`, never as
+  NULL, and the admin page refuses to analyse it.
+- **Diagnostics page**: a select, since it reads saved files with no device.
+- **Harnesses**: a `PRESET` file in the test directory (`validate_engine.mjs`),
+  or the per-row preset in `meta.json` (`score_uploads.mjs`, one machine per run).
+- **`publish_firmware.mjs`** reads the preset out of the `.bin` (its boot-log
+  string) and records it, so `status` and `arm` say which machine a build is for.
+
+**NOT in a preset**: the algorithm and the quality gates — `T`, `TILTS`,
+`SEARCH`, the flatfield. A gate per machine would be a place to lower a
+threshold until a new calibration "works".
+
+**An uncalibrated preset refuses, it does not guess.** `platinum9` is empty
+(nulls, no references) until its sweep exists. `analyze()` returns
+`uncalibrated:true`; `judge()` says "inte kalibrerad för den här
+koncentratorn". The device page shows the whole frame with the buttons and no
+number, which is what aiming a camera at a new machine needs. The admin page
+does not store those refusals — they say nothing about the frames.
+
+**How the move was verified**: the functions that do the work were not touched.
+`usePreset()` assigns the same names (`XL`, `CAL`, …) the constants had, so on
+413 frames — the sweep, the 78 negatives and 312 uploads covering all three
+references and two fallbacks — every field of `analyze()` and `judge()` came
+out bit-identical to v1.10.12. The engine hash changed anyway, so the admin
+page will offer to re-analyse everything once.
+
+**Deploy order, because the ingest INSERT names the new column**: run both
+`ALTER TABLE`s in `cloud/schema.sql` first, then deploy ingest and admin. The
+other way round fails every upload until the column exists.
+
+### Calibrating a new concentrator
+The EverFlo calibration of 2026-08-22 is the template; its notes above say why
+each number is what it is. In order:
+
+1. **Firmware.** Set `CONCENTRATOR`, measure the step sizes against the ball as
+   was done 2026-08-16, and check that + turns the flow UP. Bump the MINOR
+   version: a recalibration is part of the job. Flash.
+2. **Camera and light.** Aim with the device page, which shows the whole frame
+   until a preset has a crop. Settle the LED position BEFORE the sweep — the
+   light is part of the calibration.
+3. **Sweep.** With the control panel's "Spara bild", in the lighting it will run
+   in: the resting stop (`0_min`), every half L/min from the lowest mark to the
+   top, the top mark (`<n>_max`) and one past the red line (`over_max`). Put the
+   frames in `test/<preset>-sweep-<date>/` with a `PRESET` file.
+4. **`node tools/calibrate.mjs <dir> --geometry g.json`** builds the reference
+   (per-pixel median of the gray frames — it reproduced EverFlo's `REF_PNG`
+   bit for bit) and fits the curve (within 0.0005 L/min of EverFlo's). The
+   geometry it SUGGESTS is approximate and says so — on EverFlo it put the ball
+   band 13 px too narrow on the left and the lean at 0.075 against 0.066 — so
+   measure the bands and the tilt the way the EverFlo notes describe.
+5. **Fill in the preset**, including what the Platinum's own label implies: it
+   alarms below 1.0 L/min and loses concentration above the red line at 9, so
+   `LOW_*` and `MAX_REASON` should say that rather than copy EverFlo's texts.
+6. **Validate**: `node tools/validate_engine.mjs test/<dir>`, and the old
+   suites still green.
+7. **Day and evening references** come afterwards from a day or two of
+   uploads, ball positions spread (see "Daylight is a second lighting regime").
 
 ### Engine invariants
 Grayscale -> flatfield (3-pass box blur ~ sigma 41) -> horizontal

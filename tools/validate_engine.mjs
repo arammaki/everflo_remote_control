@@ -3,7 +3,13 @@
    Runs the real balldetector.js against a directory of labelled
    images and reports the error against the label in each filename.
 
-       node tools/validate_engine.mjs ~/Downloads
+       node tools/validate_engine.mjs test/sweep-2026-08-22
+
+   Which concentrator preset to validate against comes from a file named
+   PRESET in the directory (one line, e.g. "everflo"), or from --preset <id>.
+   One of the two is required, and if both are given they must agree: a sweep
+   validated against the wrong machine's calibration is refused wholesale,
+   which looks exactly like an engine that has broken.
 
    Run this after ANY change to balldetector.js. The engine reads oxygen
    flow for a patient; a refactor that looks harmless can move a number or
@@ -50,20 +56,42 @@ const args = process.argv.slice(2);
    fails when any of them produces a number. Same decode, same references, so
    the two directions cannot drift apart. */
 const expectRejected = args.includes('--expect-rejected');
+const pi = args.indexOf('--preset');
+const presetFlag = pi >= 0 ? args[pi + 1] : null;
+if (pi >= 0 && (!presetFlag || presetFlag.startsWith('--'))) {
+  console.error('--preset needs a value, e.g. --preset everflo');
+  process.exit(2);
+}
 // A misspelt flag must not run the opposite assertion in silence.
-const badFlag = args.find((a) => a.startsWith('--') && a !== '--expect-rejected');
+const badFlag = args.find((a) => a.startsWith('--') && a !== '--expect-rejected' && a !== '--preset');
 if (badFlag) {
   console.error(`Unknown option ${badFlag}`);
   process.exit(2);
 }
-const dirs = args.filter((a) => !a.startsWith('--'));
+const dirs = args.filter((a, i) => !a.startsWith('--') && !(pi >= 0 && i === pi + 1));
 if (dirs.length > 1) {
   console.error(`One directory at a time, got: ${dirs.join(', ')}`);
   process.exit(2);
 }
 const imageDir = dirs[0];
 if (!imageDir) {
-  console.error('Usage: node tools/validate_engine.mjs <dir with bild_*.jpg> [--expect-rejected]');
+  console.error('Usage: node tools/validate_engine.mjs <dir with bild_*.jpg> [--expect-rejected] [--preset <id>]');
+  process.exit(2);
+}
+
+let presetFile = null;
+try {
+  presetFile = readFileSync(join(imageDir, 'PRESET'), 'utf8').trim();
+} catch (e) {
+  if (e.code !== 'ENOENT') throw e;
+}
+if (presetFile !== null && presetFlag !== null && presetFile !== presetFlag) {
+  console.error(`${imageDir}/PRESET says "${presetFile}", --preset says "${presetFlag}"`);
+  process.exit(2);
+}
+const presetId = presetFlag ?? presetFile;
+if (!presetId) {
+  console.error(`Which concentrator? Put its preset id in ${imageDir}/PRESET, or pass --preset <id>.`);
   process.exit(2);
 }
 
@@ -74,14 +102,18 @@ const toBmp = (src, name) => {
   return out;
 };
 
-/* The engine file is used as-is. It only gets a REF setter appended,
-   because loadRef() needs Image and canvas, which Node does not have. */
+/* The engine file is used as-is, with an export line appended. References go
+   in through setRefs(), because loadRef() needs Image and canvas, which Node
+   does not have. */
 const src = readFileSync(ENGINE, 'utf8');
 writeFileSync(join(work, 'engine.mjs'), src +
-  '\nexport function __setREF(r){ REF = r; }\n' +
-  '\nexport function __setREFS(n, d, e){ REF = n; REF_DAY = d; REF_EVENING = e; }\n' +
-  'export { T,toGray,flatfield,buildRef,analyze,judge };\n');
+  '\nexport { T,toGray,flatfield,buildRef,analyze,judge,PRESETS,usePreset,setRefs,isCalibrated };\n');
 const E = await import(pathToFileURL(join(work, 'engine.mjs')).href);
+if (!Object.prototype.hasOwnProperty.call(E.PRESETS, presetId)) {
+  console.error(`Unknown preset "${presetId}". The engine has: ${Object.keys(E.PRESETS).join(', ')}`);
+  process.exit(2);
+}
+E.usePreset(presetId);
 
 /** 24-bit uncompressed BMP, either row order. */
 function readBmp(path) {
@@ -104,25 +136,19 @@ function readBmp(path) {
   return { data, width: w, height: h };
 }
 
-// Rebuild BOTH references the way loadRef() does, from the engine's own
-// embedded PNGs. Both, deliberately: the labelled sweep is a night sweep, so
-// this also proves the selection picks the night reference for night frames —
-// a day reference that somehow out-registered it on sweep frames would show
-// up here as readings drifting, not stay hidden behind a single-ref harness.
-const refPng = join(work, 'ref.png');
-writeFileSync(refPng, Buffer.from(
-  src.match(/const REF_PNG="data:image\/png;base64,([^"]+)"/)[1], 'base64'));
-const night = E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(refPng, 'ref')))));
-/* Every reference the engine carries, because the selection is per frame:
-   a harness holding fewer than the phone does reports a different engine. */
-const extra = (name, file) => {
-  const m = src.match(new RegExp(`const ${name}="data:image/png;base64,([^"]+)"`));
-  if (!m) return null;
-  const png = join(work, file + '.png');
-  writeFileSync(png, Buffer.from(m[1], 'base64'));
-  return E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(png, file)))));
-};
-E.__setREFS(night, extra('REF_PNG_DAY', 'refday'), extra('REF_PNG_EVENING', 'refeve'));
+/* Every reference the preset carries, built the way loadRef() does, because
+   the selection is per frame: a harness holding fewer references than the
+   phone does reports a different engine. For the EverFlo night sweep this also
+   proves the selection picks the night reference for night frames — a day
+   reference that out-registered it would show up here as readings drifting. */
+const refs = E.PRESETS[presetId].refs().map(([dataUrl, name], i) => {
+  const png = join(work, `ref${i}.png`);
+  writeFileSync(png, Buffer.from(dataUrl.replace(/^data:image\/png;base64,/, ''), 'base64'));
+  return [E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(png, `ref${i}`))))), name];
+});
+E.setRefs(refs);
+console.log(`preset ${presetId}: ${E.PRESETS[presetId].name}, ${refs.length} reference(s)` +
+            (E.isCalibrated(presetId) ? '' : ' — NOT CALIBRATED, every frame will be refused'));
 
 /* Three naming generations live in the saved sweeps, and a filter that
    silently drops the ones it does not recognise is worse than one that fails
@@ -205,9 +231,9 @@ for (const f of files) {
   const b = E.judge(r);
   // The engine's own wording, so a verdict here can be grepped for in the log
   // and on the page the patient reads.
-  const verdict = !b.ok ? 'REJECTED' : b.maxState ? 'Max' : b.bottomState ? 'Under 0,3'
+  const verdict = !b.ok ? 'REJECTED' : b.maxState ? 'Max' : b.bottomState ? b.label
                 : b.extrapolated ? 'ok (extrapolated)' : 'ok';
-  const read = verdict.startsWith('ok') || verdict === 'Under 0,3';
+  const read = b.ok && !b.maxState;
 
   /* --expect-rejected turns the assertion around: every frame must be
      REJECTED, which is what a wrong camera pose, an occlusion or a garbage
@@ -227,7 +253,7 @@ for (const f of files) {
   }
 
   console.log(
-    `${label.padEnd(10)} ${read && verdict !== 'Under 0,3' ? r.flow.toFixed(2).padStart(5) : '  -  '} ${diff.padStart(6)} |` +
+    `${label.padEnd(10)} ${read && !b.bottomState ? r.flow.toFixed(2).padStart(5) : '  -  '} ${diff.padStart(6)} |` +
     ` ${r.peak.toFixed(3).padStart(8)} ${r.margin.toFixed(1).padStart(5)}x ${r.reg.toFixed(2).padStart(6)}` +
     ` ${r.dy.toFixed(1).padStart(6)} ${String(r.spread).padStart(7)} | ${verdict}` +
     (verdict === 'REJECTED' ? ' - ' + b.reason.slice(0, 50) : ''));

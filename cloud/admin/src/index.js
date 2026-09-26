@@ -138,7 +138,8 @@ function renderPage(rows, now, latest, nav) {
       data-tid="${escapeHtml(r.received_at)}" data-orsak="${escapeHtml(r.reason)}"
       data-vrid="${r.press_degrees == null ? '' : r.press_degrees}"
       data-lage="${r.position ?? ''}" data-rssi="${r.rssi ?? ''}"
-      data-fw="${escapeHtml(r.fw ?? '')}">
+      data-fw="${escapeHtml(r.fw ?? '')}"
+      data-preset="${escapeHtml(r.preset ?? 'everflo')}">
       <td class="num id">${r.id}</td>
       <td class="t">${escapeHtml(r.received_at.replace('T', ' ').slice(0, 19))}</td>
       <td>${escapeHtml(r.reason)}</td>
@@ -317,7 +318,7 @@ säger hellre ifrån än gissar.</p>
 const MOTOR=${JSON.stringify(ENGINE_VERSION)};
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{willReadFrequently:true});
 const rows=[...document.querySelectorAll('#rows tr')];
-let sel=-1, refReady=false;
+let sel=-1;
 
 /* The uploaded frames are the RAW sensor image, 640x480 landscape. The
    calibration is bound to the canvas both pages build — mirrored, rotated 270
@@ -356,15 +357,31 @@ function chips(r){
        neighbours, so it belongs beside the numbers rather than nowhere. */
     (r.ref?f('referens',r.ref+(r.fallback?' (reserv)':''),!r.fallback):'');
 }
-/* One shape for both the table cell and the row written to the database. */
+class UnknownPreset extends Error {}
+/* One shape for both the table cell and the row written to the database.
+   state:null means "nothing to store": a machine without a calibration yet can
+   only refuse, and a table full of those refusals would say nothing about the
+   frames that the next engine, calibrated, will read. */
 function verdict(r,b){
+  if(r.uncalibrated) return {state:null, flow:null, txt:'okal.', cls:'bad'};
   if(!b.ok) return {state:b.title==='Osäker avläsning'?'uncertain':'no-reading',
                     flow:null, txt:b.title==='Osäker avläsning'?'osäker':'nej', cls:'bad'};
   if(b.maxState)    return {state:'max',   flow:null, txt:b.label, cls:'good'};
   if(b.bottomState) return {state:'below', flow:null, txt:b.label, cls:'good'};
   return {state:'ok', flow:r.flow, txt:r.flow.toFixed(2), cls:'good'};
 }
+/* Each frame is read with the preset of the machine it was taken of, as the
+   device reported it. NULL in the table means a frame from before presets, and
+   every one of those is an EverFlo frame — the row markup already maps it. An
+   id this engine has no preset for (a newer machine, or "?" for a malformed
+   report) is refused outright: reading it with some other machine's curve
+   would put a number in this table that nothing backs. */
 async function analyse(tr,{draw}={}){
+  const id=tr.dataset.preset;
+  if(!Object.prototype.hasOwnProperty.call(PRESETS,id))
+    throw new UnknownPreset('Okänd maskin "'+id+'" — den här motorn har inget preset för den.');
+  usePreset(id);
+  await loadRef();
   const im=await load(tr.dataset.key);
   const t=orient(im);
   if(draw){ ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(t,0,0,480,640); }
@@ -435,14 +452,15 @@ async function select(i,{scroll}={}){
     (tr.dataset.lokal||'').replace('T',' ')+' · '+tr.dataset.orsak+
     (tr.dataset.vrid?' · vridning '+(tr.dataset.vrid>0?'+':'')+tr.dataset.vrid+'°':'')+
     (tr.dataset.rssi?' · '+tr.dataset.rssi+' dBm':'')+
-    (tr.dataset.fw?' · v'+tr.dataset.fw:'');
+    (tr.dataset.fw?' · v'+tr.dataset.fw:'')+
+    ' · '+(Object.prototype.hasOwnProperty.call(PRESETS,tr.dataset.preset)
+           ? PRESETS[tr.dataset.preset].name : 'maskin '+tr.dataset.preset);
   document.getElementById('reason').textContent='';
   if(!tr.dataset.key){ show('–','','none');
     document.getElementById('reason').textContent='Raden har ingen bild.';
     document.getElementById('chips').innerHTML=''; return; }
   show('…','','');
   try{
-    if(!refReady){ await loadRef(); refReady=true; }
     const {r,b}=await analyse(tr,{draw:true});
     chips(r);
     document.getElementById('reason').textContent=b.reason||'';
@@ -451,10 +469,11 @@ async function select(i,{scroll}={}){
     else if(b.maxState) show(b.label,'över skalans slut','warn');
     else if(b.bottomState) show(b.label,'L/min','warn');
     else show(r.flow.toFixed(2),'L/min'+(b.extrapolated?' (osäkert)':''));
-    paint(tr,v); remember(tr,r,v); flush();
+    paint(tr,v); if(v.state) { remember(tr,r,v); flush(); }
   }catch(e){
     show('Ingen avläsning','','none');
-    document.getElementById('reason').textContent='Bilden kunde inte läsas eller analyseras.';
+    document.getElementById('reason').textContent=e instanceof UnknownPreset
+      ? e.message : 'Bilden kunde inte läsas eller analyseras.';
     document.getElementById('chips').innerHTML='';
   }
 }
@@ -604,7 +623,6 @@ async function sweep(force){
   const a=document.getElementById('all'), b=document.getElementById('allt');
   const prog=document.getElementById('progress');
   a.disabled=b.disabled=true;
-  if(!refReady){ await loadRef(); refReady=true; }
   const todo=rows.filter(tr=>tr.dataset.key && inEpoch(tr) && (force || !tr.dataset.nu));
   let n=0, failed=0;
   for(const tr of todo){
@@ -612,7 +630,7 @@ async function sweep(force){
     try{
       const {r,b:jb}=await analyse(tr);
       const v=verdict(r,jb);
-      paint(tr,v); remember(tr,r,v);
+      paint(tr,v); if(v.state) remember(tr,r,v);
       if(!jb.ok) failed++;
     }catch(e){
       const td=tr.querySelector('.avl.nu'); td.textContent='fel'; td.className='avl nu bad';
@@ -888,7 +906,7 @@ export default {
 
     const { results } = await db.all(env.DB.prepare(
       `SELECT r.id, r.received_at, r.reason, r.image_key,
-              r.position, r.press_degrees, r.rssi, r.fw,
+              r.position, r.press_degrees, r.rssi, r.fw, r.preset,
               n.flow AS flow_nu, n.state AS state_nu,
               f.flow AS flow_da, f.state AS state_da, f.engine AS engine_da
          FROM readings r

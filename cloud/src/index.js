@@ -49,6 +49,18 @@ function intParam(url, name) {
 
 /* Milliseconds are part of the key on purpose: two uploads in the same
    second would otherwise overwrite each other, losing an image silently. */
+/* The concentrator preset the firmware was built for; the admin page reads the
+   frame with it. ABSENT means firmware older than 1.10.13, all of which drove
+   an EverFlo, and is stored as NULL — which the admin page reads as EverFlo.
+   PRESENT but malformed must therefore NOT become NULL, or a garbled Platinum
+   frame would be read with the EverFlo curve. It is stored as "?", which is
+   no preset at all, and the admin page refuses to analyse it. */
+function presetParam(url) {
+  const p = url.searchParams.get('preset');
+  if (p === null) return null;
+  return /^[a-z0-9_-]{1,32}$/.test(p) ? p : '?';
+}
+
 function imageKey(now, reason) {
   const iso = now.toISOString();                 // 2026-08-15T13:49:35.996Z
   const day = iso.slice(0, 10).replace(/-/g, '/');
@@ -145,8 +157,8 @@ export default {
     await env.DB.prepare(
       `INSERT INTO readings
          (received_at, reason, image_key, flow, state,
-          position, step_degrees, press_degrees, uptime_s, rssi, fw, engine)
-       VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?)`
+          position, step_degrees, press_degrees, uptime_s, rssi, fw, engine, preset)
+       VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       now.toISOString(),
       reason,
@@ -162,7 +174,8 @@ export default {
       // joined against analyses.engine, and a junk value there would quietly
       // match nothing forever instead of failing loudly.
       /^[0-9a-f]{1,16}$/.test(url.searchParams.get('motor') || '')
-        ? url.searchParams.get('motor') : null
+        ? url.searchParams.get('motor') : null,
+      presetParam(url)
     ).run();
 
     /* An update that has landed is no longer pending. Disarming on the

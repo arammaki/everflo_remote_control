@@ -8,7 +8,13 @@
        node tools/score_uploads.mjs <dir> '{"YTOP":110}'   score a candidate
 
    <dir> holds the downloaded frames as <reading id>.jpg plus a meta.json
-   listing {id, received_at, reason} — see "Fetching" below.
+   listing {id, received_at, reason, preset} — see "Fetching" below.
+
+   The preset is per row, as the device reported it. A row without one was
+   uploaded before presets existed, and every such row is an EverFlo frame —
+   that is history, not a default. One run scores one machine: a directory
+   mixing presets is refused, because a span of "same knob position" cannot
+   straddle two concentrators.
 
    Why this exists: the sweep is 25 frames from one calm morning. The uploads
    are hundreds of frames across days, lighting, and weather, and they are the
@@ -37,7 +43,7 @@
    required for R2 or the download silently writes empty files):
 
      npx wrangler d1 execute everflo --remote --json \
-       --command "SELECT id, received_at, reason, image_key FROM readings" \
+       --command "SELECT id, received_at, reason, preset, image_key FROM readings" \
        | sed -n '/^\[/,$p' > meta-raw.json
      # keep the .results array as meta.json, then per row:
      npx wrangler r2 object get everflo-images/<image_key> -J eu --remote \
@@ -98,7 +104,9 @@ function orient(im) {
   return { data: out, width: W, height: H };
 }
 
-/* Rewrites one constant in the engine source.
+/* Rewrites one SHARED constant in the engine source (SEARCH, TILTS, BOXW —
+   the algorithm, which every preset uses). Preset fields are patched on the
+   preset object instead, see load().
 
    Only `const` declaration lines are eligible. The obvious version of this —
    one regex over the whole file — silently patches the FIRST match, and the
@@ -118,30 +126,32 @@ function setConst(src, name, value) {
   return lines.join('\n');
 }
 
-/** Loads the engine, optionally with constants overridden, and primes BOTH
-    references the way loadRef() does. Both matters: this tool's one job is
-    "what will the phone show", and the phone selects between night and day
-    per frame — a night-only harness would report daylight frames as refused
-    while the phone reads them. */
-async function load(overrides, tag) {
+/** Loads the engine for one preset, optionally with values overridden, and
+    builds EVERY reference the preset carries, the way loadRef() does. Every
+    one matters: this tool's one job is "what will the phone show", and the
+    phone selects between references per frame — a harness holding fewer
+    reports frames as refused that the phone reads. */
+async function load(presetId, overrides, tag) {
   let src = readFileSync(ENGINE, 'utf8');
-  for (const [k, v] of Object.entries(overrides)) src = setConst(src, k, v);
+  writeFileSync(join(work, `probe-${tag}.mjs`), src + '\nexport { PRESET_KEYS };\n');
+  const { PRESET_KEYS } = await import(pathToFileURL(join(work, `probe-${tag}.mjs`)).href);
+  const presetPatch = {};
+  for (const [k, v] of Object.entries(overrides)) {
+    if (PRESET_KEYS.includes(k)) presetPatch[k] = v;
+    else src = setConst(src, k, v);
+  }
   writeFileSync(join(work, `engine-${tag}.mjs`), src +
-    '\nexport function __setREFS(n, d, e){ REF = n; REF_DAY = d; REF_EVENING = e; }\n' +
-    'export { T,toGray,flatfield,buildRef,analyze,judge };\n');
+    '\nexport { T,toGray,flatfield,buildRef,analyze,judge,PRESETS,usePreset,setRefs,isCalibrated };\n');
   const E = await import(pathToFileURL(join(work, `engine-${tag}.mjs`)).href);
-  const build = (b64, name) => {
-    const png = join(work, name + '.png');
-    writeFileSync(png, Buffer.from(b64, 'base64'));
-    return E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(png, name)))));
-  };
-  const night = build(src.match(/const REF_PNG="data:image\/png;base64,([^"]+)"/)[1],
-                      'ref-' + tag);
-  const extra = (name, file) => {
-    const m = src.match(new RegExp(`const ${name}="data:image/png;base64,([^"]+)"`));
-    return m ? build(m[1], file + '-' + tag) : null;
-  };
-  E.__setREFS(night, extra('REF_PNG_DAY', 'refday'), extra('REF_PNG_EVENING', 'refeve'));
+  if (!Object.prototype.hasOwnProperty.call(E.PRESETS, presetId))
+    throw new Error(`Unknown preset "${presetId}". The engine has: ${Object.keys(E.PRESETS).join(', ')}`);
+  Object.assign(E.PRESETS[presetId], presetPatch);
+  E.usePreset(presetId);
+  E.setRefs(E.PRESETS[presetId].refs().map(([dataUrl, name], i) => {
+    const png = join(work, `ref${i}-${tag}.png`);
+    writeFileSync(png, Buffer.from(dataUrl.replace(/^data:image\/png;base64,/, ''), 'base64'));
+    return [E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(png, `ref${i}-${tag}`))))), name];
+  }));
   return E;
 }
 
@@ -158,8 +168,14 @@ if (missing.length) {
   process.exit(2);
 }
 
-const engines = [await load({}, 'base')];
-if (Object.keys(patch).length) engines.push(await load(patch, 'cand'));
+const presets = [...new Set(ids.map((id) => meta[id].preset ?? 'everflo'))];
+if (presets.length !== 1) {
+  console.error(`${dir} mixes presets (${presets.join(', ')}). Score one machine per run.`);
+  process.exit(2);
+}
+console.log(`preset ${presets[0]}`);
+const engines = [await load(presets[0], {}, 'base')];
+if (Object.keys(patch).length) engines.push(await load(presets[0], patch, 'cand'));
 
 /* Both engines score each frame while it is decoded, then it is dropped. An
    oriented frame is 1.2 MB, so holding all of them would cost 200 MB at

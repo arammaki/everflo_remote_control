@@ -68,24 +68,65 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.10.12"
+#define FW_VERSION "1.10.13"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
                                   //     (needs TMCStepper library + 1k resistor, see README)
 
-/* ---------------- MOVEMENT ---------------- */
-#define DEG_PER_PRESS   39        // motor shaft degrees per button press.
-                                  // Calibrated on site against the ball 2026-08-16,
-                                  // replacing the earlier 15° Lego estimate.
-#define DIRECTION       -1        // 1 or -1 when + turns the wrong way
+/* ---------------- CONCENTRATOR ----------------
+   Which machine this build drives. Everything that was tuned for one model
+   lives in its block: the preset the detection engine reads the meter with
+   (PRESETS in balldetector.js, by id), the step sizes on her buttons and the
+   direction the knob turns. Chosen here and nowhere else — not on the page and
+   not over the API. She cannot switch it, and neither can a stray request: a
+   machine swap is a visit anyway (cup, mount, camera, light), and a build is
+   the one place a wrong choice cannot quietly persist.
+
+   The preset id goes to the device page, to /api/status for the control panel,
+   and with every upload so the admin page reads each frame with the preset it
+   was taken under. Switching back is: set this line, bump FW_VERSION, flash. */
+#define CONC_EVERFLO    1
+#define CONC_PLATINUM9  2
+#define CONCENTRATOR    CONC_EVERFLO
+
+#if CONCENTRATOR == CONC_EVERFLO
+  #define PRESET_ID       "everflo"
+  #define DEG_PER_PRESS   39      // motor shaft degrees per button press, and her
+                                  // smallest button. Calibrated on site against
+                                  // the ball 2026-08-16, replacing the earlier
+                                  // 15° Lego estimate.
+  #define STEP_MEDIUM     90      // her ++ and −− buttons
+  #define STEP_LARGE      160     // her +++ and −−− buttons
+  #define DIRECTION       -1      // 1 or -1 when + turns the wrong way
                                   // (-1 since v1.6.2: verified on site)
-#define STEP_DEG_MIN    4         // clamp range for a press, whether it comes from
+#elif CONCENTRATOR == CONC_PLATINUM9
+  #define PRESET_ID       "platinum9"
+  /* NOT MEASURED — copied from the EverFlo so a first build has sane values.
+     The same cup fits (2026-09-26), so the direction probably carries over, but
+     1-9 L/min on a knob of unknown pitch will not match 39° per step. Measure
+     against the ball, as on 2026-08-16, and write the result here. The post-
+     flash check (+ turns the flow UP) settles the direction. */
+  #define DEG_PER_PRESS   39
+  #define STEP_MEDIUM     90
+  #define STEP_LARGE      160
+  #define DIRECTION       -1
+#else
+  #error "CONCENTRATOR must be CONC_EVERFLO or CONC_PLATINUM9"
+#endif
+
+/* ---------------- MOVEMENT ---------------- */
+#define STEP_DEG_MIN    4        // clamp range for a press, whether it comes from
 #define STEP_DEG_MAX    180       // /api/steg or ?steg=N on a press. Half a turn is
                                   // a lot of flow in one press — the ceiling exists
                                   // so a bad request cannot spin the knob, not to
                                   // second-guess a deliberate one. Raised from 90
                                   // for calibration work 2026-08-16.
+#if DEG_PER_PRESS < STEP_DEG_MIN || STEP_LARGE > STEP_DEG_MAX || STEP_MEDIUM > STEP_LARGE
+  // A button whose step the clamp silently changes would turn a different
+  // amount than its preset says, with nothing on her page to show it.
+  #error "Preset step sizes must satisfy STEP_DEG_MIN <= DEG_PER_PRESS, STEP_MEDIUM <= STEP_LARGE <= STEP_DEG_MAX"
+#endif
 #define MICROSTEPS      8         // TMC2209 standalone: MS1=MS2=GND => 1/8
 #define STEP_PAUSE_US   1800      // µs between microsteps at cruise (lower = faster).
                                   // 125 deg/s. A stepper runs far faster once moving
@@ -618,14 +659,14 @@ static const char PAGE[] = R"HTML(
 <div id="flow">–<small> L/min</small></div>
 <div class="buttons">
 <div class="row">
-<button class="plus" onclick="press('plus',39)">+</button>
-<button class="plus" onclick="press('plus',90)">++</button>
-<button class="plus" onclick="press('plus',160)">+++</button>
+<button class="plus" onclick="press('plus',%STEP1%)">+</button>
+<button class="plus" onclick="press('plus',%STEP2%)">++</button>
+<button class="plus" onclick="press('plus',%STEP3%)">+++</button>
 </div>
 <div class="row">
-<button class="minus" onclick="press('minus',39)">&minus;</button>
-<button class="minus" onclick="press('minus',90)">&minus;&minus;</button>
-<button class="minus" onclick="press('minus',160)">&minus;&minus;&minus;</button>
+<button class="minus" onclick="press('minus',%STEP1%)">&minus;</button>
+<button class="minus" onclick="press('minus',%STEP2%)">&minus;&minus;</button>
+<button class="minus" onclick="press('minus',%STEP3%)">&minus;&minus;&minus;</button>
 </div>
 </div>
 <div id="msg"></div>
@@ -635,6 +676,8 @@ static const char PAGE[] = R"HTML(
 const PIN='%PIN%'; const q = PIN ? ('?pin='+PIN) : '';
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{willReadFrequently:true});
 let lastFrameAt=Date.now(), lastAnalysis=0, refReady=false;
+// The machine this firmware was built for. Compiled in, never chosen here.
+try{ usePreset('%PRESET%'); }catch(e){}
 loadRef().then(()=>{refReady=true})
   .catch(()=>{ show('Ingen avläsning','','none');
     document.getElementById('msg').textContent=
@@ -659,18 +702,18 @@ function show(text,unit,cls){
 }
 function nextFrame(){ const i=new Image(); i.onload=()=>{ frame(i); setTimeout(nextFrame,250); };
   i.onerror=()=>setTimeout(nextFrame,1000); i.src='/bild?t='+Date.now(); }
-/* What she SEES is the meter alone, x 215..440 of the oriented frame. The LED
-   sits left of the tube and blazes into the lens: measured over the 2026-08-22
-   sweep, mean column brightness peaks at 175 around x 175 and falls off a
-   cliff between x 210 (153) and x 220 (119). Cropping there drops the glare
-   and roughly doubles how big the ball is on her phone.
+/* What she SEES is the meter alone: the preset's VIEW_X/VIEW_W crop of the
+   oriented frame (the EverFlo preset explains its numbers). An uncalibrated
+   preset has none and shows the whole frame, which is what aiming a camera at
+   a new machine needs.
 
    The ANALYSIS still gets the whole 480x640 frame — the crop is display only,
    so no band, no registration and no calibration constant is touched. Cutting
    this close leaves little margin if the camera slides sideways, and that is
    the right trade: past about 20 px the engine refuses the reading anyway, and
    the control panel still shows the full frame for working out why. */
-const CROP_X=215, CROP_W=225;
+const CROP_X=VIEW_X??0, CROP_W=VIEW_W??480;
+cv.width=CROP_W;
 function frame(img){
   lastFrameAt=Date.now();
   const t=orient(img);
@@ -736,10 +779,11 @@ bool pinOK(httpd_req_t *req) {
 }
 
 esp_err_t sendJson(httpd_req_t *req, bool ok, int applied) {
-  char b[96];
+  char b[128];
   // `steg` is what the firmware actually turned, after its own clamping, so a
-  // caller asking for 180 can see it got 180 — or did not.
-  snprintf(b, sizeof(b), "{\"ok\":%s,\"lage\":%d,\"steg\":%d}",
+  // caller asking for 180 can see it got 180 — or did not. `preset` is the
+  // machine this build was made for; the control panel reads the meter with it.
+  snprintf(b, sizeof(b), "{\"ok\":%s,\"lage\":%d,\"steg\":%d,\"preset\":\"" PRESET_ID "\"}",
            ok ? "true" : "false", position, applied);
   httpd_resp_set_type(req, "application/json");
   // CORS on every JSON API, not just /api/steg. The control panel runs from
@@ -755,6 +799,10 @@ esp_err_t h_index(httpd_req_t *req) {
   String s(PAGE);
   s.replace("%PIN%", WEB_PIN);
   s.replace("%VER%", FW_VERSION);
+  s.replace("%PRESET%", PRESET_ID);
+  s.replace("%STEP1%", String(DEG_PER_PRESS));
+  s.replace("%STEP2%", String(STEP_MEDIUM));
+  s.replace("%STEP3%", String(STEP_LARGE));
   httpd_resp_set_type(req, "text/html; charset=utf-8");
   return httpd_resp_send(req, s.c_str(), s.length());
 }
@@ -1153,6 +1201,7 @@ bool uploadFrame(const char *reason) {
                "&uptime=" + (millis() / 1000) +
                "&rssi=" + WiFi.RSSI() +
                "&fw=" FW_VERSION
+               "&preset=" PRESET_ID
                // The engine this firmware serves at /motor.js, by content hash
                // (generated into balldetector_js.h). fw alone cannot answer
                // "what did it read at the time": an engine is baked into a
@@ -1482,6 +1531,7 @@ void setup() {
 
   motorInit();
   Serial.printf("Motor: NEMA17+TMC2209, %d degrees/press\n", DEG_PER_PRESS);
+  logLine("Concentrator preset: " PRESET_ID);
 
   ledInit();
 

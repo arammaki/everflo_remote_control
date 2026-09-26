@@ -36,7 +36,13 @@ CREATE TABLE IF NOT EXISTS readings (
   -- genuinely "what it read at the time" rather than "the first time someone
   -- happened to click it". NULL for every frame uploaded before v1.9.7 —
   -- and that must stay visible rather than be guessed at.
-  engine       TEXT
+  engine       TEXT,
+  -- Which concentrator the device was built for (CONCENTRATOR in the sketch,
+  -- a key of PRESETS in balldetector.js), reported since v1.10.13. The admin
+  -- page reads each frame with this preset. NULL means the frame predates
+  -- presets, and every such frame is an EverFlo frame — that is history, not
+  -- a default, which is why NULL is left in place rather than backfilled.
+  preset       TEXT
 );
 
 CREATE INDEX IF NOT EXISTS readings_received_at ON readings (received_at);
@@ -90,11 +96,19 @@ CREATE TABLE IF NOT EXISTS firmware (
   md5         TEXT NOT NULL,
   size        INTEGER NOT NULL,
   uploaded_at TEXT NOT NULL,
-  armed_at    TEXT                -- NULL = inert. Exactly one row may be armed.
+  armed_at    TEXT,               -- NULL = inert. Exactly one row may be armed.
+  preset      TEXT                -- the concentrator the image was built for, read
+                                  -- from the image by publish_firmware.mjs (1.10.13+)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS firmware_one_armed
   ON firmware ((1)) WHERE armed_at IS NOT NULL;
 
+-- Added 2026-09-26 for existing databases. Run it BEFORE deploying the
+-- ingest Worker that writes the column: the INSERT names it, so a Worker
+-- deployed first fails every upload until the column exists.
+--   ALTER TABLE readings ADD COLUMN preset TEXT;
+--   ALTER TABLE firmware ADD COLUMN preset TEXT;
+--
 -- Added 2026-08-17 for existing databases:
 --   ALTER TABLE readings ADD COLUMN engine TEXT;
 --
