@@ -90,7 +90,6 @@ function label(flow, state) {
 }
 const good = (state) => state === 'ok' || state === 'max' || state === 'below';
 
-
 /* `latest` is the newest reading in the database, not rows[0]: on page 2 the
    first row is hours old and the banner would call a healthy device dead. */
 /* Newest first, so "older" is the next page. The row count in the label is
@@ -383,7 +382,9 @@ async function analyse(tr,{draw}={}){
   // what the operator must be looking at.
   const im=await load(tr.dataset.key);
   const t=orient(im);
-  if(draw){ ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(t,0,0,480,640); }
+  // Only while this row is still the selected one: an earlier, slower
+  // selection must not paint its frame over the row now highlighted.
+  if(draw && rows[sel]===tr){ ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(t,0,0,480,640); }
   const id=tr.dataset.preset;
   if(!Object.prototype.hasOwnProperty.call(PRESETS,id))
     throw new UnknownPreset('Okänd maskin "'+id+'" — den här motorn har inget preset för den.');
@@ -472,15 +473,19 @@ async function select(i,{scroll}={}){
   show('…','','');
   try{
     const {r,b}=await analyse(tr,{draw:true});
+    const v=verdict(r,b);
+    // The reading belongs to its own row whatever happens on screen, so it is
+    // stored either way; only what is SHOWN waits for the row to still be chosen.
+    paint(tr,v); if(v.state) { remember(tr,r,v); flush(); }
+    if(rows[sel]!==tr) return;
     chips(r);
     document.getElementById('reason').textContent=b.reason||'';
-    const v=verdict(r,b);
     if(!b.ok) show(b.title,'','none');
     else if(b.maxState) show(b.label,'över skalans slut','warn');
     else if(b.bottomState) show(b.label,'L/min','warn');
     else show(r.flow.toFixed(2),'L/min'+(b.extrapolated?' (osäkert)':''));
-    paint(tr,v); if(v.state) { remember(tr,r,v); flush(); }
   }catch(e){
+    if(rows[sel]!==tr) return;
     show('Ingen avläsning','','none');
     document.getElementById('reason').textContent=e instanceof UnknownPreset
       ? e.message : 'Bilden kunde inte läsas eller analyseras.';

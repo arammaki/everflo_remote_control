@@ -115,14 +115,15 @@ RUNS_ON="$(curl -4 -s --max-time 5 "http://$ADDR/api/status" 2>/dev/null | sed -
 # Silence says EverFlo only when the version says "before presets" (1.10.13);
 # a status request that merely timed out says nothing at all. Guessing there
 # would cry wolf on the one warning that must be believed.
-before_presets() { awk -v v="$1" 'BEGIN{ if (split(v,a,".")!=3) exit 1
+before_presets() { awk -v v="$1" 'BEGIN{ if (v !~ /^[0-9]+\.[0-9]+\.[0-9]+$/) exit 1
+  split(v,a,"."); a[1]+=0; a[2]+=0; a[3]+=0
   exit !((a[1]<1)||(a[1]==1&&a[2]<10)||(a[1]==1&&a[2]==10&&a[3]<13)) }'; }
 if [ -z "$RUNS_ON" ] && [ -n "$WAS" ] && before_presets "$WAS"; then
   RUNS_ON="everflo (firmware before presets)"
 fi
-if [ -z "$BUILT_FOR" ] && before_presets "$VERSION"; then
-  BUILT_FOR="everflo"                  # every build before presets was one
-fi
+# This script builds from the sketch, which is 1.10.13 or later, so the image
+# must carry the string; one that does not is not the build it claims to be.
+[ -n "$BUILT_FOR" ] || die "the built image names no concentrator preset — refusing to send it"
 echo "  machine   ${BUILT_FOR:-unknown}"
 [ -n "$RUNS_ON" ] && echo "  unit is   $RUNS_ON"
 echo "  image     $BIN"

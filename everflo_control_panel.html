@@ -805,7 +805,7 @@ function judge(r){
 /* ---------- shell: polling, display, motor, log (from bolldetektor_3) ---------- */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{willReadFrequently:true});
 let host='', lastFlow=null, timer=null, lastCleanFrame=null, fetchingSince=0, pulseTimer=null;
-let presetFor=null, presetAsking=false, presetUnknown=null, presetError=null, buttonsFor=null;
+let presetFor=null, presetAsking=false, presetUnknown=null, presetError=null, stepsEdited=false;
 try{
   document.getElementById('log').value = localStorage.getItem('ev_logg')||'';
   const h=localStorage.getItem('ev_host'); if(h) document.getElementById('host').value=h;
@@ -862,6 +862,8 @@ function pulse(){
   fetch('http://'+host+'/api/ui-pulse').catch(()=>{});
 }
 document.addEventListener('visibilitychange', pulse);
+['d1','d2','d3'].forEach(d=>document.getElementById(d)
+  .addEventListener('input',()=>{ stepsEdited=true; }));
 /* Which machine the device drives decides how the meter is read, and only the
    device knows: it was built for exactly one (CONCENTRATOR in the sketch).
    Firmware before 1.10.13 does not say — and every one of those drove an
@@ -891,14 +893,12 @@ async function choosePreset(){
       (isCalibrated(id) ? '' : ' — inte kalibrerad än, bara bild');
     // Her three button sizes for this machine (1.10.13+). The fields here are
     // not remembered and would otherwise send EverFlo's 39/90/160 to any machine.
-    // Filled once per host and machine: this runs again after every lost
-    // contact, and a value the operator typed must not quietly change under a
-    // button that turns a motor.
-    if(buttonsFor!==askedFor+'|'+id && Array.isArray(j.buttons) && j.buttons.length===3 &&
-       j.buttons.every(Number.isInteger)){
+    // Unless the operator has typed in them: this runs again after every lost
+    // contact, and a value typed by hand must not quietly change under a button
+    // that turns a motor. A reload hands the fields back to the device.
+    if(!stepsEdited && Array.isArray(j.buttons) && j.buttons.length===3 &&
+       j.buttons.every(Number.isInteger))
       ['d1','d2','d3'].forEach((d,i)=>{ document.getElementById(d).value=j.buttons[i]; });
-      buttonsFor=askedFor+'|'+id;
-    }
   }catch(e){
     // The device answered, so this is not lost contact: the preset itself or its
     // references are broken in this copy of the page. Say so and stop asking.
@@ -1051,7 +1051,7 @@ function runFrame(){
   }
   let r,b;
   try{ r=analyze(ctx.getImageData(0,0,480,640), overrides()); b=judge(r); }
-  catch(e){ clearReading('Analysen misslyckades: '+e.message); return; }
+  catch(e){ console.error(e); clearReading('Analysen misslyckades — ladda om sidan. Detaljer i konsolen.'); return; }
   update(r,b);
   drawBands(r);
 }

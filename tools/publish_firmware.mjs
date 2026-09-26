@@ -62,8 +62,6 @@ function sql(command) {
     but quoting them properly costs one line and removes the question. */
 const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
 
-
-
 const [verb, ...rest] = process.argv.slice(2);
 
 if (verb === 'status') {
