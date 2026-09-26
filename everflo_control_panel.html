@@ -806,7 +806,7 @@ function judge(r){
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{willReadFrequently:true});
 let host='', lastFlow=null, timer=null, lastCleanFrame=null, fetchingSince=0, pulseTimer=null;
 let presetFor=null, presetAsking=false, presetUnknown=null, presetError=null,
-    stepsEdited=false, stepsFor=null;
+    stepsEdited=new Set(), stepsFor=null;   // ids of the step fields typed in by hand
 try{
   document.getElementById('log').value = localStorage.getItem('ev_logg')||'';
   const h=localStorage.getItem('ev_host'); if(h) document.getElementById('host').value=h;
@@ -864,7 +864,7 @@ function pulse(){
 }
 document.addEventListener('visibilitychange', pulse);
 ['d1','d2','d3'].forEach(d=>document.getElementById(d)
-  .addEventListener('input',()=>{ stepsEdited=true; }));
+  .addEventListener('input',()=>{ stepsEdited.add(d); }));
 /* Which machine the device drives decides how the meter is read, and only the
    device knows: it was built for exactly one (CONCENTRATOR in the sketch).
    Firmware before 1.10.13 does not say — and every one of those drove an
@@ -885,7 +885,14 @@ async function choosePreset(){
   try{
     const id=typeof j.preset==='string' ? j.preset : 'everflo';
     if(askedFor!==host) return;
-    if(!Object.prototype.hasOwnProperty.call(PRESETS,id)){ presetUnknown=id; return; }
+    if(!Object.prototype.hasOwnProperty.call(PRESETS,id)){
+      presetUnknown=id;
+      // No sizes this page can vouch for: empty fields make every press refuse
+      // ("Ogiltig stegstorlek") until the operator types one for this knob.
+      ['d1','d2','d3'].forEach(d=>{ document.getElementById(d).value=''; });
+      stepsFor=null; stepsEdited.clear();
+      return;
+    }
     usePreset(id);
     await loadRef();
     if(askedFor!==host) return;
@@ -898,11 +905,17 @@ async function choosePreset(){
     // one knob is wrong for another. Within the same one, a value the operator
     // typed stays — this runs again after every lost contact, and a number
     // must not quietly change under a button that turns a motor.
-    if(Array.isArray(j.buttons) && j.buttons.length===3 && j.buttons.every(Number.isInteger)){
+    // Firmware before 1.10.13 sends none, and drove an EverFlo with its
+    // compiled 39/90/160 — history, like the preset itself.
+    const sizes=(Array.isArray(j.buttons) && j.buttons.length===3 && j.buttons.every(Number.isInteger))
+      ? j.buttons : (j.preset===undefined ? [39,90,160] : null);
+    if(sizes){
       const key=askedFor+'|'+id;
-      if(key!==stepsFor){ stepsFor=key; stepsEdited=false; }
-      if(!stepsEdited)
-        ['d1','d2','d3'].forEach((d,i)=>{ document.getElementById(d).value=j.buttons[i]; });
+      // A value typed before the first answer is kept; only an actual change
+      // of host or machine hands the fields back to the device.
+      if(stepsFor!==null && key!==stepsFor) stepsEdited.clear();
+      stepsFor=key;
+      ['d1','d2','d3'].forEach((d,i)=>{ if(!stepsEdited.has(d)) document.getElementById(d).value=sizes[i]; });
     }
   }catch(e){
     // The device answered, so this is not lost contact: the preset itself or its
@@ -1056,7 +1069,8 @@ function runFrame(){
   }
   let r,b;
   try{ r=analyze(ctx.getImageData(0,0,480,640), overrides()); b=judge(r); }
-  catch(e){ console.error(e); clearReading('Analysen misslyckades ('+e.message+'). Ladda om sidan.'); return; }
+  catch(e){ console.error(e);
+    clearReading('Analysen misslyckades. Ladda om sidan. Teknisk detalj: '+String((e&&e.message)||e)); return; }
   update(r,b);
   drawBands(r);
 }

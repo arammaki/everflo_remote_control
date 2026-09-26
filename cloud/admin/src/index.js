@@ -360,6 +360,7 @@ function chips(r){
 }
 class UnknownPreset extends Error {}
 class Superseded extends Error {}
+class LoadFailed extends Error {}
 const blank=()=>{ ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,480,640); };
 /* One shape for both the table cell and the row written to the database.
    state:null means "nothing to store": a machine without a calibration yet can
@@ -382,7 +383,8 @@ function verdict(r,b){
 async function analyse(tr,{draw}={}){
   // The picture first: whatever happens to the reading, the row's own frame is
   // what the operator must be looking at.
-  const im=await load(tr.dataset.key);
+  let im;
+  try{ im=await load(tr.dataset.key); }catch(e){ throw new LoadFailed(); }
   /* A row passed by on the way to another (arrow key held down) is dropped
      here, before any real work: its frame must not paint over the row now
      highlighted, and analysing every row passed would queue up a flatfield
@@ -491,8 +493,9 @@ async function select(i,{scroll}={}){
     else show(r.flow.toFixed(2),'L/min'+(b.extrapolated?' (osäkert)':''));
   }catch(e){
     if(e instanceof Superseded || rows[sel]!==tr) return;
-    // Whatever is on the canvas now belongs to another row.
-    if(!(e instanceof UnknownPreset)) blank();
+    // Only when this row's frame never arrived: then the canvas still holds
+    // another row's. A failure after the draw leaves this row's own picture.
+    if(e instanceof LoadFailed) blank();
     show('Ingen avläsning','','none');
     document.getElementById('reason').textContent=e instanceof UnknownPreset
       ? e.message : 'Bilden kunde inte läsas eller analyseras.';
