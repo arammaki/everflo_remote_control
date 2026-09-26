@@ -606,9 +606,12 @@ before the new ingest stores NULL presets, which the admin page then refuses.
 The EverFlo calibration of 2026-08-22 is the template; its notes above say why
 each number is what it is. In order:
 
-1. **Firmware.** Set `CONCENTRATOR`, measure the step sizes against the ball as
-   was done 2026-08-16, and check that + turns the flow UP. Bump the MINOR
-   version: a recalibration is part of the job. Flash.
+1. **Firmware.** Set `CONCENTRATOR`, bump the MINOR version (a recalibration is
+   part of the job) and flash — the unit has to be on the machine before its
+   knob can be measured. Then check that + turns the flow UP, measure the step
+   sizes against the ball as was done 2026-08-16, write them into the
+   machine's block, bump and reflash. Until then the buttons turn by EverFlo's
+   sizes on a knob of another pitch, so watch the picture on every press.
 2. **Camera and light.** Aim with the device page, which shows the whole frame
    until a preset has a crop. Settle the LED position and level BEFORE the
    sweep, and write the level into the machine's `LED_LEVEL` — the light is part

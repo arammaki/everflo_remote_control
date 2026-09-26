@@ -76,6 +76,12 @@ echo "Building v$VERSION ..."
 grep -qaF "remote control v$VERSION starting" "$BIN" \
   || die "the built image does not carry \"v$VERSION\" — refusing to send it"
 
+# Which machine the image is for. This script builds from the sketch, which is
+# 1.10.13 or later, so the image must name one; an image that does not is not
+# the build it claims to be — refused here, before any network probing.
+BUILT_FOR="$(grep -aoE 'Concentrator preset: [a-z0-9_-]+' "$BIN" | head -1 | sed 's/.*: //' || true)"
+[ -n "$BUILT_FOR" ] || die "the built image names no concentrator preset — refusing to send it"
+
 SIZE="$(wc -c < "$BIN" | tr -d ' ')"
 
 # -4, and resolve the name once.
@@ -108,9 +114,8 @@ if [ -n "$WAS" ]; then
 else
   echo "  running   not answering (or its log ring has rotated)"
 fi
-# Which machine the image is for, against which the unit says it drives — the
-# one mistake here that boots perfectly and is still wrong.
-BUILT_FOR="$(grep -aoE 'Concentrator preset: [a-z0-9_-]+' "$BIN" | head -1 | sed 's/.*: //' || true)"
+# Which machine the unit says it drives, against the image's — the one
+# mistake here that boots perfectly and is still wrong.
 RUNS_ON="$(curl -4 -s --max-time 5 "http://$ADDR/api/status" 2>/dev/null | sed -n 's/.*"preset":"\([a-z0-9_-]*\)".*/\1/p' || true)"
 # Silence says EverFlo only when the version says "before presets" (1.10.13);
 # a status request that merely timed out says nothing at all. Guessing there
@@ -121,10 +126,7 @@ before_presets() { awk -v v="$1" 'BEGIN{ if (v !~ /^[0-9]+\.[0-9]+\.[0-9]+$/) ex
 if [ -z "$RUNS_ON" ] && [ -n "$WAS" ] && before_presets "$WAS"; then
   RUNS_ON="everflo (firmware before presets)"
 fi
-# This script builds from the sketch, which is 1.10.13 or later, so the image
-# must carry the string; one that does not is not the build it claims to be.
-[ -n "$BUILT_FOR" ] || die "the built image names no concentrator preset — refusing to send it"
-echo "  machine   ${BUILT_FOR:-unknown}"
+echo "  machine   $BUILT_FOR"
 [ -n "$RUNS_ON" ] && echo "  unit is   $RUNS_ON"
 echo "  image     $BIN"
 echo "  size      $SIZE bytes, md5 $(md5 -q "$BIN")"
@@ -132,7 +134,7 @@ if [ "$ADDR" = "$HOST" ]; then echo "  target    $HOST:3232"; else echo "  targe
 echo
 echo "  This replaces the running firmware and reboots the unit."
 echo "  There is no rollback; recovery is a USB cable."
-if [ -n "$RUNS_ON" ] && [ -n "$BUILT_FOR" ] && [ "${RUNS_ON%% *}" != "$BUILT_FOR" ]; then
+if [ -n "$RUNS_ON" ] && [ "${RUNS_ON%% *}" != "$BUILT_FOR" ]; then
   echo
   echo "  WARNING: this build is for $BUILT_FOR, the unit runs $RUNS_ON. That moves it"
   echo "  to another machine's calibration and button sizes. Only if you mean it."

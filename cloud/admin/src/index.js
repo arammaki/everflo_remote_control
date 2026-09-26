@@ -359,6 +359,8 @@ function chips(r){
     (r.ref?f('referens',r.ref+(r.fallback?' (reserv)':''),!r.fallback):'');
 }
 class UnknownPreset extends Error {}
+class Superseded extends Error {}
+const blank=()=>{ ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,480,640); };
 /* One shape for both the table cell and the row written to the database.
    state:null means "nothing to store": a machine without a calibration yet can
    only refuse, and a table full of those refusals would say nothing about the
@@ -381,10 +383,13 @@ async function analyse(tr,{draw}={}){
   // The picture first: whatever happens to the reading, the row's own frame is
   // what the operator must be looking at.
   const im=await load(tr.dataset.key);
+  /* A row passed by on the way to another (arrow key held down) is dropped
+     here, before any real work: its frame must not paint over the row now
+     highlighted, and analysing every row passed would queue up a flatfield
+     each and freeze the page. The sweep is what stores readings wholesale. */
+  if(draw && rows[sel]!==tr) throw new Superseded();
   const t=orient(im);
-  // Only while this row is still the selected one: an earlier, slower
-  // selection must not paint its frame over the row now highlighted.
-  if(draw && rows[sel]===tr){ ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(t,0,0,480,640); }
+  if(draw){ ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(t,0,0,480,640); }
   const id=tr.dataset.preset;
   if(!Object.prototype.hasOwnProperty.call(PRESETS,id))
     throw new UnknownPreset('Okänd maskin "'+id+'" — den här motorn har inget preset för den.');
@@ -467,7 +472,7 @@ async function select(i,{scroll}={}){
     ' · '+(Object.prototype.hasOwnProperty.call(PRESETS,tr.dataset.preset)
            ? PRESETS[tr.dataset.preset].name : 'maskin '+tr.dataset.preset);
   document.getElementById('reason').textContent='';
-  if(!tr.dataset.key){ show('–','','none');
+  if(!tr.dataset.key){ blank(); show('–','','none');
     document.getElementById('reason').textContent='Raden har ingen bild.';
     document.getElementById('chips').innerHTML=''; return; }
   show('…','','');
@@ -485,7 +490,9 @@ async function select(i,{scroll}={}){
     else if(b.bottomState) show(b.label,'L/min','warn');
     else show(r.flow.toFixed(2),'L/min'+(b.extrapolated?' (osäkert)':''));
   }catch(e){
-    if(rows[sel]!==tr) return;
+    if(e instanceof Superseded || rows[sel]!==tr) return;
+    // Whatever is on the canvas now belongs to another row.
+    if(!(e instanceof UnknownPreset)) blank();
     show('Ingen avläsning','','none');
     document.getElementById('reason').textContent=e instanceof UnknownPreset
       ? e.message : 'Bilden kunde inte läsas eller analyseras.';
