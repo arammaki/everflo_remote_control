@@ -76,7 +76,7 @@ asserted only to produce a reading. The curve comes from the printed scale,
 not from these labels: see the CAL comment in the preset.
 
 Its `TOLERANCE` is 0.3 L/min, not the default 0.2, and the reason is two
-straight-on labels: 1.5 and 2.5 read +0.19 and +0.26, and the printed scale
+straight-on labels: 1.5 and 2.5 read +0.20 and +0.27, and the printed scale
 puts the ball above those marks too. That is how precisely the knob was set,
 not a looser gate — the engine's quality thresholds are the same for every
 machine.

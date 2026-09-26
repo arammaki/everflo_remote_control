@@ -206,8 +206,10 @@ function parseName(file) {
   if (/^(\d+(\.\d+)?_)?min$/i.test(s)) return { name: s, expect: 'reading', value: null };
   if (/^max$/i.test(s)) return { name: s, expect: 'reading', value: null };
   // Read by eye at an angle, or below the calibrated range: the number is
-  // approximate, so the frame is asserted only to produce a reading.
-  if (/^\d+(\.\d+)?_approx$/i.test(s)) return { name: s, expect: 'reading', value: null };
+  // approximate, so the frame is held to a loose bound, not the tolerance —
+  // see the 'approx' branch below.
+  const ap = s.match(/^(\d+(?:\.\d+)?)_approx$/i);
+  if (ap) return { name: s, expect: 'approx', value: Number(ap[1]) };
   const mx = s.match(/^(\d+(?:\.\d+)?)_?max$/i);
   if (mx) return { name: s, expect: 'value', value: Number(mx[1]) };
   if (/^\d+(\.\d+)?$/.test(s)) return { name: s, expect: 'value', value: Number(s) };
@@ -269,6 +271,14 @@ for (const f of files) {
     if (verdict !== 'Max') failures++;
   } else if (!read) {
     failures++;
+  } else if (p.expect === 'approx') {
+    /* A label read at an angle reads HIGH (parallax), so the truth is at or
+       under it; one below the calibrated range is about the bottom. Either way
+       the reading must land between label - 1 and label + TOLERANCE — loose,
+       but a frame read as 3 when labelled 9 still fails. */
+    const d = r.flow - p.value;
+    diff = '~' + (d >= 0 ? '+' : '') + d.toFixed(2);
+    if (d > TOLERANCE || d < -1) failures++;
   } else if (p.expect === 'value') {
     const d = r.flow - p.value;
     diff = (d >= 0 ? '+' : '') + d.toFixed(2);

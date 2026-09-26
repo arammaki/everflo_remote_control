@@ -668,10 +668,17 @@ version, and what to watch:
   label-fitted curve was up to 0.4 over the scale at the top. The method: find
   the ticks as dark rows in the reference's anchor band (sheared by
   BASE_TILT), number them from the frames, fit the offset between the engine's
-  y and the tick against the straight-on frames only (6.5 px), and fit the
+  y and the tick against the straight-on frames only, leaving out the two it
+  then judges (6.75 px), and fit the
   quadratic through the ticks 1..9 (within 0.09 of each). Frames read at an
   angle are named `<n>_approx`: asserted to read, not to a number.
-  calibrate.mjs does not do the tick fit yet.
+  calibrate.mjs does not do the tick fit yet, and warns rather than let its
+  label-fitted snippet be pasted over this preset.
+- **Below 1 L/min there is no number**, only "Under 1": the scale is
+  stretched there and the tick-fitted curve reads low. The boundary sits at
+  0.8 on the curve (~0.9 on the scale) so a clean 1.0 (reads 0.95) does not
+  flip. **Max starts at the red line** (engine y 165); the sweep's `max`
+  frame was judged from the side and sits just under it, reading 9.33.
 - **Open risks, measured nowhere yet:** the engine's pixel constants (the
   60-row ambiguity exclusion, spread 75, the ±35 centroid window, 20 px
   shift) were set for EverFlo's ~50 rows per L/min; on the Platinum's ~25

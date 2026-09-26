@@ -408,6 +408,15 @@ for (const fr of rest)
               'curve — the bottom state\'s LOW_FLOW must sit above that, and below the lowest flow in use.');
 
 /* ---------- 3. against the committed calibration ---------- */
+/* A preset whose trusted range reaches well past this sweep's labels was
+   not fitted to labels alone — the Platinum's comes from the printed ticks,
+   because its labels above 5 were read at an angle. Pasting this run's
+   snippet over it would replace that with a label fit. Say so. */
+if (committed.CAL && (committed.Y_CAL_MIN < yCalMin - 10 || committed.Y_CAL_MAX > yCalMax + 10)) {
+  console.log(`\nWARNING    the committed ${presetId} curve covers y ${committed.Y_CAL_MIN}..${committed.Y_CAL_MAX}, ` +
+              `beyond this sweep's numeric labels (${yCalMin}..${yCalMax}): it was fitted another way ` +
+              '(the printed scale — see CLAUDE.md). Do NOT paste the snippet below over it.');
+}
 if (committed.CAL) {
   const lo = committed.Y_CAL_MIN;
   const hi = Math.max(committed.Y_CAL_MAX, ...rest.map((fr) => Math.ceil(fr.r.y)));
