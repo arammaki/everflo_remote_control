@@ -68,7 +68,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.10.13"
+#define FW_VERSION "1.11.0"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -88,7 +88,7 @@
    was taken under. Switching back is: set this line, bump FW_VERSION, flash. */
 #define CONC_EVERFLO    1
 #define CONC_PLATINUM9  2
-#define CONCENTRATOR    CONC_EVERFLO
+#define CONCENTRATOR    CONC_PLATINUM9
 
 #if CONCENTRATOR == CONC_EVERFLO
   #define PRESET_ID       "everflo"
