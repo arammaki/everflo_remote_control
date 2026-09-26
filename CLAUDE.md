@@ -648,7 +648,7 @@ version, and what to watch:
   the dark body, x 312..324.
 - **Margins are thinner than EverFlo's** on every gate: contrast 0.146,
   ambiguity 4.8x, registration 0.952 (EverFlo 0.173 / 15.9x / 0.982). 9 L/min
-  fit in ~230 rows. Fit mean 0.099, worst 0.296 — mostly label precision.
+  fit in ~230 rows. Against the straight-on labels: mean 0.08, worst 0.26.
 - **The tilt is a known disagreement.** A hand-drawn line says 3.3 degrees
   (tan 0.058); the zero-deviation plateau and the gates say 0.03. The anchor
   is horizontal ticks, which pin a tilt weakly. First suspect if a later
@@ -662,13 +662,16 @@ version, and what to watch:
 - Her page crops to the meter (`VIEW_*`, vertical too since 1.11.2), about
   1.6x the size the whole frame gave.
 - Buttons 40/60/120 degrees, chosen on the unit "for now".
-- **The printed scale is a second truth, and it was checked** (2026-09-27).
-  The ticks are found in the anchor band of the reference; the engine's y
-  reads 6.75 px below the tick. From 1 to 6 L/min the curve and the scale
-  agree within ~0.05 — the 1.5 and 2.5 frames' residuals are the labels. Above
-  ~7 the label-fitted curve reads up to 0.4 higher than the scale. The bottom
-  of the scale is stretched (0.5 L/min per ~22 rows under 1). See the CAL
-  comment for the numbers and the tick-fitted alternative.
+- **The curve is fitted to the printed scale, not to the labels**
+  (2026-09-27). Above ~5 the motor mount blocks the front view, so those
+  labels were read from the side, and parallax made them read high — the
+  label-fitted curve was up to 0.4 over the scale at the top. The method: find
+  the ticks as dark rows in the reference's anchor band (sheared by
+  BASE_TILT), number them from the frames, fit the offset between the engine's
+  y and the tick against the straight-on frames only (6.5 px), and fit the
+  quadratic through the ticks 1..9 (within 0.09 of each). Frames read at an
+  angle are named `<n>_approx`: asserted to read, not to a number.
+  calibrate.mjs does not do the tick fit yet.
 - **Open risks, measured nowhere yet:** the engine's pixel constants (the
   60-row ambiguity exclusion, spread 75, the ±35 centroid window, 20 px
   shift) were set for EverFlo's ~50 rows per L/min; on the Platinum's ~25

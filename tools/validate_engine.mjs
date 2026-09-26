@@ -190,6 +190,10 @@ if (expectRejected && !E.isCalibrated(presetId)) {
      bild_maxL_...       'reading'  the top mark, unlabelled (older sweeps)
      bild_5.7maxL_...    'value'    the top mark with its value
      bild_5.7_maxL_...   'value'    ditto (2026-08-22 sweep)
+     bild_7.5_approxL_... 'reading' a label known to be approximate — read at an
+                                    angle (Platinum above 5, where the motor mount
+                                    blocks the front view) or below the calibrated
+                                    range. Must read; no number is asserted.
      bild_over_maxL_...  'max'      deliberately past the end of the printed
                                     scale: the Max state, NOT a number. A
                                     number here means the y<Y_MAX_STATE guard
@@ -201,6 +205,9 @@ function parseName(file) {
   if (/^over_max$/i.test(s)) return { name: s, expect: 'max', value: null };
   if (/^(\d+(\.\d+)?_)?min$/i.test(s)) return { name: s, expect: 'reading', value: null };
   if (/^max$/i.test(s)) return { name: s, expect: 'reading', value: null };
+  // Read by eye at an angle, or below the calibrated range: the number is
+  // approximate, so the frame is asserted only to produce a reading.
+  if (/^\d+(\.\d+)?_approx$/i.test(s)) return { name: s, expect: 'reading', value: null };
   const mx = s.match(/^(\d+(?:\.\d+)?)_?max$/i);
   if (mx) return { name: s, expect: 'value', value: Number(mx[1]) };
   if (/^\d+(\.\d+)?$/.test(s)) return { name: s, expect: 'value', value: Number(s) };

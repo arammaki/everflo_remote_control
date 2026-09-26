@@ -133,6 +133,9 @@ function parseName(file) {
   if (/^over_max$/i.test(s)) return { name: s, expect: 'max', value: null };
   if (/^(\d+(\.\d+)?_)?min$/i.test(s)) return { name: s, expect: 'rest', value: null };
   if (/^max$/i.test(s)) return { name: s, expect: 'reading', value: null };
+  // Read by eye at an angle, or below the calibrated range: the number is
+  // approximate, so the frame is asserted only to produce a reading.
+  if (/^\d+(\.\d+)?_approx$/i.test(s)) return { name: s, expect: 'reading', value: null };
   const mx = s.match(/^(\d+(?:\.\d+)?)_?max$/i);
   if (mx) return { name: s, expect: 'value', value: Number(mx[1]) };
   if (/^\d+(\.\d+)?$/.test(s)) return { name: s, expect: 'value', value: Number(s) };

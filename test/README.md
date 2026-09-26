@@ -69,11 +69,17 @@ a number — the Max state begins above the line). Taken 2026-09-26
 21:31–21:35 at night with the WS2812 and the kitchen's ceiling lamp on. The 5
 and 5.5 frames were retaken a few minutes later and renamed into sequence.
 
-Its `TOLERANCE` is 0.3 L/min, not the default 0.2: the labels were set by eye
-on 0.5 L/min marks about 11 px apart (EverFlo's were ~29), and the worst
-residual is 0.296 on the 9 frame. The 2.5 frame sits 5 px from the 3.0 frame,
-i.e. between marks. That is how precisely the labels were set, not a looser
-gate — the engine's quality thresholds are the same for every machine.
+Above about 5 L/min the motor mount blocks the front view, so those labels
+were read from the side — parallax, growing toward the top. They are named
+`<n>_approx` (as are 0.5 and 0.75, below the calibrated range) and are
+asserted only to produce a reading. The curve comes from the printed scale,
+not from these labels: see the CAL comment in the preset.
+
+Its `TOLERANCE` is 0.3 L/min, not the default 0.2, and the reason is two
+straight-on labels: 1.5 and 2.5 read +0.19 and +0.26, and the printed scale
+puts the ball above those marks too. That is how precisely the knob was set,
+not a looser gate — the engine's quality thresholds are the same for every
+machine.
 
 Cross-checked 2026-09-26: these frames read as `everflo` are refused 21/21,
 and the EverFlo sweep plus the 78 old poses read as `platinum9` are refused
