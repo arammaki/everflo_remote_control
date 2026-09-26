@@ -560,7 +560,8 @@ How each consumer learns the preset — and none of them has a default:
   EverFlo — history, not a guess. The panel asks again whenever contact drops,
   because a reflash onto another machine is exactly when it does.
 - **Admin page**: per row, from `readings.preset`, which the device sends with
-  every upload. NULL is EverFlo only when the row's `fw` predates 1.10.13; a
+  every upload. NULL is EverFlo only when the row's `fw` predates 1.10.13 (the
+  rule is `tools/preset_of.mjs`, imported by the Worker and both tools); a
   NULL from newer firmware (an ingest Worker deployed out of order) names no
   machine and is refused, like a malformed report, which ingest stores as `?`.
   Not backfilled. The engine's preset is one global, so `analyse()` selects it

@@ -805,7 +805,7 @@ function judge(r){
 /* ---------- shell: polling, display, motor, log (from bolldetektor_3) ---------- */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{willReadFrequently:true});
 let host='', lastFlow=null, timer=null, lastCleanFrame=null, fetchingSince=0, pulseTimer=null;
-let presetFor=null, presetAsking=false, presetUnknown=null, presetError=null;
+let presetFor=null, presetAsking=false, presetUnknown=null, presetError=null, buttonsFor=null;
 try{
   document.getElementById('log').value = localStorage.getItem('ev_logg')||'';
   const h=localStorage.getItem('ev_host'); if(h) document.getElementById('host').value=h;
@@ -891,8 +891,14 @@ async function choosePreset(){
       (isCalibrated(id) ? '' : ' — inte kalibrerad än, bara bild');
     // Her three button sizes for this machine (1.10.13+). The fields here are
     // not remembered and would otherwise send EverFlo's 39/90/160 to any machine.
-    if(Array.isArray(j.buttons) && j.buttons.length===3 && j.buttons.every(Number.isInteger))
+    // Filled once per host and machine: this runs again after every lost
+    // contact, and a value the operator typed must not quietly change under a
+    // button that turns a motor.
+    if(buttonsFor!==askedFor+'|'+id && Array.isArray(j.buttons) && j.buttons.length===3 &&
+       j.buttons.every(Number.isInteger)){
       ['d1','d2','d3'].forEach((d,i)=>{ document.getElementById(d).value=j.buttons[i]; });
+      buttonsFor=askedFor+'|'+id;
+    }
   }catch(e){
     // The device answered, so this is not lost contact: the preset itself or its
     // references are broken in this copy of the page. Say so and stop asking.
@@ -1006,14 +1012,8 @@ function lostContact(){
   // machine is exactly when contact drops — so the machine is asked again.
   presetFor=null; presetUnknown=null; presetError=null;
   document.getElementById('preset').textContent='';
-  lastFlow=null;
-  const fl=document.getElementById('flow');
-  fl.parentElement.className='big error';
-  fl.textContent='Ingen kontakt';
-  document.getElementById('unit').textContent='';
-  document.getElementById('quality').textContent='';
-  document.getElementById('status').textContent=
-    'Ingen kontakt med '+host+' – siffran ovan är inte aktuell.';
+  clearReading('Ingen kontakt med '+host+' – siffran ovan är inte aktuell.');
+  document.getElementById('flow').textContent='Ingen kontakt';
 }
 function fetchFrame(){
   const nu=Date.now();
@@ -1049,8 +1049,9 @@ function runFrame(){
     choosePreset();
     return;
   }
-  const r=analyze(ctx.getImageData(0,0,480,640), overrides());
-  const b=judge(r);
+  let r,b;
+  try{ r=analyze(ctx.getImageData(0,0,480,640), overrides()); b=judge(r); }
+  catch(e){ clearReading('Analysen misslyckades: '+e.message); return; }
   update(r,b);
   drawBands(r);
 }

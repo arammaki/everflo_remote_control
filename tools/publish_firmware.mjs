@@ -41,6 +41,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { presetOf } from './preset_of.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const CLOUD = join(here, '..', 'cloud');
@@ -61,16 +62,7 @@ function sql(command) {
     but quoting them properly costs one line and removes the question. */
 const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
 
-/* The machine a stored reading was taken of — the admin page's presetOf().
-   NULL is EverFlo only for firmware from before presets (1.10.13). */
-function presetOf(r) {
-  if (r.preset != null) return r.preset;
-  if (r.fw == null) return 'everflo';
-  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(r.fw);
-  if (!m) return '?';
-  const [a, b, c] = m.slice(1).map(Number);
-  return (a !== 1 ? a < 1 : b !== 10 ? b < 10 : c < 13) ? 'everflo' : '?';
-}
+
 
 const [verb, ...rest] = process.argv.slice(2);
 

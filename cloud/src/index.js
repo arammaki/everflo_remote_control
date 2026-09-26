@@ -57,11 +57,11 @@ function imageKey(now, reason) {
 }
 
 /* The concentrator preset the firmware was built for; the admin page reads the
-   frame with it. ABSENT means firmware older than 1.10.13, all of which drove
-   an EverFlo, and is stored as NULL — which the admin page reads as EverFlo.
-   PRESENT but malformed must therefore NOT become NULL, or a garbled Platinum
-   frame would be read with the EverFlo curve. It is stored as "?", which is
-   no preset at all, and the admin page refuses to analyse it. */
+   frame with it. ABSENT is stored as NULL, which the admin page reads as
+   EverFlo only when the row's fw predates 1.10.13 (every such build drove one)
+   and refuses otherwise — see presetOf() in tools/preset_of.mjs. PRESENT but
+   malformed is stored as "?", which is no preset at all: turning it into NULL
+   would hand it to that EverFlo rule. */
 function presetParam(url) {
   const p = url.searchParams.get('preset');
   if (p === null) return null;

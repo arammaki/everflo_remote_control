@@ -112,7 +112,17 @@ fi
 # one mistake here that boots perfectly and is still wrong.
 BUILT_FOR="$(grep -aoE 'Concentrator preset: [a-z0-9_-]+' "$BIN" | head -1 | sed 's/.*: //' || true)"
 RUNS_ON="$(curl -4 -s --max-time 5 "http://$ADDR/api/status" 2>/dev/null | sed -n 's/.*"preset":"\([a-z0-9_-]*\)".*/\1/p' || true)"
-if [ -n "$WAS" ] && [ -z "$RUNS_ON" ]; then RUNS_ON="everflo (firmware before presets)"; fi
+# Silence says EverFlo only when the version says "before presets" (1.10.13);
+# a status request that merely timed out says nothing at all. Guessing there
+# would cry wolf on the one warning that must be believed.
+before_presets() { awk -v v="$1" 'BEGIN{ if (split(v,a,".")!=3) exit 1
+  exit !((a[1]<1)||(a[1]==1&&a[2]<10)||(a[1]==1&&a[2]==10&&a[3]<13)) }'; }
+if [ -z "$RUNS_ON" ] && [ -n "$WAS" ] && before_presets "$WAS"; then
+  RUNS_ON="everflo (firmware before presets)"
+fi
+if [ -z "$BUILT_FOR" ] && before_presets "$VERSION"; then
+  BUILT_FOR="everflo"                  # every build before presets was one
+fi
 echo "  machine   ${BUILT_FOR:-unknown}"
 [ -n "$RUNS_ON" ] && echo "  unit is   $RUNS_ON"
 echo "  image     $BIN"
@@ -121,7 +131,7 @@ if [ "$ADDR" = "$HOST" ]; then echo "  target    $HOST:3232"; else echo "  targe
 echo
 echo "  This replaces the running firmware and reboots the unit."
 echo "  There is no rollback; recovery is a USB cable."
-if [ -n "$RUNS_ON" ] && [ "${RUNS_ON%% *}" != "$BUILT_FOR" ]; then
+if [ -n "$RUNS_ON" ] && [ -n "$BUILT_FOR" ] && [ "${RUNS_ON%% *}" != "$BUILT_FOR" ]; then
   echo
   echo "  WARNING: this build is for $BUILT_FOR, the unit runs $RUNS_ON. That moves it"
   echo "  to another machine's calibration and button sizes. Only if you mean it."

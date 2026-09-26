@@ -52,6 +52,7 @@
    ============================================================ */
 
 import { ENGINE, ENGINE_VERSION } from './engine.js';
+import { presetOf } from '../../../tools/preset_of.mjs';
 
 const PAGE_SIZE = 200;
 const STATES = new Set(['ok', 'max', 'below', 'uncertain', 'no-reading']);
@@ -89,21 +90,6 @@ function label(flow, state) {
 }
 const good = (state) => state === 'ok' || state === 'max' || state === 'below';
 
-/* Which preset a stored frame is read with. NULL means EverFlo only when the
-   firmware predates presets (1.10.13) — that is history. A NULL from newer
-   firmware means the row went through an ingest Worker that did not write the
-   column (deployed out of order, or rolled back), and then nobody knows which
-   machine it was: '?' is no preset, and the page refuses to read it rather
-   than guess EverFlo on what may be a Platinum frame. */
-function presetOf(r) {
-  if (r.preset != null) return r.preset;
-  if (r.fw == null) return 'everflo';
-  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(r.fw);
-  if (!m) return '?';
-  const [a, b, c] = m.slice(1).map(Number);
-  const before = a !== 1 ? a < 1 : b !== 10 ? b < 10 : c < 13;
-  return before ? 'everflo' : '?';
-}
 
 /* `latest` is the newest reading in the database, not rows[0]: on page 2 the
    first row is hours old and the banner would call a healthy device dead. */
@@ -407,7 +393,9 @@ async function analyse(tr,{draw}={}){
      one global in the engine, and a sweep and a row click run concurrently.
      Whichever of them awaited last may have switched it to another machine. */
   usePreset(id);
-  const src=(draw?ctx:t.getContext('2d',{willReadFrequently:true})).getImageData(0,0,480,640);
+  /* The row's OWN canvas, never the visible one: that is shared, and another
+     select() may have drawn its frame there while this one awaited loadRef(). */
+  const src=t.getContext('2d',{willReadFrequently:true}).getImageData(0,0,480,640);
   const r=analyze(src);
   return {r, b:judge(r)};
 }

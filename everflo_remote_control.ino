@@ -686,12 +686,11 @@ let lastFrameAt=Date.now(), lastAnalysis=0, refReady=false;
 // The machine this firmware was built for. Compiled in, never chosen here.
 // Guarded, like everything below that touches the engine: if /motor.js did not
 // load, the picture and the buttons must still work.
-let presetError='';
+let presetError='', loadError='';
 try{ usePreset('%PRESET%'); }catch(e){ if(typeof usePreset==='function') presetError='Avläsningen är felinställd i den här versionen. Läs av bilden.'; }
 (typeof loadRef==='function' ? loadRef() : Promise.reject(new Error('no engine')))
   .then(()=>{refReady=true})
-  .catch(()=>{ show('Ingen avläsning','','none');
-    document.getElementById('msg').textContent=presetError ||
+  .catch(()=>{ loadError=presetError ||
       'Referensbilden kunde inte läsas in. Bilden visas, men inget värde kan beräknas.'; });
 
 // Same transform the control panel uses; the calibration is bound to it.
@@ -734,6 +733,9 @@ function frame(img){
   ctx.drawImage(t, CROP_X,0,CROP_W,640, 0,0,CROP_W,640);
   // Once a second is plenty: the ball moves slowly and analysis costs
   // real work on a phone.
+  // Said on every frame, not once: the stale-picture timer clears the message,
+  // and a reason that vanishes after one wifi hiccup leaves her with a blank.
+  if(loadError){ show('Ingen avläsning','','none'); document.getElementById('msg').textContent=loadError; return; }
   if(!refReady || Date.now()-lastAnalysis<1000) return;
   lastAnalysis=Date.now();
   let r,b;

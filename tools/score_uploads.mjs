@@ -12,8 +12,10 @@
 
    The preset is per row, as the device reported it. A row without one is an
    EverFlo frame only when its firmware predates presets (1.10.13) — that is
-   history, not a default; the admin page's presetOf() applies the same rule.
-   A NULL from newer firmware names no machine and stops the run. One run scores one machine: a directory
+   history, not a default; tools/preset_of.mjs holds the rule, shared with the
+   admin page. A NULL from newer firmware names no machine and stops the run,
+   and so does a meta.json without the fw and preset columns: fetched with the
+   older command, it cannot tell an EverFlo row from an unrecorded one. One run scores one machine: a directory
    mixing presets is refused, because a span of "same knob position" cannot
    straddle two concentrators.
 
@@ -46,6 +48,7 @@
      npx wrangler d1 execute everflo --remote --json \
        --command "SELECT id, received_at, reason, fw, preset, image_key FROM readings" \
        | sed -n '/^\[/,$p' > meta-raw.json
+     # (before the ALTER TABLE in cloud/schema.sql has run: NULL AS preset)
      # keep the .results array as meta.json, then per row:
      npx wrangler r2 object get everflo-images/<image_key> -J eu --remote \
        --file <dir>/<id>.jpg
@@ -56,6 +59,7 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
+import { presetOf } from './preset_of.mjs';
 
 const BOB = 0.05;          // how much the ball floats on its own, L/min
 const here = dirname(fileURLToPath(import.meta.url));
@@ -169,13 +173,11 @@ if (missing.length) {
   process.exit(2);
 }
 
-function presetOf(r) {
-  if (r.preset != null) return r.preset;
-  if (r.fw == null) return 'everflo';
-  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(r.fw);
-  if (!m) return '?';
-  const [a, b, c] = m.slice(1).map(Number);
-  return (a !== 1 ? a < 1 : b !== 10 ? b < 10 : c < 13) ? 'everflo' : '?';
+const noCols = ids.filter((id) => !('fw' in meta[id]) || !('preset' in meta[id]));
+if (noCols.length) {
+  console.error(`meta.json has no fw/preset column (id ${noCols[0]}${noCols.length > 1 ? ` +${noCols.length - 1} more` : ''}). ` +
+                'Re-fetch it with the command in the header.');
+  process.exit(2);
 }
 const presets = [...new Set(ids.map((id) => presetOf(meta[id])))];
 if (presets.length !== 1) {
