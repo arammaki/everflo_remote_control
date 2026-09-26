@@ -1206,9 +1206,10 @@ unsigned long lastUpload = 0;
 unsigned long lastFwCheck = 0;
 /* Set by /api/fw-check: ask now instead of at the next quarter. It only moves
    the QUESTION forward — what gets installed is still only a build a person
-   armed, so this cannot start an update by itself. Not honoured within
-   FW_CHECK_MIN_GAP_MS of the last ask: each one blocks loop() for a TLS
-   request, and a page hammering the endpoint must not keep it blocked. The
+   armed, so this cannot start an update by itself. Within
+   FW_CHECK_MIN_GAP_MS of the last ask the request waits rather than runs —
+   it is kept, and served once the gap has passed: each ask blocks loop() for
+   a TLS request, and a page hammering the endpoint must not keep it blocked. The
    boot-loop guard is untouched — that is lastFwCheck seeded at boot, and the
    gap below applies from it as well. */
 #define FW_CHECK_MIN_GAP_MS 30000UL
