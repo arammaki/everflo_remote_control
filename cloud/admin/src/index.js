@@ -336,7 +336,7 @@ function orient(img){
   return t;
 }
 const load=(key)=>new Promise((res,rej)=>{
-  const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new Error('bild saknas'));
+  const im=new Image(); im.onload=()=>res(im); im.onerror=()=>rej(new LoadFailed('bild saknas'));
   im.src='/image/'+key.split('/').map(encodeURIComponent).join('/');
 });
 function show(text,unit,cls){
@@ -380,18 +380,17 @@ function verdict(r,b){
    id this engine has no preset for (a newer machine, or "?" for a malformed
    report) is refused outright: reading it with some other machine's curve
    would put a number in this table that nothing backs. */
-async function analyse(tr,{draw}={}){
+async function analyse(tr,{draw,shown}={}){
   // The picture first: whatever happens to the reading, the row's own frame is
   // what the operator must be looking at.
-  let im;
-  try{ im=await load(tr.dataset.key); }catch(e){ throw new LoadFailed(); }
+  const im=await load(tr.dataset.key);
   /* A row passed by on the way to another (arrow key held down) is dropped
      here, before any real work: its frame must not paint over the row now
      highlighted, and analysing every row passed would queue up a flatfield
      each and freeze the page. The sweep is what stores readings wholesale. */
   if(draw && rows[sel]!==tr) throw new Superseded();
   const t=orient(im);
-  if(draw){ ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(t,0,0,480,640); }
+  if(draw){ ctx.setTransform(1,0,0,1,0,0); ctx.drawImage(t,0,0,480,640); if(shown) shown.drawn=true; }
   const id=tr.dataset.preset;
   if(!Object.prototype.hasOwnProperty.call(PRESETS,id))
     throw new UnknownPreset('Okänd maskin "'+id+'" — den här motorn har inget preset för den.');
@@ -478,8 +477,9 @@ async function select(i,{scroll}={}){
     document.getElementById('reason').textContent='Raden har ingen bild.';
     document.getElementById('chips').innerHTML=''; return; }
   show('…','','');
+  const shown={drawn:false};
   try{
-    const {r,b}=await analyse(tr,{draw:true});
+    const {r,b}=await analyse(tr,{draw:true, shown});
     const v=verdict(r,b);
     // The reading belongs to its own row whatever happens on screen, so it is
     // stored either way; only what is SHOWN waits for the row to still be chosen.
@@ -493,12 +493,13 @@ async function select(i,{scroll}={}){
     else show(r.flow.toFixed(2),'L/min'+(b.extrapolated?' (osäkert)':''));
   }catch(e){
     if(e instanceof Superseded || rows[sel]!==tr) return;
-    // Only when this row's frame never arrived: then the canvas still holds
-    // another row's. A failure after the draw leaves this row's own picture.
-    if(e instanceof LoadFailed) blank();
+    // Unless this row's own frame made it onto the canvas, what is there now
+    // belongs to another row — whatever the error was.
+    if(!shown.drawn) blank();
     show('Ingen avläsning','','none');
-    document.getElementById('reason').textContent=e instanceof UnknownPreset
-      ? e.message : 'Bilden kunde inte läsas eller analyseras.';
+    document.getElementById('reason').textContent=e instanceof UnknownPreset ? e.message
+      : e instanceof LoadFailed ? 'Bilden kunde inte hämtas.'
+      : 'Bilden kunde inte läsas eller analyseras.';
     document.getElementById('chips').innerHTML='';
   }
 }

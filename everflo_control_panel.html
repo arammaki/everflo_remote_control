@@ -870,6 +870,27 @@ document.addEventListener('visibilitychange', pulse);
    Firmware before 1.10.13 does not say — and every one of those drove an
    EverFlo, so that is history rather than a guess. Asked once per host; until
    the answer is in, nothing is analysed. */
+/* The three step fields belong to one device on one machine, and one rule
+   governs them:
+   - a CHANGE of device or machine drops whatever was typed by hand and fills
+     the fields with what can be vouched for — the device's own sizes, or
+     EverFlo's 39/90/160 from firmware before 1.10.13 (history, like its
+     preset), or nothing, which makes every press refuse until one is typed;
+   - the SAME device and machine leaves hand-typed fields alone, also after a
+     lost contact, because a number must not change under a motor button;
+   - the first answer is not a change: what was typed before it stays. */
+function stepSizes(j){
+  if(Array.isArray(j.buttons) && j.buttons.length===3 && j.buttons.every(Number.isInteger))
+    return j.buttons;
+  return typeof j.preset!=='string' ? [39,90,160] : null;   // same test as the preset id
+}
+function applySteps(key, sizes){
+  if(stepsFor!==null && key!==stepsFor) stepsEdited.clear();
+  stepsFor=key;
+  ['d1','d2','d3'].forEach((d,i)=>{
+    if(!stepsEdited.has(d)) document.getElementById(d).value = sizes ? sizes[i] : '';
+  });
+}
 async function choosePreset(){
   if(presetAsking) return;
   presetAsking=true;
@@ -885,38 +906,14 @@ async function choosePreset(){
   try{
     const id=typeof j.preset==='string' ? j.preset : 'everflo';
     if(askedFor!==host) return;
-    if(!Object.prototype.hasOwnProperty.call(PRESETS,id)){
-      presetUnknown=id;
-      // No sizes this page can vouch for: empty fields make every press refuse
-      // ("Ogiltig stegstorlek") until the operator types one for this knob.
-      ['d1','d2','d3'].forEach(d=>{ document.getElementById(d).value=''; });
-      stepsFor=null; stepsEdited.clear();
-      return;
-    }
+    applySteps(askedFor+'|'+id, stepSizes(j));
+    if(!Object.prototype.hasOwnProperty.call(PRESETS,id)){ presetUnknown=id; return; }
     usePreset(id);
     await loadRef();
     if(askedFor!==host) return;
     presetFor=askedFor;
     document.getElementById('preset').textContent='Maskin: '+PRESETS[id].name+
       (isCalibrated(id) ? '' : ' — inte kalibrerad än, bara bild');
-    // Her three button sizes for this machine (1.10.13+). The fields here are
-    // not remembered and would otherwise send EverFlo's 39/90/160 to any machine.
-    // A new host or a new machine always gets its own sizes: a step typed for
-    // one knob is wrong for another. Within the same one, a value the operator
-    // typed stays — this runs again after every lost contact, and a number
-    // must not quietly change under a button that turns a motor.
-    // Firmware before 1.10.13 sends none, and drove an EverFlo with its
-    // compiled 39/90/160 — history, like the preset itself.
-    const sizes=(Array.isArray(j.buttons) && j.buttons.length===3 && j.buttons.every(Number.isInteger))
-      ? j.buttons : (j.preset===undefined ? [39,90,160] : null);
-    if(sizes){
-      const key=askedFor+'|'+id;
-      // A value typed before the first answer is kept; only an actual change
-      // of host or machine hands the fields back to the device.
-      if(stepsFor!==null && key!==stepsFor) stepsEdited.clear();
-      stepsFor=key;
-      ['d1','d2','d3'].forEach((d,i)=>{ if(!stepsEdited.has(d)) document.getElementById(d).value=sizes[i]; });
-    }
   }catch(e){
     // The device answered, so this is not lost contact: the preset itself or its
     // references are broken in this copy of the page. Say so and stop asking.
