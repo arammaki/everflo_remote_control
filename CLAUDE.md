@@ -1032,6 +1032,26 @@ the reading and the quality line still sit under the picture, and a picture
 free to fill the viewport pushes the number this page exists to show below
 the fold.
 
+### Knob calibration on the control panel (2026-09-27)
+"Kalibrera ratten" measures how many degrees the knob needs per L/min along
+the scale — the data for the flow-step buttons on her page (v1.11.3), which
+stay hidden until its KNOB/BACKLASH line is in the preset. With a table and a
+settled number read within 3 s she gets "+0,2 / +1 / +2" and the same down,
+clamped to the table and to 1..9 L/min; otherwise the fixed-degree buttons
+with a line saying why — never locked (August's rule). knobPlan() in the
+engine sizes the turn; the page comments say what each guard is for. The routine turns under 1, back up to 1 (approaching from
+below), climbs in small steps to just under the preset's top, measures the
+backlash on reversing where the scale can be read, and returns to the start
+closed on the reading. Aborts rather than turns on: Max, the flow going the
+wrong way or not moving once it has, 15 s without a frame, a refused or
+unanswered press, 15 turns. An abort never turns anything back — it says
+what it last saw. The whole page is locked during a run except Stopp.
+Tested end to end only against a simulated knob (raw frames rebuilt from the
+Platinum sweep); its last round of fixes was tested but not cold-reviewed.
+
+The band fields (forced shift/tilt) are remembered per machine
+(`ev_<preset>_bDx`): a value set on the EverFlo made the Platinum refuse.
+
 ### The control panel's light section (v1.10.0)
 `<details id="light">` on `everflo_control_panel.html` only — never on the
 device page. On/off, a 0-255 brightness slider and a colour swatch, all

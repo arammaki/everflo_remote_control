@@ -123,6 +123,27 @@
   <p class="hint" id="bandhint" style="text-align:left"></p>
 </details>
 
+<details id="knobcal">
+  <summary>Kalibrera ratten</summary>
+  <p class="hint" style="text-align:left">Mäter hur många grader ratten behöver för att
+  ändra flödet, i olika delar av skalan. Rutinen vrider ner under 1, upp till 1 igen
+  (så den närmar sig underifrån, utan glapp), sedan uppåt i små steg till strax under
+  toppen (aldrig över 9) och läser av efter varje steg, mäter glappet när den vänder,
+  och vrider sist tillbaka dit flödet stod.
+  <b>Flödet ändras över nästan hela skalan under tiden</b> och maskinen larmar under 1:
+  gör det inte medan någon andas från maskinen, och tryck inte i appen under tiden. Tar ungefär 10 minuter.</p>
+  <div class="row">
+    <label>Steg <input id="kcStep" type="number" value="10" min="4" max="30" inputmode="numeric"> grader</label>
+    <label>Vänta <input id="kcWait" type="number" value="3" min="2" max="10" step="0.5" inputmode="decimal"> s</label>
+  </div>
+  <div class="row">
+    <button id="kcStart" onclick="knobCal()">Starta kalibrering</button>
+    <button id="kcStop" onclick="knobCalStop()" disabled>Stopp</button>
+  </div>
+  <p class="hint" id="kcStatus" style="text-align:left"></p>
+  <textarea id="kcOut" rows="8" readonly placeholder="Resultatet hamnar här"></textarea>
+</details>
+
 <details id="light">
   <summary>Belysning</summary>
   <p class="hint" style="text-align:left">Lampan som lyser på mätaren. Skruva medan
@@ -348,6 +369,7 @@ const PRESETS={
        drops the glare and roughly doubles the ball on her phone. Display only:
        the analysis always gets the whole 480x640 frame. */
     VIEW_X:215, VIEW_W:225, VIEW_Y:0, VIEW_H:640,
+    KNOB:null, BACKLASH:null,   // never measured on the EverFlo: her page keeps the degree buttons
     /* Lighting references in selection order; see the REF_PNG_* constants below
        the table. A function because those constants are declared after it: they
        are 400 kB of base64 and would bury every number above. */
@@ -441,6 +463,11 @@ const PRESETS={
     /* Her page shows the meter alone: x 250..390, y 95..495, about 1.6x the
        size the whole frame would give it. */
     VIEW_X:250, VIEW_W:140, VIEW_Y:95, VIEW_H:400,
+    /* Degrees of knob per flow, measured by "Kalibrera ratten" on the control
+       panel: [[L/min, degrees from the table's first row], ...] ascending, and
+       the backlash in degrees. Until a run has been made these are null and her
+       page shows the degree buttons only — see knobPlan(). */
+    KNOB:null, BACKLASH:null,
     /* One reference so far, and its lighting is NOT a dark kitchen: the ceiling
        lamp was on. Hence 'kväll'. A lamp-off night and daylight will need their
        own references from uploads (see "Daylight is a second lighting
@@ -497,11 +524,12 @@ const REF_PNG_PLATINUM9_KVALL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeA
    move. Assigned only by usePreset(). */
 const PRESET_KEYS=['XL','XR','AX1','AX2','YTOP','YBOT','RY1','RY2','BASE_TILT',
   'CAL','Y_CAL_MIN','Y_CAL_MAX','Y_MAX_STATE','LOW_FLOW','LOW_LABEL','LOW_REASON','MAX_REASON',
-  'VIEW_X','VIEW_W','VIEW_Y','VIEW_H'];
+  'VIEW_X','VIEW_W','VIEW_Y','VIEW_H','KNOB','BACKLASH'];
 let PRESET=null;
+let KNOB_ERROR=null;   // why the live preset's knob table was set aside, if it was
 let XL, XR, AX1, AX2, YTOP, YBOT, RY1, RY2, BASE_TILT,
     CAL, Y_CAL_MIN, Y_CAL_MAX, Y_MAX_STATE, LOW_FLOW, LOW_LABEL, LOW_REASON, MAX_REASON,
-    VIEW_X, VIEW_W, VIEW_Y, VIEW_H;
+    VIEW_X, VIEW_W, VIEW_Y, VIEW_H, KNOB, BACKLASH;
 /* References are built per preset and kept, so the admin page can move between
    frames from two machines without rebuilding them each time. */
 const REF_CACHE={};
@@ -523,17 +551,83 @@ function usePreset(id){
      same silent failure as undefined, one step removed. Only the display crop
      may stay null: the device page then shows the whole frame. */
   if(p.CAL){
-    const unset=PRESET_KEYS.filter(k=>!k.startsWith('VIEW_')&&p[k]==null);
+    // The display crop and the knob table are optional: without them the
+    // page shows the whole frame, and degree buttons.
+    const unset=PRESET_KEYS.filter(k=>!k.startsWith('VIEW_')&&k!=='KNOB'&&k!=='BACKLASH'&&p[k]==null);
     if(unset.length||!p.refs().length)
       throw new Error('Preset '+id+' has a curve but is incomplete: '+
                       (unset.length?'unset '+unset.join(','):'no references'));
   }
+  // A knob table turns the motor from her page: it must be whole, whether or
+  // not the preset has a curve yet. At least two rows, strictly rising in both
+  // flow and degrees (equal flows would divide by zero in knobDeg), and the
+  // backlash that goes with it.
+  // A table that is not whole disables the flow buttons, NOT the reading: a
+  // table exists only to add buttons, and must never take the number away.
+  KNOB_ERROR=null;
+  if(p.KNOB!=null){
+    const k=p.KNOB, okRows=Array.isArray(k) && k.length>=2 &&
+      k.every((r,i)=>Array.isArray(r) && r.length===2 && Number.isFinite(r[0]) && Number.isFinite(r[1]) &&
+                     (i===0 || (r[0]>k[i-1][0] && r[1]>k[i-1][1])));
+    if(!okRows) KNOB_ERROR='Preset '+id+': KNOB must be rows [L/min, degrees], both strictly rising';
+    else if(!(Number.isFinite(p.BACKLASH) && p.BACKLASH>=0)) KNOB_ERROR='Preset '+id+': KNOB without a BACKLASH';
+  }
   ({XL, XR, AX1, AX2, YTOP, YBOT, RY1, RY2, BASE_TILT,
     CAL, Y_CAL_MIN, Y_CAL_MAX, Y_MAX_STATE, LOW_FLOW, LOW_LABEL, LOW_REASON, MAX_REASON,
-    VIEW_X, VIEW_W, VIEW_Y, VIEW_H}=p);
+    VIEW_X, VIEW_W, VIEW_Y, VIEW_H, KNOB, BACKLASH}=p);
+  if(KNOB_ERROR){ KNOB=null; BACKLASH=null; if(typeof console!=='undefined') console.warn(KNOB_ERROR); }
   PRESET=id;
   REFS=REF_CACHE[id]||[];
 }
+/* ---------- flow steps on her page ----------
+   How far to turn the knob to change the flow by `delta` L/min from `flow`,
+   from the live preset's measured KNOB table. The target is clamped to the
+   range the table covers AND to 1..9 L/min — never above 9, never below 1, so
+   at 8.2 a "+2" turns only to the top. `lastOp` is the direction the knob
+   was last turned, as the DEVICE reports it (any page, any phone; a turn by
+   hand it cannot know): the backlash is paid only when turning the other
+   way, and not when it is unknown — turning a little short is the
+   safe error, turning too far is not, which is also why degrees round down.
+   Returns {op, deg, target, from} or null: no table, or a flow outside what
+   the table covers, is no promise at all — the page then offers the fixed
+   degree buttons instead. deg can exceed one press (180°); the caller splits. */
+function knobDeg(f){
+  for(let i=1;i<KNOB.length;i++){
+    const [f0,d0]=KNOB[i-1], [f1,d1]=KNOB[i];
+    if(f>=f0 && f<=f1) return d0+(d1-d0)*(f-f0)/(f1-f0);
+  }
+  return null;
+}
+/* The range the buttons act on: the measured table, inside 1..9 L/min. */
+function knobRange(){
+  if(!KNOB || KNOB.length<2) return null;
+  return {lo:Math.max(1.0, KNOB[0][0]), hi:Math.min(9.0, KNOB[KNOB.length-1][0])};
+}
+/* Is `flow` something the buttons can step from? `margin` lets a page that
+   is already showing the flow buttons keep them while the ball bobs just past
+   an end of the table — without it the two button sets would swap every
+   second at 1.0 and at the top. Past an end, knobPlan steps from the end
+   itself: the turn comes out short, never long. */
+function knobCovers(flow, margin){
+  const r=knobRange();
+  return !!r && Number.isFinite(flow) && flow>=r.lo-(margin||0) && flow<=r.hi+(margin||0);
+}
+function knobPlan(flow, delta, lastOp, margin){
+  if(!knobCovers(flow, margin) || !Number.isFinite(delta) || delta===0) return null;
+  const {lo, hi}=knobRange();
+  const from=Math.min(hi, Math.max(lo, flow));
+  // From the clamped start: past an end the step is sized from the end, so
+  // 9.0 -0,2 turns what 8.8 -> 8.6 needs, and lands near 8.8.
+  const target=Math.min(hi, Math.max(lo, from+delta));
+  const op = delta>0 ? 'plus' : 'minus';
+  // Clamped to where it already is: at the limit, and nothing to turn.
+  if(Math.abs(target-from)<0.01) return {op, deg:0, target, from, lo, hi, atLimit:true};
+  let deg=Math.abs(knobDeg(target)-knobDeg(from));
+  if(lastOp && lastOp!==op && BACKLASH>0) deg+=BACKLASH;
+  // Round down: short is the safe error. Under 4° the caller turns nothing.
+  return {op, deg:Math.floor(deg), target, from, lo, hi, atLimit:false};
+}
+
 /* A preset without a curve has not been calibrated yet. */
 const isCalibrated=(id)=>!!(Object.prototype.hasOwnProperty.call(PRESETS,id)&&PRESETS[id].CAL);
 /* True once the live preset's references are built (an uncalibrated preset has
@@ -883,6 +977,9 @@ function judge(r){
 /* ---------- shell: polling, display, motor, log (from bolldetektor_3) ---------- */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{willReadFrequently:true});
 let host='', lastFlow=null, timer=null, lastCleanFrame=null, fetchingSince=0, pulseTimer=null;
+let lastRead=null;   // newest analysed frame, for knobCal()
+let motorBusy=false; // a manual press in flight: the knob calibration must not start under it
+let bandsFor=null;   // the machine the band fields currently hold values for
 let presetFor=null, presetAsking=false, presetUnknown=null, presetError=null,
     stepsEdited=new Set(), stepsFor=null;   // ids of the step fields typed in by hand
 try{
@@ -923,6 +1020,7 @@ function start(){
   if(timer) clearInterval(timer);
   fetchingSince=0;
   presetFor=null; presetUnknown=null; presetError=null;   // a different host may be a different machine
+  bandsFor=null;   // and must not save its band values under the last one's key
   timer=setInterval(fetchFrame, 1000);
   fetchFrame();
   if(pulseTimer) clearInterval(pulseTimer);
@@ -985,10 +1083,11 @@ async function choosePreset(){
     const id=typeof j.preset==='string' ? j.preset : 'everflo';
     if(askedFor!==host) return;
     applySteps(askedFor+'|'+id, stepSizes(j));
-    if(!Object.prototype.hasOwnProperty.call(PRESETS,id)){ presetUnknown=id; return; }
+    if(!Object.prototype.hasOwnProperty.call(PRESETS,id)){ presetUnknown=id; bandsFor=null; return; }
     usePreset(id);
     await loadRef();
     if(askedFor!==host) return;
+    loadBands(id);
     presetFor=askedFor;
     document.getElementById('preset').textContent='Maskin: '+PRESETS[id].name+
       (isCalibrated(id) ? '' : ' — inte kalibrerad än, bara bild');
@@ -1122,12 +1221,12 @@ function fetchFrame(){
     lastCleanFrame=t;
     ctx.setTransform(1,0,0,1,0,0);
     ctx.drawImage(t,0,0,480,640);
-    runFrame();
+    runFrame(nu);
   };
   img.onerror=()=>{ fetchingSince=0; lostContact(); };
   img.src='http://'+host+'/bild?t='+nu;
 }
-function runFrame(){
+function runFrame(takenAt){
   if(presetUnknown!==null){
     clearReading('Enheten är byggd för maskinen "'+presetUnknown+
       '", som den här sidan inte känner till. Hämta en nyare kontrollpanel.');
@@ -1147,6 +1246,10 @@ function runFrame(){
   catch(e){ console.error(e);
     clearReading('Analysen misslyckades. Ladda om sidan. Teknisk detalj: '+String((e&&e.message)||e)); return; }
   update(r,b);
+  // Stamped with when the frame was REQUESTED: on a slow link a picture taken
+  // before a press can finish loading after it, and must not count as after.
+  lastRead={at:takenAt||Date.now(), ok:b.ok, number:b.ok && !b.maxState && !b.bottomState,
+            flow:r.flow, below:!!b.bottomState, max:!!b.maxState};
   drawBands(r);
 }
 function update(r,b){
@@ -1214,6 +1317,7 @@ async function motor(op,n){
   if(deg===null){ document.getElementById('status').textContent='Ogiltig stegstorlek.'; return; }
   const bs=document.querySelectorAll('.mplus,.mminus');
   bs.forEach(b=>b.disabled=true);
+  motorBusy=true;
   // Without a timeout both rows stay locked until the browser gives up when
   // the device goes dark (no RST). 4 s is plenty for a call on the local net.
   const ac=new AbortController();
@@ -1235,22 +1339,44 @@ async function motor(op,n){
       : 'Kommandot nådde inte enheten – kontrollera bilden innan du trycker igen.';
   }finally{
     clearTimeout(tm);
-    setTimeout(()=>{ bs.forEach(b=>b.disabled=false); }, 700);
+    setTimeout(()=>{ motorBusy=false; if(!kcRun) bs.forEach(b=>b.disabled=false); }, 700);
   }
 }
-/* Band overlay. Purely a visual aid: the engine reads the bands compiled
-   into balldetector.js, so these boxes are for finding the numbers to put
-   there after the camera has moved — not a live override. */
+/* The shift and tilt fields force what the engine would otherwise measure.
+   They are remembered PER MACHINE (ev_<preset>_bDx): a shift that put the
+   bands on the EverFlo's tube puts them 11 px off the Platinum's ball, and a
+   value remembered across machines read as "två lika starka kandidater" on
+   the first night of the Platinum (2026-09-27) while her page read 3.0.
+   Loaded when the device has said which machine it is — see choosePreset(). */
 const BAND_KEYS=['bDx','bTilt'];
-const bandDefaults={bDx:'',bTilt:''};
 function initBands(){
   for(const k of BAND_KEYS){
     const el=document.getElementById(k);
+    el.value='';
+    el.oninput=()=>{
+      if(bandsFor===null) return;   // machine not known yet: nothing to remember it for
+      try{ localStorage.setItem('ev_'+bandsFor+'_'+k, el.value); }catch(e){}
+    };
+  }
+}
+function loadBands(id){
+  // Only on a change of machine: this runs after every lost contact too, and
+  // must not wipe a value being tried on the same one.
+  if(id===bandsFor) return;
+  bandsFor=id;
+  for(const k of BAND_KEYS){
     let v=null;
-    try{ v=localStorage.getItem('ev_'+k); }catch(e){}
-    el.value = v!==null ? v : bandDefaults[k];
-    if(k==='bTilt' && el.value==='') el.value='';
-    el.onchange=()=>{ try{ localStorage.setItem('ev_'+k, el.value); }catch(e){} };
+    try{
+      // Before 1.11.2 the fields were global, and set on the EverFlo — so a
+      // leftover global value is the EverFlo's. Moved there once, then gone.
+      const legacy=localStorage.getItem('ev_'+k);
+      if(legacy!==null){
+        if(localStorage.getItem('ev_everflo_'+k)===null) localStorage.setItem('ev_everflo_'+k, legacy);
+        localStorage.removeItem('ev_'+k);
+      }
+      v=localStorage.getItem('ev_'+id+'_'+k);
+    }catch(e){}
+    document.getElementById(k).value = v!==null ? v : '';
   }
 }
 
@@ -1326,6 +1452,229 @@ async function resetCounter(){
   }catch(e){ document.getElementById('status').textContent='Kunde inte nollställa.'; }
 }
 function copyLog(){ navigator.clipboard.writeText(document.getElementById('log').value); }
+
+/* ---------- knob calibration ----------
+   How many degrees the knob needs per L/min, along the scale — a rotameter
+   needs more turn higher up. Operator-started behind a confirm, stoppable,
+   and bounded:
+   - the top is the preset's, never above 9, and the climb stops a step early
+     when the next step is expected to reach it or Max;
+   - Max aborts at once, whatever the phase;
+   - every phase checks the flow moves the way the knob is turned, and that it
+     moves at all: eight steps with no change in the (hidden) flow means a
+     slipping cup or a machine that is off, and aborts;
+   - 15 s without a trustworthy frame, a refused or re-sized press, a press
+     without an answer, or 15 turns in total abort;
+   - the whole panel is locked except Stopp.
+   Sequence: turn down until the reading is under 1, then up to 1 — so the
+   climb approaches from below with the backlash taken up — climb in small
+   steps to the top reading after each, then reverse and count the degrees
+   before the reading has fallen twice in a row: the backlash, measured where
+   the scale can be read. Last, turn back to where the flow stood, from above
+   and closed on the reading. An abort does NOT turn anything back: when
+   something has already gone wrong more automatic turning is the worse
+   choice, so it says what it last saw instead. */
+const KC_MAX_DEG=5400;
+let kcRun=null;
+const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+function kcSay(t){ document.getElementById('kcStatus').textContent=t; }
+function knobCalStop(){ if(kcRun) kcRun.stop=true; kcSay('Stoppar efter pågående steg …'); }
+function kcMaxFlow(){ const y=Y_MAX_STATE; return CAL[0]*y*y+CAL[1]*y+CAL[2]; }   // the Max boundary, in L/min
+function kcTop(){ return Math.min(9.0, kcMaxFlow())-0.2; }
+async function kcPress(op, deg){
+  if(kcRun.stop) throw new Error('stoppad');
+  if(host!==kcRun.host) throw new Error('värden ändrades under körningen');
+  if(deg<4 || deg>180) throw new Error('internt: steg '+deg+'° utanför 4–180');
+  if((kcRun.total+=deg) > KC_MAX_DEG) throw new Error('mer än '+KC_MAX_DEG+' grader totalt');
+  kcRun.last=null;                     // whatever was seen before this press is no longer current
+  const ac=new AbortController(), tm=setTimeout(()=>ac.abort(),4000);
+  try{
+    const j=await (await fetch('http://'+kcRun.host+'/api/'+op+'?steg='+deg,{signal:ac.signal})).json();
+    if(!j.ok) throw new Error('enheten vägrade trycket (motorn upptagen?)');
+    if(j.steg!==deg) throw new Error('enheten ändrade '+deg+' till '+j.steg+' grader');
+    // The device counts presses (lage, ±1 each). Moved by more than this
+    // press means someone else pressed — her page, another phone — and the
+    // table would book their turn against these degrees.
+    if(Number.isInteger(j.lage)){
+      const want = kcRun.lage===null ? null : kcRun.lage + (op==='plus'?1:-1);
+      if(want!==null && j.lage!==want) throw new Error('någon annan tryckte under kalibreringen');
+      kcRun.lage=j.lage;
+    }
+  }catch(e){
+    if(e.name==='AbortError') throw new Error('trycket fick inget svar — okänt om ratten vreds');
+    throw e;
+  }finally{ clearTimeout(tm); }
+  kcRun.deg += op==='plus' ? deg : -deg;
+}
+/* Median of three frames REQUESTED after the wait. Max aborts. flow is the
+   engine's number even in the bottom state (it has one, just not a trusted
+   one), which is what lets a stalled knob be noticed down there too. */
+async function kcRead(){
+  await sleep(kcRun.wait);
+  const since=Date.now(), got=[];
+  while(got.length<3){
+    if(kcRun.stop) throw new Error('stoppad');
+    if(Date.now()-since>15000) throw new Error('ingen avläsning på 15 s');
+    await sleep(250);
+    const r=lastRead;
+    if(r && r.at>since && (got.length===0 || r.at>got[got.length-1].at)){
+      if(!r.ok) continue;            // refused frame: wait for the next
+      if(r.max){ kcRun.last={max:true}; throw new Error('avläsningen säger Max'); }
+      got.push(r);
+      kcRun.last={flow:r.flow, number:r.number, below:r.below};   // what was last SEEN, even mid-read
+    }
+  }
+  const fl=got.map(r=>r.flow).sort((a,b)=>a-b);
+  const x={flow:fl[1], number:got.every(r=>r.number), below:got.some(r=>r.below)};
+  kcRun.last=x;
+  return x;
+}
+function kcLog(t){ const o=document.getElementById('kcOut'); o.value+=t+'\n'; o.scrollTop=o.scrollHeight; }
+/* Everything that can change what the next frame reads, or where a press
+   goes, is locked for the run: host, rotation, mirror, bands, light, the
+   manual buttons. Only Stopp stays live. */
+function kcLock(on){
+  document.querySelectorAll('input, select, button').forEach(el=>{
+    if(el.id==='kcStop') return;
+    if(on){ el.dataset.kcWas=el.disabled?'1':''; el.disabled=true; }
+    else if(el.dataset.kcWas!==undefined){ el.disabled=el.dataset.kcWas==='1'; delete el.dataset.kcWas; }
+  });
+  document.getElementById('kcStop').disabled=!on;
+}
+async function knobCal(){
+  if(!host || presetFor!==host){ kcSay('Starta och vänta tills maskinen är känd först.'); return; }
+  if(!isCalibrated(PRESET)){ kcSay('Maskinen har ingen avläsningskalibrering än — ratten kan inte mätas utan den.'); return; }
+  if(motorBusy){ kcSay('Ett tryck pågår — vänta en sekund och starta igen.'); return; }
+  const top=kcTop(), maxFlow=kcMaxFlow();
+  if(!confirm('Kalibrera ratten? Flödet ändras mellan '+LOW_LABEL.toLowerCase()+' och '+top.toFixed(1)+
+              ' L/min i ungefär 10 minuter. Ingen får andas från maskinen, och ingen får trycka på knapparna i appen under tiden.')) return;
+  const step=Math.round(Number(document.getElementById('kcStep').value));
+  const wait=Math.round(1000*Number(document.getElementById('kcWait').value));
+  if(!(step>=4 && step<=30) || !(wait>=2000 && wait<=10000)){ kcSay('Steg 4–30 grader, vänta 2–10 s.'); return; }
+  kcRun={stop:false, deg:0, total:0, wait, host, last:null, lage:null};
+  document.getElementById('kcOut').value='';
+  kcLock(true);
+  let start=null;
+  /* The flow must follow the knob. Both checks restart at every change of
+     direction, because the backlash makes the first steps after one move
+     nothing — that is the slack, not a fault. Against: two steps in a row
+     the wrong way. Still: once the flow HAS moved in this direction, eight
+     steps whose readings span under 0.1 L/min (a net test, not per step, so
+     small steps high on the scale are not mistaken for a stall). A machine
+     that is off never moves at all: the phase bounds catch that. */
+  let against=0, hist=[], moved=false, dirNow=0;
+  const check=(prev, now, up)=>{
+    const dir=up?1:-1;
+    if(dir!==dirNow){ dirNow=dir; against=0; hist=[]; moved=false; }
+    const d=now.flow-prev.flow;
+    against = (up ? d < -0.1 : d > 0.1) ? against+1 : 0;
+    if(against>=2) throw new Error('flödet går åt fel håll när ratten vrids — kontrollera riktning och koppen');
+    if(Math.abs(d)>=0.1) moved=true;
+    hist.push(now.flow); if(hist.length>8) hist.shift();
+    if(moved && hist.length===8 && Math.max(...hist)-Math.min(...hist)<0.1)
+      throw new Error('flödet rör sig inte när ratten vrids — slirar koppen, eller är maskinen avstängd?');
+  };
+  const press=async (op, prev)=>{ await kcPress(op, step); const r=await kcRead(); check(prev, r, op==='plus'); return r; };
+  try{
+    kcLog('# '+PRESET+', steg '+step+'°, vänta '+wait/1000+' s, topp '+top.toFixed(1)+', '+new Date().toISOString());
+    let r=await kcRead(); start=r;
+    kcLog('start: '+(r.number?r.flow.toFixed(2):LOW_LABEL));
+    // 1) down until under 1
+    kcSay('Vrider ner under 1 …');
+    let n=0;
+    while(!(r.below || r.flow<0.9)){ if(++n>200) throw new Error('kommer inte under 1'); r=await press('minus', r); }
+    kcLog('under 1 efter '+n*step+'°');
+    // 2) up to 1, from below: the backlash is taken up on the way
+    kcSay('Upp till 1 …');
+    n=0;
+    while(!r.number || r.flow<1.0){ if(++n>40) throw new Error('kommer inte upp till 1 — är maskinen avstängd?'); r=await press('plus', r); }
+    // 3) climb, stopping a step early rather than stepping into Max
+    kcSay('Vrider uppåt mot '+top.toFixed(1)+' …');
+    const base=kcRun.deg, table=[[0, r.flow]];
+    kcLog('0°\t'+r.flow.toFixed(2));
+    const rises=[];   // the largest of the last three: one bob down must not predict zero
+    const nextRise=()=>rises.length ? Math.max(...rises) : 0;
+    while(r.number && r.flow<top && r.flow+1.5*nextRise()<maxFlow-0.05){
+      const p=r; r=await press('plus', r);
+      if(!r.number) throw new Error('ingen siffra mitt i skalan');
+      rises.push(Math.max(0, r.flow-p.flow)); if(rises.length>3) rises.shift();
+      table.push([kcRun.deg-base, r.flow]);
+      kcLog((kcRun.deg-base)+'°\t'+r.flow.toFixed(2));
+    }
+    // 4) reverse: degrees before the reading has fallen twice in a row = backlash
+    kcSay('Mäter glappet …');
+    const peak=r.flow; let turned=0, firstFall=0, confirmed=false; n=0;
+    while(!confirmed){
+      if(++n>20) throw new Error('flödet sjunker inte när ratten vrids ner');
+      const p=r; await kcPress('minus',step); turned+=step; r=await kcRead(); check(p, r, false);
+      const low=r.flow<peak-0.08;
+      if(firstFall===0){ if(low) firstFall=turned; }
+      else if(low) confirmed=true;                           // a second fall: the first was real
+      else if(turned-firstFall>=2*step) firstFall=0;         // nothing followed it: a bob, start over
+    }
+    // The first falling step both closed the slack and moved the ball: half of it.
+    const backlash=Math.max(0, Math.round(firstFall-step/2));
+    kcLog('glapp ungefär '+backlash+'° (vid '+peak.toFixed(2)+')');
+    // 5) summary. The first segment may be extended down to 0.5 L/min, so the
+    // 1.0 row exists although the climb starts above it; marked when it is.
+    const segAt=(f)=>{
+      for(let i=1;i<table.length;i++){ const [d0,f0]=table[i-1],[d1,f1]=table[i];
+        if(f1>f0 && f>=f0 && f<=f1) return d0+(d1-d0)*(f-f0)/(f1-f0); }
+      return null; };
+    const degAt=(f)=>{
+      const d=segAt(f); if(d!==null) return d;
+      if(f<table[0][1] && f>=table[0][1]-0.5 && table.length>1){
+        const [d0,f0]=table[0], i=table.findIndex(([,fx])=>fx>f0+0.05);
+        if(i>0){ const [d1,f1]=table[i]; return d0-(d1-d0)*(f0-f)/(f1-f0); } }
+      return null; };
+    const knob=[];
+    for(let f=1.0; f<=top+1e-9; f+=0.5){ const d=degAt(f); if(d!==null) knob.push([+f.toFixed(1), Math.round(d)]); }
+    // The top of the climb as the last row, so her buttons reach it: the rows
+    // above are at whole halves and would otherwise stop at 8.5.
+    const [dTop,fTop]=table[table.length-1];
+    if(knob.length && fTop>knob[knob.length-1][0]+0.1) knob.push([+fTop.toFixed(2), Math.round(dTop)]);
+    const ext = knob.length && knob[0][0]<table[0][1];
+    kcLog('\ngrader per 0,5 L/min'+(ext?' ('+knob[0][0].toFixed(1)+' förlängd nedåt från '+table[0][1].toFixed(2)+')':'')+':');
+    for(let i=1;i<knob.length;i++) kcLog('  '+knob[i-1][0]+'–'+knob[i][0]+': '+(knob[i][1]-knob[i-1][1])+'°');
+    kcLog('\nKNOB:'+JSON.stringify(knob)+', BACKLASH:'+backlash+',   // '+PRESET+' '+new Date().toISOString().slice(0,10));
+    // 6) back to where the flow stood — from above (still turning down, so no
+    // slack), large moves from the table where it can say, then single steps
+    // closed on the reading; over-shooting is fixed with ONE turn back up.
+    const goal=start.number ? start.flow : null;
+    if(goal===null){
+      kcLog('\nvid start: '+LOW_LABEL+' — flödet lämnas vid '+r.flow.toFixed(1)+', vrid ner för hand');
+      kcSay('Klar, men flödet står på '+r.flow.toFixed(1)+' L/min — vrid ner för hand. Kopiera raden KNOB: … till Claude.');
+      return;
+    }
+    kcSay('Vrider tillbaka till '+goal.toFixed(2)+' …');
+    const here=degAt(r.flow);
+    // Below the table the fast move goes to its bottom row; single steps do the rest.
+    const there=degAt(goal)!==null ? degAt(goal) : (goal<table[0][1] ? 0 : null);
+    if(here!==null && there!==null){
+      let move=Math.round(here-there)-2*step;           // stop a little short, then close in
+      while(move>=4){ const d=Math.min(180,move); await kcPress('minus',d); move-=d; }
+      r=await kcRead();
+    }
+    n=0;
+    while(r.flow>goal+0.15){ if(++n>150) break; r=await press('minus', r); }
+    if(r.flow<goal-0.15) { await kcPress('plus', Math.min(180, step+backlash)); r=await kcRead(); }   // once: no hunting
+    const ok=Math.abs(r.flow-goal)<=0.2;
+    kcLog('\ntillbaka: '+r.flow.toFixed(2)+' (start '+goal.toFixed(2)+')'+(ok?'':' — INTE framme'));
+    kcSay(ok ? 'Klar. Kopiera raden KNOB: … till Claude.'
+             : 'Klar med mätningen, men flödet står på '+r.flow.toFixed(2)+' (var '+goal.toFixed(2)+') — justera för hand. Kopiera raden KNOB: … till Claude.');
+  }catch(e){
+    const last=kcRun && kcRun.last;
+    const seen = !last ? 'okänt — ratten kan ha vridits sedan senaste avläsningen'
+               : last.max ? 'Max (ovanför röda linjen)'
+               : last.number ? last.flow.toFixed(1)+' L/min' : LOW_LABEL;
+    kcSay('AVBRUTEN: '+e.message+(/[?.]$/.test(e.message)?' ':'. ')+'Senast avläst: '+seen+' — vrid tillbaka för hand'+
+          (start&&start.number?' (det var '+start.flow.toFixed(1)+' vid start)':'')+'.');
+    kcLog('# avbruten: '+e.message);
+  }finally{
+    kcRun=null;
+    kcLock(false);
+  }
+}
 
 initBands();
 // Autostart: the host field remembers the last address and defaults to

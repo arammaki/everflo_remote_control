@@ -68,7 +68,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.11.2"
+#define FW_VERSION "1.11.3"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -358,6 +358,11 @@ void motorStep(int direction, int degrees) {
    gone quiet. What we wait for is the end of the series, not the ball —
    it settles in well under a second. */
 volatile unsigned long lastPressAt = 0;
+/* The direction of the last move, by whoever made it (+1 plus, -1 minus, 0
+   none since boot). Her page pays the knob's backlash only when turning the
+   other way, and only the device knows the last direction across her page,
+   the control panel and a second phone. A turn by hand it cannot know. */
+volatile int lastMoveDir = 0;
 volatile bool uploadAfterPress = false;
 volatile int lastPressDegrees = 0;   // signed: what the knob was actually turned
 volatile bool otaActive = false;     // an over-the-air update is in progress
@@ -377,6 +382,7 @@ bool move(int direction, int degrees) {
   position = next;
   prefs.putInt("lage", position);           // NVS key kept: renaming loses the stored position
   lastPressDegrees = direction * degrees;
+  lastMoveDir = direction;
   logLine(String("Press ") + (lastPressDegrees > 0 ? "+" : "") + lastPressDegrees +
           " deg, position " + position);
   lastPressAt = millis();
@@ -621,6 +627,12 @@ static const char PAGE[] = R"HTML(
  #flow{font-size:3.4rem;font-weight:800;color:#1c8a4c;line-height:1;text-align:center}
  #flow small{font-size:1.1rem;color:#666;font-weight:400}
  #flow.warn{color:#b8860b}
+ /* Flow-step buttons when the machine's knob is measured and a reading
+    exists; the fixed-degree buttons otherwise. Never both, never neither. */
+ .buttons.flow{display:none}
+ body.flowmode .buttons.flow{display:flex}
+ body.flowmode .buttons.deg{display:none}
+ #mode{font-size:.95rem;color:#8a5a00;text-align:center;min-height:1.2em}
  #flow.none{color:#a33;font-size:1.7rem}
  /* Sized by viewport height, not width: what she is looking at is a tall
     narrow tube, and the crop below makes it taller and narrower still. Left
@@ -663,7 +675,20 @@ static const char PAGE[] = R"HTML(
 <div id="camwrap"><canvas id="cv" width="225" height="640"></canvas>
 <div id="stale">Bilden uppdateras inte<small id="staleAge"></small></div></div>
 <div id="flow">–<small> L/min</small></div>
-<div class="buttons">
+<div id="mode"></div>
+<div class="buttons flow">
+<div class="row">
+<button class="plus" onclick="pressFlow(0.2)">+0,2</button>
+<button class="plus" onclick="pressFlow(1)">+1</button>
+<button class="plus" onclick="pressFlow(2)">+2</button>
+</div>
+<div class="row">
+<button class="minus" onclick="pressFlow(-0.2)">&minus;0,2</button>
+<button class="minus" onclick="pressFlow(-1)">&minus;1</button>
+<button class="minus" onclick="pressFlow(-2)">&minus;2</button>
+</div>
+</div>
+<div class="buttons deg">
 <div class="row">
 <button class="plus" onclick="press('plus',%STEP1%)">+</button>
 <button class="plus" onclick="press('plus',%STEP2%)">++</button>
@@ -718,8 +743,10 @@ function show(text,unit,cls){
   el.className=cls||'';
   el.innerHTML=text+(unit?'<small> '+unit+'</small>':'');
 }
-function nextFrame(){ const i=new Image(); i.onload=()=>{ frame(i); setTimeout(nextFrame,250); };
-  i.onerror=()=>setTimeout(nextFrame,1000); i.src='/bild?t='+Date.now(); }
+// Stamped with the REQUEST time: on 2.4 GHz a picture can take seconds to
+// arrive, and one taken while the ball still moved must not count as settled.
+function nextFrame(){ const i=new Image(), asked=Date.now(); i.onload=()=>{ frame(i, asked); setTimeout(nextFrame,250); };
+  i.onerror=()=>setTimeout(nextFrame,1000); i.src='/bild?t='+asked; }
 /* What she SEES is the meter alone: the preset's VIEW_* crop of the
    oriented frame (the EverFlo preset explains its numbers). An uncalibrated
    preset has none and shows the whole frame, which is what aiming a camera at
@@ -738,7 +765,7 @@ const CROP_W=(typeof VIEW_W!=='undefined' && VIEW_W!=null) ? VIEW_W : 480;
 const CROP_Y=(typeof VIEW_Y!=='undefined' && VIEW_Y!=null) ? VIEW_Y : 0;
 const CROP_H=(typeof VIEW_H!=='undefined' && VIEW_H!=null) ? VIEW_H : 640;
 cv.width=CROP_W; cv.height=CROP_H;
-function frame(img){
+function frame(img, asked){
   lastFrameAt=Date.now();
   const t=orient(img);
   ctx.setTransform(1,0,0,1,0,0);
@@ -751,9 +778,15 @@ function frame(img){
   let r,b;
   try{ r=analyze(t.getContext('2d').getImageData(0,0,480,640)); b=judge(r); }
   catch(e){ show('Ingen avläsning','','none');
-             document.getElementById('msg').textContent=''; return; }
-  if(!b.ok){ show(b.title,'','none'); document.getElementById('msg').textContent=b.reason; return; }
+             document.getElementById('msg').textContent=''; good=null; shown='none'; setMode(); return; }
+  if(!b.ok){ show(b.title,'','none'); document.getElementById('msg').textContent=b.reason; good=null; shown='none'; setMode(); return; }
   document.getElementById('msg').textContent='';
+  // Only a number is something to step from: not Max, not the bottom state,
+  // and not one the page itself marks uncertain (extrapolated).
+  const steppable=!b.maxState && !b.bottomState && !b.extrapolated;
+  good = steppable ? {flow:r.flow, at:asked||Date.now()} : null;
+  shown = steppable ? 'number' : 'state';
+  setMode();
   if(b.maxState) show(b.label,'över skalans slut','warn');
   else if(b.bottomState) show(b.label,'L/min','warn');
   else show(r.flow.toFixed(1),'L/min'+(b.extrapolated?' (osäkert)':''));
@@ -768,7 +801,9 @@ setInterval(()=>{
       'Senaste bild för '+age+' sekunder sedan. Tryck inte förrän bilden är tillbaka.';
     show('–','L/min','none');   // never leave a stale number looking current
     document.getElementById('msg').textContent='';
+    good=null; shown='none';
   }
+  setMode();
 }, 1000);
 nextFrame();
 // Tells the device someone is looking, so the lamp over the meter stays lit
@@ -779,13 +814,105 @@ pulse(); setInterval(pulse,5000);
 document.addEventListener('visibilitychange',pulse);
 const allButtons=()=>document.querySelectorAll('.buttons button');
 async function press(op,deg){
+  pressing=true;
   allButtons().forEach(b=>b.disabled=true);
   document.getElementById('msg').textContent='';
   try{
     const j = await (await fetch('/api/'+op+(q?q+'&':'?')+'steg='+deg)).json();
     if(!j.ok) document.getElementById('msg').textContent='Motorn är upptagen – vänta';
   }catch(e){ document.getElementById('msg').textContent='Ingen kontakt'; }
+  // The knob has moved by an amount no flow reading has seen yet: the next
+  // flow step must start from a reading taken after the ball has settled.
+  pending=null; good=null; settleUntil=Date.now()+SETTLE_MS;
+  pressing=false;
   allButtons().forEach(b=>b.disabled=false);
+  setMode();
+}
+/* ---- flow steps ----
+   The buttons say "+0,2 / +1 / +2" when there is something to step FROM: a
+   measured knob table for this machine (KNOB in its preset) and a number
+   read within the last 3 s. Otherwise the fixed-degree buttons, with a line
+   saying so — never locked (2026-08-15: a remote control that locks when
+   something is wrong is gone exactly when it is needed). The 3 s also keeps
+   the buttons from flickering between the two sets on one refused frame.
+   After a flow press the next one steps from where that press was heading,
+   not from the old reading, until the ball has had time to settle. */
+let good=null, pending=null, pressing=false, shown='none', settleUntil=0;
+const SETTLE_MS=5000;   // after any press, how long the ball is taken to be moving
+const hasKnob=()=>typeof knobPlan==='function' && typeof KNOB!=='undefined' && KNOB!=null;
+const shownFlow=()=>document.body.classList.contains('flowmode');
+// Hysteresis in flow and in time: the flow buttons appear on a reading at
+// most 3 s old inside the table, and once shown they stay through 8 s of
+// refused frames and 0.2 past its ends — so the button under her finger does
+// not change meaning on a bob or one bad frame.
+const margin=()=>shownFlow() ? 0.2 : 0;
+const holdMs=()=>shownFlow() ? 8000 : 3000;
+// What a flow press would step from right now: where the last flow press was
+// heading while the ball settles, else a number read within 3 s AND after the
+// last press had settled — a reading of a ball still rising is no base. Only
+// if the knob table covers it, by the same test knobPlan makes.
+function stepBase(){
+  if(!hasKnob()) return null;
+  const f = (pending && Date.now()<pending.until) ? pending.target
+          : (good && Date.now()-good.at<holdMs() && good.at>=settleUntil) ? good.flow : null;
+  return f!==null && knobCovers(f, margin()) ? f : null;
+}
+function setMode(){
+  if(pressing) return;                 // no switching under her finger
+  const on=stepBase()!==null;
+  document.body.classList.toggle('flowmode', on);
+  document.getElementById('mode').textContent = !hasKnob() || on || Date.now()<settleUntil ? ''
+    : shown==='none' ? 'Ingen avläsning – knapparna vrider ett fast steg.'
+    : 'Utanför knapparnas område – de vrider ett fast steg.';
+}
+async function pressFlow(delta){
+  const m=document.getElementById('msg');
+  // Re-checked at the tap, not trusted from the last mode switch: that ran up
+  // to a second ago, and the reading may be too old by now.
+  const from=stepBase();
+  if(from===null){ m.textContent='Ingen avläsning just nu – vänta en sekund, eller använd knapparna med fast steg.'; setMode(); return; }
+  // The last direction the knob was turned, by anyone, from the device. If
+  // it cannot be had, no backlash is added: turning short is the safe error.
+  let lastDir=null;
+  try{
+    const ac0=new AbortController(), t0=setTimeout(()=>ac0.abort(),2000);
+    const s0=await (await fetch('/api/status'+q,{signal:ac0.signal})).json(); clearTimeout(t0);
+    lastDir = s0.dir>0 ? 'plus' : s0.dir<0 ? 'minus' : null;
+  }catch(e){}
+  const p=knobPlan(from, delta, lastDir, margin());
+  if(!p){ setMode(); return; }         // the degree buttons come back, with the line saying why
+  const sv=(x)=>x.toFixed(1).replace('.',',');
+  if(p.atLimit){ m.textContent = delta>0 ? 'Redan vid det högsta flödet knapparna går till ('+sv(p.hi)+' L/min).'
+                                        : 'Redan vid det lägsta flödet knapparna går till ('+sv(p.lo)+' L/min).'; return; }
+  // Under the motor's smallest step (4°) this step is not something it can
+  // make here without overshooting it: nothing turns.
+  if(p.deg<4){ m.textContent='Steget är för litet för motorn här – välj ett större.'; return; }
+  // One press turns at most 180°: split evenly, rounding down.
+  const n=Math.ceil(p.deg/180), each=Math.floor(p.deg/n);
+  pressing=true;
+  allButtons().forEach(b=>b.disabled=true);
+  m.textContent='';
+  let done=0;
+  try{
+    for(let i=0;i<n;i++){
+      // 4 s, as everywhere else: a hung request must not keep every button
+      // on her page disabled (2026-08-15: never locked).
+      const ac=new AbortController(), tm=setTimeout(()=>ac.abort(),4000);
+      try{
+        const j = await (await fetch('/api/'+p.op+(q?q+'&':'?')+'steg='+each,{signal:ac.signal})).json();
+        if(!j.ok){ m.textContent='Motorn är upptagen – vänta'; break; }
+      }finally{ clearTimeout(tm); }
+      done++;
+    }
+  }catch(e){ m.textContent='Ingen kontakt'; }
+  // Only a step that fully happened is somewhere to step on from; anything
+  // less and the next step waits for a fresh reading.
+  settleUntil=Date.now()+SETTLE_MS;   // a completed step settles too: readings before this are of a moving ball
+  if(done===n) pending={target:p.target, until:Date.now()+6000};
+  else { pending=null; good=null; }
+  pressing=false;
+  allButtons().forEach(b=>b.disabled=false);
+  setMode();
 }
 async function restart(){
   if(!confirm('Starta om enheten? Bilden återkommer inom en minut.'))return;
@@ -811,8 +938,8 @@ esp_err_t sendJson(httpd_req_t *req, bool ok, int applied) {
   // and `buttons` are her three button sizes for that machine, which the panel
   // uses for its own buttons rather than EverFlo's 39/90/160.
   snprintf(b, sizeof(b), "{\"ok\":%s,\"lage\":%d,\"steg\":%d,\"preset\":\"" PRESET_ID "\","
-           "\"buttons\":[%d,%d,%d]}",
-           ok ? "true" : "false", position, applied, DEG_PER_PRESS, STEP_MEDIUM, STEP_LARGE);
+           "\"buttons\":[%d,%d,%d],\"dir\":%d}",
+           ok ? "true" : "false", position, applied, DEG_PER_PRESS, STEP_MEDIUM, STEP_LARGE, (int)lastMoveDir);
   httpd_resp_set_type(req, "application/json");
   // CORS on every JSON API, not just /api/steg. The control panel runs from
   // a different origin and today fires the motor calls no-cors, which makes

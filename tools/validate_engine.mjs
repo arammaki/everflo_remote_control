@@ -117,13 +117,17 @@ const toBmp = (src, name) => {
    does not have. */
 const src = readFileSync(ENGINE, 'utf8');
 writeFileSync(join(work, 'engine.mjs'), src +
-  '\nexport { T,toGray,flatfield,buildRef,analyze,judge,PRESETS,usePreset,setRefs,isCalibrated };\n');
+  '\nexport { T,toGray,flatfield,buildRef,analyze,judge,PRESETS,usePreset,setRefs,isCalibrated };\n' +
+  'export function knobError(){ return KNOB_ERROR; }\n');
 const E = await import(pathToFileURL(join(work, 'engine.mjs')).href);
 if (!Object.prototype.hasOwnProperty.call(E.PRESETS, presetId)) {
   console.error(`Unknown preset "${presetId}". The engine has: ${Object.keys(E.PRESETS).join(', ')}`);
   process.exit(2);
 }
 E.usePreset(presetId);
+// A broken knob table does not stop the reading (it only hides her flow
+// buttons), so it would pass here unseen: say it, and fail.
+if (E.knobError()) { console.error(`KNOB TABLE SET ASIDE: ${E.knobError()}`); process.exit(1); }
 
 /** 24-bit uncompressed BMP, either row order. */
 function readBmp(path) {
