@@ -1074,8 +1074,20 @@ closed on the reading. Aborts rather than turns on: Max, the flow going the
 wrong way or not moving once it has, 15 s without a frame, a refused or
 unanswered press, 15 turns. An abort never turns anything back — it says
 what it last saw. The whole page is locked during a run except Stopp.
-Tested end to end only against a simulated knob (raw frames rebuilt from the
-Platinum sweep); its last round of fixes was tested but not cold-reviewed.
+First real run 2026-09-29 on the Platinum (KNOB/BACKLASH in the preset since
+1.12.3): three runs joined, backlash 35 degrees, so her page keeps the
+direction logic. What it took, worth knowing before the next run:
+- **Lock the tilt at 0** (see the Platinum section) — under the free search
+  the late-afternoon light alternated references and nothing settled.
+- **Keep the panel visible.** A hidden Safari tab has its timers slowed, the
+  frames stop coming close together, and the run used to end in "no still
+  reading". It now aborts at once and says why.
+- **"Fortsätt förra"** continues an aborted run: the climb is saved per
+  machine after every step (or pasted into the result box), approached again
+  from below a little under where it ended, and anchored in the saved table.
+- The reading sticks for 20-40 degrees at each whole mark and catches up —
+  the ball crossing a printed tick in the band. It moves no table row by more
+  than about 10 degrees, so the table is taken as printed.
 
 The band fields (forced shift/tilt) are remembered per machine
 (`ev_<preset>_bDx`): a value set on the EverFlo made the Platinum refuse.

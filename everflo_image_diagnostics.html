@@ -375,10 +375,21 @@ const PRESETS={
        crop moved with the camera (+15, +10). */
     VIEW_X:265, VIEW_W:140, VIEW_Y:105, VIEW_H:400,
     /* Degrees of knob per flow, measured by "Kalibrera ratten" on the control
-       panel: [[L/min, degrees from the table's first row], ...] ascending, and
-       the backlash in degrees. Until a run has been made these are null and her
-       page shows the degree buttons only — see knobPlan(). */
-    KNOB:null, BACKLASH:null,
+       panel 2026-09-29 (18:04-18:23 local, tilt locked at 0, three runs joined
+       with "Fortsätt förra", step 10 degrees): [[L/min, degrees from the
+       table's first row], ...], and the backlash, measured on reversing at
+       8.81. Taken as the routine printed it. Two things in the raw climb,
+       neither changing this table by more than 10 degrees (about 0.1 L/min)
+       when smoothed away with a +-25..50 degree local fit:
+       - the reading sticks for 20-40 degrees at each whole mark (4.99-5.06,
+         5.97-6.05, 6.95-7.04, 8.01-8.09) and then catches up — the ball
+         crossing a printed tick in the band, not the knob;
+       - 4..5 L/min takes about 210 degrees where 1..4 takes 90 per L/min and
+         5..6 about 140. Every smoothing keeps it, so it is the knob, not the
+         reading: the valve, or the cup slipping there under more torque — the
+         flow still followed every step. A second run would tell which. */
+    KNOB:[[1,-4],[1.5,38],[2,95],[2.5,141],[3,182],[3.5,234],[4,277],[4.5,382],[5,487],[5.5,558],[6,627],[6.5,693],[7,794],[7.5,863],[8,944],[8.5,1094],[8.81,1145]],
+    BACKLASH:35,
     /* Two references, both with the LED on: 'dag' (16:40 local, the sweep the
        geometry was measured on) and 'kväll' (17:47 local, later light, no
        sun in the room), aligned to the first — see REF_PNG_PLATINUM9_KVALL.
