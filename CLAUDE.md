@@ -640,7 +640,7 @@ each number is what it is. In order:
 8. **Day and evening references** come afterwards from a day or two of
    uploads, ball positions spread (see "Daylight is a second lighting regime").
 
-### The Platinum 9 calibration (v1.12.1, 2026-09-29)
+### The Platinum 9 calibration (v1.12.1-1.12.2, 2026-09-29)
 Everything is in the `platinum9` preset with a comment per number; the short
 version, and what to watch. The first calibration (v1.11.2, 2026-09-26, night
 with the ceiling lamp) died when the camera was moved: it refused all 21
@@ -648,11 +648,27 @@ frames of the new sweep at registration 0.31-0.46. Its sweep is now
 `test/negative-platinum9-2026-09-26/`, refused 21/21. **The unit is to be
 moved again** (as of 2026-09-29), which will mean a third sweep.
 
-- **One reference, and it is DAYLIGHT** ('dag', WS2812 on). Night — lamp off
-  or on — is a different lighting and is refused until it has its own
-  reference: a short sweep, or uploads with the ball at varied positions.
-  The old 'kväll' reference went with the old pose; a reference is bound to
-  the camera as well as the light.
+Sweep file names carry UTC (`toISOString()`); the times here are local.
+
+- **Two references, both with the LED on**: 'dag' (16:40, the sweep the
+  geometry was measured on) and 'kväll' (17:47, later light, no sun in the
+  room; v1.12.2). Against 'dag' alone the later light refused around 4 L/min
+  and stopped the knob calibration. 'kväll' was built from frames shifted
+  back by their own dx/dy against 'dag' (the camera had crept 8-14 px), so it
+  shares its coordinates and every band and the curve apply unchanged —
+  `tools/align_reference.mjs` does it; calibrate.mjs does not.
+  Night, lamp off or on, is still a lighting of its own and refused. The
+  'kväll' of 2026-09-26 went with the old pose; this one is new.
+- **Lock the tilt at 0 when calibrating the knob** (the panel's band field).
+  Under the free search 4 of the 20 evening frames are refused — the search
+  steps 1 degree off and the ticks near the top become rivals — and three
+  more are answered by 'dag' through the fallback reading HIGH (1 L/min reads
+  1.20). Two causes: the mount twists with the knob, and the 'kväll' median
+  itself prefers about -0.5 degrees, which the 1-degree grid rounds to -1.
+  At tilt 0 all 41 frames of both sweeps read. The search is shared by every
+  preset and is not changed; stiffening the mount is the real fix.
+- **dx headroom is shrinking**: the evening sweep's top frames sit at dx 14
+  against the 20 px gate.
 - **The ball in daylight is a dark ring with a bright highlight on its
   left.** A band that takes in the highlight cancels against it (contrast
   0.08). The band sits on the dark part, x 327..337.
@@ -697,8 +713,8 @@ moved again** (as of 2026-09-29), which will mean a third sweep.
   shift) were set for EverFlo's ~50 rows per L/min; on the Platinum's ~21
   the exclusion spans ~2.9 L/min, so a rival that close is invisible to the
   ambiguity gate. The `max` frame asserts only "a number", and no frame
-  exercises Max above the red line. Afternoon and evening sun are untested:
-  the sweep is 14:39-14:45.
+  exercises Max above the red line. Only 16:40 and 17:47 light have been
+  seen; night and other times of day are untested.
 
 ### Engine invariants
 Grayscale -> flatfield (3-pass box blur ~ sigma 41) -> horizontal

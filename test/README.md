@@ -67,7 +67,7 @@ still read about right. Those are constructible from the sweep above.
 
 21 labelled frames, 0 to 9 L/min in half steps, the resting stop (`0_min`)
 and the ball on the red line (`max`, which must read as a number — the Max
-state begins above the line). Taken 2026-09-29 14:39–14:45 in DAYLIGHT with
+state begins above the line). Taken 2026-09-29 16:39–16:45 local in DAYLIGHT with
 the WS2812 on, after the camera had been moved.
 
 The motor mount had been made smaller, so this time the labels up to 7 were
@@ -88,9 +88,20 @@ Cross-checked 2026-09-29: these frames read as `everflo` are refused 21/21,
 and the EverFlo sweep plus the 78 old poses read as `platinum9` are refused
 101/101.
 
+## `platinum9-sweep-2026-09-29-kvall/` — the second Platinum reference
+
+20 labelled frames taken 17:47–17:52 local the same day, late-afternoon light with
+no sun in the room, from which `REF_PNG_PLATINUM9_KVALL` is built (each frame
+shifted back by its own dx/dy against the day reference first: the camera sat
+8–14 px further right by then). **Not a must-pass set yet**: under the free
+tilt search 4 frames are refused (0_min, 0.5, 4.5, 6.5 — the search steps 1
+degree off and the ticks near the top become rivals). With the tilt locked at
+0 all 20 read, within about 0.1 of their labels on the whole marks. The mount
+twists with the knob; see the comment at the preset's `refs`.
+
 ## `negative-platinum9-2026-09-26/` — the Platinum's first pose, refused
 
-The first Platinum sweep (2026-09-26 21:31–21:35, night, WS2812 plus the
+The first Platinum sweep (2026-09-26 21:31–21:35 UTC, night, WS2812 plus the
 ceiling lamp). The camera has been moved since, so like `negative-old-poses/`
 it is run with `--expect-rejected`: all 21 refused (registration 0.62 at
 best, against the 0.75 gate).
