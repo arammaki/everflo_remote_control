@@ -17,7 +17,12 @@
  .big small{font-size:1.1rem;color:#666;font-weight:400}
  .big.warn{color:#b8860b}
  .big.error{color:#a33;font-size:1.6rem}
- #status{min-height:1.3em;color:#a33;font-size:.95rem;text-align:center;max-width:480px}
+ /* Two lines reserved whether or not a reason is showing: a refusal that
+    comes and goes (a reading on the edge of a gate) otherwise makes the whole
+    page jump with it. On a laptop it is as wide as the two columns, where
+    every reason fits on one line, so one line is reserved there. */
+ #status{min-height:2.6em;color:#a33;font-size:.95rem;text-align:center;max-width:1010px;width:100%}
+ @media (min-width:920px){ #status{min-height:1.3em} }   /* one line fits at this width */
  #quality{font-family:monospace;font-size:.75rem;color:#888;text-align:center}
  #quality b{color:#a33;font-weight:700}
  input,button{font-size:1rem;padding:10px 14px;border-radius:10px;border:1px solid #ccc}
@@ -143,11 +148,13 @@
     <label>Vänta minst <input id="kcWait" type="number" value="1" min="0.5" max="10" step="0.5" inputmode="decimal"> s</label>
   </div>
   <div class="row">
-    <button id="kcStart" onclick="knobCal()">Starta kalibrering</button>
+    <button id="kcStart" onclick="knobCal(false)">Starta kalibrering</button>
+    <button id="kcResume" onclick="knobCal(true)">Fortsätt förra</button>
     <button id="kcStop" onclick="knobCalStop()" disabled>Stopp</button>
   </div>
+  <p class="hint" id="kcSaved" style="text-align:left"></p>
   <p class="hint" id="kcStatus" style="text-align:left"></p>
-  <textarea id="kcOut" rows="8" readonly placeholder="Resultatet hamnar här"></textarea>
+  <textarea id="kcOut" rows="8" placeholder="Resultatet hamnar här. Har en körning avbrutits på en annan dator eller före en omladdning: klistra in dess utskrift här och tryck Fortsätt förra."></textarea>
 </details>
 
 <details id="light">
@@ -1201,6 +1208,7 @@ async function choosePreset(){
     if(askedFor!==host) return;
     loadBands(id);
     presetFor=askedFor;
+    kcShowSaved();
     document.getElementById('preset').textContent='Maskin: '+PRESETS[id].name+
       (isCalibrated(id) ? '' : ' — inte kalibrerad än, bara bild');
   }catch(e){
@@ -1598,6 +1606,44 @@ let kcRun=null;
 const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
 function kcSay(t){ document.getElementById('kcStatus').textContent=t; }
 function knobCalStop(){ if(kcRun) kcRun.stop=true; kcSay('Stoppar efter pågående steg …'); }
+/* The climb so far, saved after every step and per machine, so an aborted run
+   can be continued instead of started over from under 1. Degrees are counted
+   from the table's first row, as in KNOB. A finished run is kept but marked
+   done: there is nothing to continue. The cup must not have been moved on the
+   shaft in between — the degrees would no longer mean the same knob. */
+const kcKey=()=>'ev_'+PRESET+'_kc';
+function kcLoad(){ try{ const j=JSON.parse(localStorage.getItem(kcKey())); return j && Array.isArray(j.table) ? j : null; }catch(e){ return null; } }
+function kcSave(table, done){ try{ localStorage.setItem(kcKey(), JSON.stringify({at:new Date().toISOString(), table, done})); }catch(e){} }
+/* A run's printout pasted into the result box, for a run this browser did not
+   save (another computer, or a reload since). Only the LAST run in the box
+   counts — a paste may land below an old printout — and it is refused when it
+   finished (it has a KNOB line: nothing to continue) or was made on another
+   machine (its header names the preset). The climb rows are "<deg>° <flow>";
+   everything after the climb (backlash, summary) is ignored. */
+function kcParseOut(){
+  const lines=document.getElementById('kcOut').value.split(/\r?\n/);
+  let from=-1;
+  lines.forEach((l,i)=>{ if(/^# \S+, steg /.test(l.trim())) from=i; });
+  if(from<0) return null;
+  const run=lines.slice(from), head=run[0].trim().match(/^# (\S+), steg /);
+  if(head[1]!==PRESET) return {error:'Den inklistrade körningen gjordes på '+head[1]+', inte på '+PRESET+'.'};
+  if(run.some(l=>/KNOB:/.test(l))) return {error:'Den inklistrade körningen är redan klar — det finns inget att fortsätta.'};
+  const table=[];
+  for(const line of run.slice(1)){
+    if(/^glapp|^# avbruten|^grader per/.test(line.trim())) break;
+    const m=line.match(/^\s*(-?\d+)°\s+(\d+(?:\.\d+)?)/);
+    if(m) table.push([Number(m[1]), Number(m[2])]);
+  }
+  for(let i=1;i<table.length;i++) if(!(table[i][0]>table[i-1][0])) return null;   // not one climb
+  return table.length ? {at:'inklistrad utskrift', table, done:false, pasted:true} : null;
+}
+function kcResumable(j){ return !!j && !j.done && j.table.length>=2 && j.table[j.table.length-1][1]>j.table[0][1]+0.1; }
+function kcShowSaved(){
+  const j=kcLoad(), el=document.getElementById('kcSaved');
+  el.textContent = !kcResumable(j) ? ''
+    : 'Avbruten körning sparad ('+j.at.slice(0,16).replace('T',' ')+' UTC): '+j.table[0][1].toFixed(2)+' till '+
+      j.table[j.table.length-1][1].toFixed(2)+' L/min. "Fortsätt förra" tar vid strax under där den slutade.';
+}
 function kcMaxFlow(){ const y=Y_MAX_STATE; return CAL[0]*y*y+CAL[1]*y+CAL[2]; }   // the Max boundary, in L/min
 function kcTop(){ return Math.min(9.0, kcMaxFlow())-0.2; }
 async function kcPress(op, deg){
@@ -1677,12 +1723,21 @@ function kcLock(on){
   });
   document.getElementById('kcStop').disabled=!on;
 }
-async function knobCal(){
+async function knobCal(resume){
   if(!host || presetFor!==host){ kcSay('Starta och vänta tills maskinen är känd först.'); return; }
   if(!isCalibrated(PRESET)){ kcSay('Maskinen har ingen avläsningskalibrering än — ratten kan inte mätas utan den.'); return; }
   if(motorBusy){ kcSay('Ett tryck pågår — vänta en sekund och starta igen.'); return; }
   const top=kcTop(), maxFlow=kcMaxFlow();
-  if(!confirm('Kalibrera ratten? Flödet ändras mellan '+LOW_LABEL.toLowerCase()+' och '+top.toFixed(1)+
+  let saved = null;
+  if(resume){
+    const pasted=kcParseOut();
+    if(pasted && pasted.error){ kcSay(pasted.error); return; }
+    saved = kcResumable(pasted) ? pasted : kcLoad();
+  }
+  if(resume && !kcResumable(saved)){ kcSay('Det finns ingen avbruten körning att fortsätta för den här maskinen (eller den hann inte stiga).'); return; }
+  if(resume && saved.table[saved.table.length-1][1]>=top){ kcSay('Den sparade körningen nådde redan toppen — starta en ny.'); return; }
+  if(!confirm((resume ? 'Fortsätta kalibreringen från '+saved.table[saved.table.length-1][1].toFixed(1)+'? Flödet ändras upp till '
+                      : 'Kalibrera ratten? Flödet ändras mellan '+LOW_LABEL.toLowerCase()+' och ')+top.toFixed(1)+
               ' L/min i några minuter. Ingen får andas från maskinen, och ingen får trycka på knapparna i appen under tiden.')) return;
   const step=Math.round(Number(document.getElementById('kcStep').value));
   const wait=Math.round(1000*Number(document.getElementById('kcWait').value));
@@ -1719,19 +1774,57 @@ async function knobCal(){
     kcLog('# '+PRESET+', steg '+step+'°, vänta '+wait/1000+' s, topp '+top.toFixed(1)+', '+new Date().toISOString());
     let r=await kcRead(); start=r;
     kcLog('start: '+(r.number?r.flow.toFixed(2):LOW_LABEL));
-    // 1) down until under 1
-    kcSay('Vrider ner under 1 …');
-    let n=0;
-    while(!(r.below || r.flow<0.9)){ if(++n>200) throw new Error('kommer inte under 1'); r=await press('minus', r); }
-    kcLog('under 1 efter '+n*step+'°');
-    // 2) up to 1, from below: the backlash is taken up on the way
-    kcSay('Upp till 1 …');
-    n=0;
-    while(!r.number || r.flow<1.0){ if(++n>40) throw new Error('kommer inte upp till 1 — är maskinen avstängd?'); r=await press('plus', r); }
+    let n=0, base, table;
+    if(!resume){
+      // 1) down until under 1
+      kcSay('Vrider ner under 1 …');
+      while(!(r.below || r.flow<0.9)){ if(++n>200) throw new Error('kommer inte under 1'); r=await press('minus', r); }
+      kcLog('under 1 efter '+n*step+'°');
+      // 2) up to 1, from below: the backlash is taken up on the way
+      kcSay('Upp till 1 …');
+      n=0;
+      while(!r.number || r.flow<1.0){ if(++n>40) throw new Error('kommer inte upp till 1 — är maskinen avstängd?'); r=await press('plus', r); }
+      base=kcRun.deg; table=[[0, r.flow]];
+      kcLog('0°\t'+r.flow.toFixed(2));
+    }else{
+      /* Continue: approach a point 0.3 L/min under where the saved climb
+         ended FROM BELOW, as the fresh run approaches 1 — so the backlash is
+         taken up — and give that reading the degrees the saved table has at
+         the same flow. From there the climb continues on the same scale. */
+      const old=saved.table, end=old[old.length-1][1];
+      // Under the end by more than a step can rise there, so the first
+      // reading at or above the target still falls inside the saved table.
+      const lastRises=old.slice(-4).map(([,f],i,a)=>i?f-a[i-1][1]:0);
+      const target=Math.max(old[0][1], end-Math.max(0.3, 2*Math.max(...lastRises)));
+      if(saved.pasted) kcSave(old, false);   // the box is cleared below: keep the paste
+      kcLog('# fortsätter körningen från '+saved.at+' ('+old[0][1].toFixed(2)+'–'+end.toFixed(2)+')');
+      kcSay('Vrider ner under '+target.toFixed(1)+' …');
+      while(r.number && !r.below && r.flow>=target-0.15){ if(++n>200) throw new Error('kommer inte ner under '+target.toFixed(1)); r=await press('minus', r); }
+      kcSay('Upp till '+target.toFixed(1)+' …');
+      n=0;
+      // Bounded by progress, not by count: the way up may be long (her flow
+      // back to near the top), but 30 presses without 0.1 L/min is a machine
+      // that is off or a slipping cup. The 5400-degree total still applies.
+      let best=r.number ? r.flow : 0; n=0;
+      while(!r.number || r.flow<target){
+        if(++n>30) throw new Error('kommer inte upp mot '+target.toFixed(1)+' — är maskinen avstängd, eller slirar koppen?');
+        r=await press('plus', r);
+        if(r.number && r.flow>=best+0.1){ best=r.flow; n=0; }
+      }
+      let d0=null;
+      for(let i=1;i<old.length;i++){ const [a0,f0]=old[i-1],[a1,f1]=old[i];
+        if(f1>f0 && r.flow>=f0 && r.flow<=f1){ d0=a0+(a1-a0)*(r.flow-f0)/(f1-f0); break; } }
+      if(d0===null) throw new Error('avläsningen '+r.flow.toFixed(2)+' ligger utanför den sparade tabellen — starta en ny körning');
+      d0=Math.round(d0);
+      table=old.filter(([d,f])=>f<r.flow && d<d0).concat([[d0, r.flow]]);
+      base=kcRun.deg-d0;
+      for(const [d,f] of table.slice(0,-1)) kcLog(d+'°\t'+f.toFixed(2)+'\t(sparad)');
+      kcLog(d0+'°\t'+r.flow.toFixed(2)+'\t(förankrad i den sparade tabellen)');
+      kcRun.resumeEnd=end;   // the saved run is replaced only once the climb has passed it
+    }
+    if(!resume) kcSave(table, false);
     // 3) climb, stopping a step early rather than stepping into Max
     kcSay('Vrider uppåt mot '+top.toFixed(1)+' …');
-    const base=kcRun.deg, table=[[0, r.flow]];
-    kcLog('0°\t'+r.flow.toFixed(2));
     const rises=[];   // the largest of the last three: one bob down must not predict zero
     const nextRise=()=>rises.length ? Math.max(...rises) : 0;
     while(r.number && r.flow<top && r.flow+1.5*nextRise()<maxFlow-0.05){
@@ -1739,6 +1832,7 @@ async function knobCal(){
       if(!r.number) throw new Error('ingen siffra mitt i skalan');
       rises.push(Math.max(0, r.flow-p.flow)); if(rises.length>3) rises.shift();
       table.push([kcRun.deg-base, r.flow]);
+      if(!(kcRun.resumeEnd>r.flow)) kcSave(table, false);
       kcLog((kcRun.deg-base)+'°\t'+r.flow.toFixed(2));
     }
     // 4) reverse: degrees before the reading has fallen twice in a row = backlash
@@ -1776,6 +1870,7 @@ async function knobCal(){
     const ext = knob.length && knob[0][0]<table[0][1];
     kcLog('\ngrader per 0,5 L/min'+(ext?' ('+knob[0][0].toFixed(1)+' förlängd nedåt från '+table[0][1].toFixed(2)+')':'')+':');
     for(let i=1;i<knob.length;i++) kcLog('  '+knob[i-1][0]+'–'+knob[i][0]+': '+(knob[i][1]-knob[i-1][1])+'°');
+    kcSave(table, true);
     kcLog('\nKNOB:'+JSON.stringify(knob)+', BACKLASH:'+backlash+',   // '+PRESET+' '+new Date().toISOString().slice(0,10));
     // 6) back to where the flow stood — from above (still turning down, so no
     // slack), large moves from the table where it can say, then single steps
@@ -1812,6 +1907,7 @@ async function knobCal(){
     kcLog('# avbruten: '+e.message);
   }finally{
     kcRun=null;
+    kcShowSaved();
     if(timer) clearInterval(timer);
     timer=setInterval(fetchFrame, 1000);
     kcLock(false);
