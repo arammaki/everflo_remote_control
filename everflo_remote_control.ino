@@ -88,7 +88,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.12.3"
+#define FW_VERSION "1.12.4"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -1016,12 +1016,19 @@ async function pressFlow(delta){
   // Buttons stay put while the ball moves (no switching under her finger),
   // but a step is not sized from a ball in motion.
   if(moving && !(pending && Date.now()<pending.until)){ m.textContent='Bollen rör sig – vänta ett ögonblick.'; return; }
+  if(pressing) return;
+  // Locked from here, BEFORE the status request below: a second tap while it
+  // is out (a double tap, or a repeat on slow wifi) would otherwise size its
+  // own step from the same reading and turn the knob twice.
+  pressing=true;
+  allButtons().forEach(b=>b.disabled=true);
+  const release=()=>{ pressing=false; allButtons().forEach(b=>b.disabled=false); };
   // Which way the knob was last turned decides whether the slack is paid —
   // the direction of the device's own last move (any page, any phone). A turn
   // by hand it cannot know, and guessing it from the reading proved fragile;
-  // the slack is expected to be small (under 5° by the operator's judgement,
-  // 2026-09-27), and if the knob calibration shows that, BACKLASH goes to 0
-  // and none of this matters. Unknown: no backlash — short is the safe error.
+  // knobPlan() leaves the slack out wherever paying it with no slack there
+  // would carry the flow past 1 or the top. Unknown: no backlash — short is
+  // the safe error.
   let lastDir=null;
   if(BACKLASH>0){
     try{
@@ -1031,17 +1038,15 @@ async function pressFlow(delta){
     }catch(e){}
   }
   const p=knobPlan(from, delta, lastDir, margin());
-  if(!p){ setMode(); return; }         // the degree buttons come back, with the line saying why
+  if(!p){ release(); setMode(); return; }         // the degree buttons come back, with the line saying why
   const sv=(x)=>x.toFixed(1).replace('.',',');
-  if(p.atLimit){ m.textContent = delta>0 ? 'Redan vid det högsta flödet knapparna går till ('+sv(p.hi)+' L/min).'
+  if(p.atLimit){ release(); m.textContent = delta>0 ? 'Redan vid det högsta flödet knapparna går till ('+sv(p.hi)+' L/min).'
                                         : 'Redan vid det lägsta flödet knapparna går till ('+sv(p.lo)+' L/min).'; return; }
   // Under the motor's smallest step (4°) this step is not something it can
   // make here without overshooting it: nothing turns.
-  if(p.deg<4){ m.textContent='Steget är för litet för motorn här – välj ett större.'; return; }
+  if(p.deg<4){ release(); m.textContent='Steget är för litet för motorn här – välj ett större.'; return; }
   // One press turns at most 180°: split evenly, rounding down.
   const n=Math.ceil(p.deg/180), each=Math.floor(p.deg/n);
-  pressing=true;
-  allButtons().forEach(b=>b.disabled=true);
   m.textContent='';
   let done=0;
   try{
@@ -1064,8 +1069,7 @@ async function pressFlow(delta){
   motorStopped=Date.now(); prevNum=null;
   if(done===n) pending={target:p.target, until:Date.now()+6000};
   else pending=null;
-  pressing=false;
-  allButtons().forEach(b=>b.disabled=false);
+  release();
   setMode();
 }
 async function restart(){

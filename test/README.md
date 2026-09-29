@@ -94,10 +94,11 @@ and the EverFlo sweep plus the 78 old poses read as `platinum9` are refused
 no sun in the room, from which `REF_PNG_PLATINUM9_KVALL` is built (each frame
 shifted back by its own dx/dy against the day reference first: the camera sat
 8–14 px further right by then). **Not a must-pass set yet**: under the free
-tilt search 4 frames are refused (0_min, 0.5, 4.5, 6.5 — the search steps 1
-degree off and the ticks near the top become rivals). With the tilt locked at
-0 all 20 read, within about 0.1 of their labels on the whole marks. The mount
-twists with the knob; see the comment at the preset's `refs`.
+tilt search 7 frames are refused (0_min, 0.5, 1, 1.5, 3.5, 4.5, 6.5 — the
+search steps 1 degree off and the ticks near the top become rivals; 1, 1.5
+and 3.5 were read 0.2-0.3 off through the fallback before 1.12.4). With the tilt locked at
+0 all 20 read, within 0.15 of their labels on the whole marks. The camera
+crept during the sweep; see the comment at the preset's `refs`.
 
 ## `negative-platinum9-2026-09-26/` — the Platinum's first pose, refused
 

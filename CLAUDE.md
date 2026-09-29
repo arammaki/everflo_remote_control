@@ -502,6 +502,21 @@ press span or against the signed turn the device logged: 17 of 17 agree, and
 the 2026-09-09 evening sequence reproduces nine consecutive logged turns with
 the right sign and magnitude.
 
+**Only from a near-tie, since 1.12.4.** A reference that registers more than
+`FALLBACK_REG_GAP` (0.05) worse than the best is not asked. At dusk on
+2026-09-29, with the Platinum switched off, 'kväll' registered 0.92-0.94 and
+refused the resting ball (contrast 0.07-0.10), and 'dag' at 0.84-0.86
+answered 1.42-1.65 L/min through the fallback with every gate green — the
+dusk-dark lower tube read as a broad ball against a daylight reference. The
+eight EverFlo rescues still stored under engine e3a28634 were 0.008-0.037
+apart, the dawn case above a thousandth. The older EverFlo rescues (the 40
+-> 7 and 26 -> 9 above) were not re-measured; any of them that were farther
+apart now refuse again, which is the safe direction. On the Platinum it also
+refuses three frames of the evening sweep that 'dag' used to answer 0.2-0.3
+off their labels (see the Platinum section). The EverFlo gaps were recomputed
+from the eight images, not read from D1: `analyses.quality` keeps only the
+chosen reference's registration.
+
 **The rejected alternative, and why.** The other candidate was to measure
 ambiguity and spread on the ball rather than on the whole profile — a rival
 counts only if it is narrow enough to be a ball. It scored slightly better on
@@ -660,13 +675,13 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
   Night, lamp off or on, is still a lighting of its own and refused. The
   'kväll' of 2026-09-26 went with the old pose; this one is new.
 - **Lock the tilt at 0 when calibrating the knob** (the panel's band field).
-  Under the free search 4 of the 20 evening frames are refused — the search
-  steps 1 degree off and the ticks near the top become rivals — and three
-  more are answered by 'dag' through the fallback reading HIGH (1 L/min reads
-  1.20). Two causes: the mount twists with the knob, and the 'kväll' median
+  Under the free search 7 of the 20 evening frames are refused — the search
+  steps 1 degree off and the ticks near the top become rivals. Three of them
+  (1, 1.5, 3.5) were answered by 'dag' through the fallback, 0.2-0.3 off,
+  until 1.12.4 limited the fallback to near-ties. Two causes: the camera crept during the sweep, and the 'kväll' median
   itself prefers about -0.5 degrees, which the 1-degree grid rounds to -1.
   At tilt 0 all 41 frames of both sweeps read. The search is shared by every
-  preset and is not changed; stiffening the mount is the real fix.
+  preset and is not changed; a camera that stays put is the real fix.
 - **dx headroom is shrinking**: the evening sweep's top frames sit at dx 14
   against the 20 px gate.
 - **The ball in daylight is a dark ring with a bright highlight on its
@@ -676,9 +691,12 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
   registration 0.968, spread 38. Daylight lays a bright streak down the lower
   tube through the ball's own columns; YBOT 392 keeps it out (398 refuses
   the 4 frame, 405 the 3.5 and 4). Against the straight-on labels: mean 0.10, worst 0.29.
-- **The camera moves with the knob**: dx runs smoothly from -3 px at the
-  bottom of the scale to +6 at the red line — the mount twists. Registration
-  absorbs it.
+- **The camera creeps sideways over time**: dx -3 -> +6 px over the first
+  sweep, 7 px an hour later, 8 -> 14 over the second. It looked like it
+  followed the knob because both sweeps went bottom-up in time, but frames
+  taken with the flow going down sat at a constant 7 px. The Platinum vibrates
+  more than the EverFlo; the operator also moved something. Registration
+  absorbs it; the dx gate is 20 px.
 - **The tilt**: the gates choose 0.065 (3.7 degrees); a line drawn along the
   tube says 5.4. Last time 3.3 against 1.7. The hand line sits consistently
   ~1.7 degrees steeper — it follows the tube's edge, the engine the ball and
@@ -1075,8 +1093,13 @@ wrong way or not moving once it has, 15 s without a frame, a refused or
 unanswered press, 15 turns. An abort never turns anything back — it says
 what it last saw. The whole page is locked during a run except Stopp.
 First real run 2026-09-29 on the Platinum (KNOB/BACKLASH in the preset since
-1.12.3): three runs joined, backlash 35 degrees, so her page keeps the
-direction logic. What it took, worth knowing before the next run:
+1.12.3): three runs joined. The routine printed a backlash of 35; 1.12.4 took
+it to 21, because a fall of 0.08 L/min is also ball movement (about 14° at the
+top of the scale) — the routine now subtracts that itself. Her page keeps
+the direction logic, with two guards added in 1.12.4 after review: the slack
+is left out of any turn that would carry the flow past 1 or the top if the
+slack were already taken (a hand turn the device cannot see), and the flow
+buttons lock before the status request, so a double tap cannot turn twice. What it took, worth knowing before the next run:
 - **Lock the tilt at 0** (see the Platinum section) — under the free search
   the late-afternoon light alternated references and nothing settled.
 - **Keep the panel visible.** A hidden Safari tab has its timers slowed, the
