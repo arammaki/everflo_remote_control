@@ -1153,7 +1153,21 @@ crypto.subtle), identical in her page and the control panel, and
 in that browser and strips it from the address (behind #, never sent). Without
 it her page shows the picture and the flow but no buttons, and a line asking
 for the link. A refused press says so. The panel keeps a key per device
-address. No lockout on failures: a 128-bit key is not guessed, and a lockout
+address. **A link never replaces a key on trust** (1.12.5): the page first
+makes a signed read of /api/steg with the new key, and keeps it only if the
+device accepts it — otherwise any link to `syrgas.local/#k=junk`, from anyone
+(the device name is public), would unpair her silently. A first pairing is
+kept when the device cannot be asked (a wrong one shows at the first press);
+a second one is not. Under CONTROL_AUTH 0 the link is stored as before, so a
+phone can be paired ahead of the lock-on build. The outcome stays on its own
+line (`#pair`); an unconfirmed first pairing says it is unconfirmed, and a
+key refusal clears that line. A link opened again in a tab already showing
+the page is a hash change, not a reload, and is handled too. A timed-out
+press says "osäkert om ratten vreds" rather than "Ingen kontakt": the device
+may have turned the knob before the reply was lost. **What happened to her
+last tap holds `#msg` for 12 s** (`note()`) — the frame loop rewrites that
+line every second (`frameMsg()`), which used to wipe "tryck igen", "be om en
+ny kopplingslänk" and "osäkert" before she could read them. No lockout on failures: a 128-bit key is not guessed, and a lockout
 would let anyone on the network take her buttons away.
 
 **What it does not solve**: a guest network with client isolation (her phone
@@ -1178,7 +1192,12 @@ a phone with the current file.
 
 A refusal says why (`"why":"nonce"` or `"key"`): both pages retry once on a
 nonce refusal (a race with another controller, or a restart), and only a key
-refusal tells her to ask for a new pairing link. The control panel's "Kolla
+refusal tells her to ask for a new pairing link — a second lost race says
+"tryck igen" (fixed in 1.12.5; it used to say "ask for a new link"). Her
+presses time out after 6 s, the fixed-degree buttons too (they had no timeout
+and could keep every button disabled for a minute). The nonce counter is open
+to anyone, so on the (months-away) wrap to 0 the device draws a new secret
+and starts the count over rather than refuse everything until a reboot. The control panel's "Kolla
 firmware nu" is the signed way to /api/fw-check.
 
 ### Deployment safety

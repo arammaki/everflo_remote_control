@@ -88,7 +88,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.12.4"
+#define FW_VERSION "1.12.5"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -691,6 +691,7 @@ static const char PAGE[] = R"HTML(
  .minus{background:#b3382c}
  button:disabled{opacity:.45}
  #msg{min-height:1.3em;font-size:1rem;color:#a33;text-align:center;max-width:480px}
+ #pair{font-size:.95rem;color:#8a5a00;text-align:center;max-width:480px}
  .small{font-size:.85rem;color:#888;margin-top:12px;text-align:center}
 </style></head><body>
 <h1>Syrgas</h1>
@@ -723,6 +724,7 @@ static const char PAGE[] = R"HTML(
 </div>
 </div>
 <div id="msg"></div>
+<div id="pair"></div>
 <div class="small"><a href="#" onclick="restart();return false">Starta om enheten</a> · v%VER%</div>
 <script src="/motor.js?v=%VER%"></script>
 <script>
@@ -785,32 +787,101 @@ function hmacHex(key, msg){
    bar. Behind #, it is never sent over the network and never logged. */
 const AUTH=%AUTH%;
 let KEY='';
-(function(){
+let pairingLink=null;   // a key from #k=, not yet accepted — see checkPairing()
+/* A #k= in the address, taken out of it at once. True if it is a key to try.
+   Run at load AND on hashchange: a link opened again in a tab that already
+   shows this page is only a hash change, no reload — nothing was checked and
+   the key stayed in the address bar. */
+function readPairingLink(){
   // The whole value after k=, decoded: a key with characters outside
   // [0-9A-Za-z_-] must not be cut short and stored wrong without a sign.
   const m=location.hash.match(/[#&]k=([^&]+)/);
-  if(m){ try{ KEY=decodeURIComponent(m[1]); }catch(e){ KEY=m[1]; }
-         try{ localStorage.setItem('ev_key',KEY); }catch(e){}
-         try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} }
-  else { try{ KEY=localStorage.getItem('ev_key')||''; }catch(e){} }
-})();
+  if(!m) return false;
+  let k; try{ k=decodeURIComponent(m[1]); }catch(e){ k=m[1]; }
+  try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+  if(k===KEY) return false;
+  // Not stored yet: any link — a mistyped one, or one sent by anyone to
+  // replace her working key with junk (the device name is public) — would
+  // otherwise unpair her with no sign. The device says first.
+  pairingLink=k;
+  return true;
+}
+try{ KEY=localStorage.getItem('ev_key')||''; }catch(e){}
+readPairingLink();
+window.addEventListener('hashchange', ()=>{ if(readPairingLink()){ setMode(); checkPairing(); } });
 const paired=()=>!AUTH || KEY!=='';
-/* fetch() for anything that turns or changes. opts carries an abort signal. */
-async function ctl(path, params, opts){
-  const p=params||'';
+/* fetch() for anything that turns or changes. opts carries an abort signal.
+   A refusal carries res.why: 'key' (this phone's key is wrong — only then is
+   a new pairing link the answer) or 'nonce' (another phone or the control
+   panel got in first, twice — trying again is). */
+async function ctl(path, params, opts, key){
+  const p=params||'', k=key===undefined ? KEY : key;
   if(!AUTH) return fetch(path+(p?'?'+p:'')+(q?(p?'&':'?')+q.slice(1):''), opts);
   // Twice at most: a refusal for the NONCE (another phone got in first, or the
   // device restarted) is fixed by a fresh one; one for the key is not.
   for(let i=0;;i++){
     const nj=await (await fetch('/api/nonce', opts)).json();
     const qs=(p?p+'&':'')+'n='+nj.n;
-    const res=await fetch(path+'?'+qs+'&h='+hmacHex(KEY, path+'?'+qs), opts);
-    if(res.status!==403 || i>=1) return res;
-    const why=await res.clone().json().then(j=>j.why).catch(()=>'');
-    if(why!=='nonce') return res;
+    const res=await fetch(path+'?'+qs+'&h='+hmacHex(k, path+'?'+qs), opts);
+    if(res.status!==403) return res;
+    res.why=await res.clone().json().then(j=>j.why).catch(()=>'key');
+    if(res.why!=='nonce' || i>=1) return res;
   }
 }
+/* A key refusal also clears the pairing line: "Telefonen är kopplad" must not
+   stand next to "not approved". */
+function refusedText(res){
+  if(res.why==='nonce') return RACE;
+  const p=document.getElementById('pair'); if(p) p.textContent='';
+  return REFUSED;
+}
+/* A key from a pairing link is taken only if the device accepts it: a signed
+   read of /api/steg, which changes nothing. Refused: the link is wrong, and
+   whatever key this phone had stays. No answer: a first pairing is kept (a
+   wrong one shows itself at the first press); a second one is not, because it
+   would replace a key that works. */
+async function checkPairing(){
+  if(pairingLink===null) return;
+  // With the lock compiled out there is nothing to ask, and the key is kept
+  // as before 1.12.5: pairing her phone before a lock-on build is flashed is
+  // how the lock is meant to be turned on.
+  if(!AUTH){ KEY=pairingLink; try{ localStorage.setItem('ev_key',KEY); }catch(e){} pairingLink=null; return; }
+  // Its own line: #msg is rewritten by every analysed frame, and this outcome
+  // has to stay readable — a refused link otherwise shows nothing at all.
+  const k=pairingLink, m=document.getElementById('pair'), had=KEY!=='';
+  let res=null;
+  try{
+    const ac=new AbortController(), t=setTimeout(()=>ac.abort(),6000);
+    try{ res=await ctl('/api/steg','',{signal:ac.signal},k); }finally{ clearTimeout(t); }
+  }catch(e){}
+  if(res && res.status===403 && res.why==='key'){
+    m.textContent='Kopplingslänken godtogs inte av enheten'+(had?' – den tidigare kopplingen gäller fortfarande.':'.');
+  }else if(res && res.ok || !had){
+    KEY=k; try{ localStorage.setItem('ev_key',KEY); }catch(e){}
+    // Only a key the device accepted is called paired. Kept unconfirmed, it
+    // says so, and a key refusal at the first press clears this line.
+    m.textContent = res && res.ok ? 'Telefonen är kopplad.'
+      : 'Kopplingslänken är sparad, men enheten kunde inte bekräfta den ännu – första trycket visar om den stämmer.';
+  }else{
+    m.textContent='Kunde inte pröva kopplingslänken just nu – öppna den igen om en stund.';
+  }
+  pairingLink=null;
+  setMode();
+}
 const REFUSED='Den här telefonen är inte godkänd för att styra – be om en ny kopplingslänk.';
+const RACE='Någon annan styrde samtidigt – tryck igen.';
+/* A timeout is not "no contact": the device may have taken the press and
+   turned the knob before the reply was lost (a slow frame on 2.4 GHz holds its
+   single web task for seconds). Pressing again blind would turn it twice. */
+/* #msg carries two kinds of text: what the analysis says about the current
+   frame (rewritten every second) and what happened to her last tap. The
+   second must stay long enough to be read — "look at the picture before you
+   press again" wiped within a second is the same as not said, and she presses
+   again. So a tap's outcome holds the line for 12 s against the frame loop. */
+let msgHold=0;
+function note(t){ document.getElementById('msg').textContent=t; msgHold = t ? Date.now()+12000 : 0; }
+function frameMsg(t){ if(Date.now()>=msgHold) document.getElementById('msg').textContent=t; }
+const UNSURE='Svaret dröjde – osäkert om ratten vreds. Titta på bilden innan du trycker igen.';
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d',{willReadFrequently:true});
 let lastFrameAt=Date.now(), lastAnalysis=0, refReady=false;
 // The machine this firmware was built for. Compiled in, never chosen here.
@@ -884,9 +955,9 @@ function frame(img, asked){
   let r,b;
   try{ r=analyze(t.getContext('2d').getImageData(0,0,480,640)); b=judge(r); }
   catch(e){ show('Ingen avläsning','','none');
-             document.getElementById('msg').textContent=''; noteReading(null,0); shown='none'; setMode(); return; }
-  if(!b.ok){ show(b.title,'','none'); document.getElementById('msg').textContent=b.reason; noteReading(null,0); shown='none'; setMode(); return; }
-  document.getElementById('msg').textContent='';
+             frameMsg(''); noteReading(null,0); shown='none'; setMode(); return; }
+  if(!b.ok){ show(b.title,'','none'); frameMsg(b.reason); noteReading(null,0); shown='none'; setMode(); return; }
+  frameMsg('');
   // Only a number is something to step from: not Max, not the bottom state,
   // and not one the page itself marks uncertain (extrapolated).
   const steppable=!b.maxState && !b.bottomState && !b.extrapolated;
@@ -906,12 +977,13 @@ setInterval(()=>{
     document.getElementById('staleAge').textContent=
       'Senaste bild för '+age+' sekunder sedan. Tryck inte förrän bilden är tillbaka.';
     show('–','L/min','none');   // never leave a stale number looking current
-    document.getElementById('msg').textContent='';
+    frameMsg('');
     noteReading(null,0); shown='none';
   }
   setMode();
 }, 1000);
 nextFrame();
+checkPairing();
 // Tells the device someone is looking, so the lamp over the meter stays lit
 // steadily. /bild alone would blink it off during a network hiccup, and it
 // stops within a minute of the page being closed or the phone locked.
@@ -922,13 +994,18 @@ const allButtons=()=>document.querySelectorAll('.buttons button');
 async function press(op,deg){
   pressing=true;
   allButtons().forEach(b=>b.disabled=true);
-  document.getElementById('msg').textContent='';
+  note('');
+  // 6 s, like pressFlow: a unit that goes dark mid-request must not keep every
+  // button on her page disabled (2026-08-15: never locked). It covers the
+  // nonce, a possible retry and the move itself.
+  const ac=new AbortController(), tm=setTimeout(()=>ac.abort(),6000);
   try{
-    const res = await ctl('/api/'+op, 'steg='+deg);
+    const res = await ctl('/api/'+op, 'steg='+deg, {signal:ac.signal});
     const j = await res.json();
-    if(res.status===403) document.getElementById('msg').textContent=REFUSED;
-    else if(!j.ok) document.getElementById('msg').textContent='Motorn är upptagen – vänta';
-  }catch(e){ document.getElementById('msg').textContent='Ingen kontakt'; }
+    if(res.status===403) note(refusedText(res));
+    else if(!j.ok) note('Motorn är upptagen – vänta');
+  }catch(e){ note(e.name==='AbortError' ? UNSURE : 'Ingen kontakt'); }
+  finally{ clearTimeout(tm); }
   // The reply comes when the motor has STOPPED. From here the next flow step
   // needs a reading of the settled ball, taken after that moment — compared
   // with another from after it, never with one from before the press.
@@ -995,9 +1072,13 @@ function showFlow(){
   return !!(lastGood && lastGood.at>=motorStopped && Date.now()-lastGood.at<holdMs() && knobCovers(lastGood.flow, margin()));
 }
 function setMode(){
+  // Both ways: a first pairing finishes AFTER this has run with no key, and a
+  // class only ever added kept her buttons hidden until a reload (1.12.5).
+  document.body.classList.toggle('unpaired', !paired());
   if(!paired()){
-    document.body.classList.add('unpaired');
-    document.getElementById('mode').textContent='Den här telefonen är inte kopplad till fjärrkontrollen – be om en kopplingslänk. Bilden och flödet visas ändå.';
+    document.getElementById('mode').textContent = pairingLink!==null
+      ? 'Prövar kopplingslänken …'
+      : 'Den här telefonen är inte kopplad till fjärrkontrollen – be om en kopplingslänk. Bilden och flödet visas ändå.';
     return;
   }
   if(pressing) return;                 // no switching under her finger
@@ -1008,14 +1089,13 @@ function setMode(){
     : 'Utanför knapparnas område – de vrider ett fast steg.';
 }
 async function pressFlow(delta){
-  const m=document.getElementById('msg');
   // Re-checked at the tap, not trusted from the last mode switch: that ran up
   // to a second ago, and the reading may be too old by now.
   const from=stepBase();
-  if(from===null){ m.textContent='Ingen avläsning just nu – vänta en sekund, eller använd knapparna med fast steg.'; setMode(); return; }
+  if(from===null){ note('Ingen avläsning just nu – vänta en sekund, eller använd knapparna med fast steg.'); setMode(); return; }
   // Buttons stay put while the ball moves (no switching under her finger),
   // but a step is not sized from a ball in motion.
-  if(moving && !(pending && Date.now()<pending.until)){ m.textContent='Bollen rör sig – vänta ett ögonblick.'; return; }
+  if(moving && !(pending && Date.now()<pending.until)){ note('Bollen rör sig – vänta ett ögonblick.'); return; }
   if(pressing) return;
   // Locked from here, BEFORE the status request below: a second tap while it
   // is out (a double tap, or a repeat on slow wifi) would otherwise size its
@@ -1040,29 +1120,31 @@ async function pressFlow(delta){
   const p=knobPlan(from, delta, lastDir, margin());
   if(!p){ release(); setMode(); return; }         // the degree buttons come back, with the line saying why
   const sv=(x)=>x.toFixed(1).replace('.',',');
-  if(p.atLimit){ release(); m.textContent = delta>0 ? 'Redan vid det högsta flödet knapparna går till ('+sv(p.hi)+' L/min).'
-                                        : 'Redan vid det lägsta flödet knapparna går till ('+sv(p.lo)+' L/min).'; return; }
+  if(p.atLimit){ release(); note(delta>0 ? 'Redan vid det högsta flödet knapparna går till ('+sv(p.hi)+' L/min).'
+                                         : 'Redan vid det lägsta flödet knapparna går till ('+sv(p.lo)+' L/min).'); return; }
   // Under the motor's smallest step (4°) this step is not something it can
   // make here without overshooting it: nothing turns.
-  if(p.deg<4){ release(); m.textContent='Steget är för litet för motorn här – välj ett större.'; return; }
+  if(p.deg<4){ release(); note('Steget är för litet för motorn här – välj ett större.'); return; }
   // One press turns at most 180°: split evenly, rounding down.
   const n=Math.ceil(p.deg/180), each=Math.floor(p.deg/n);
-  m.textContent='';
+  note('');
   let done=0;
   try{
     for(let i=0;i<n;i++){
-      // 4 s, as everywhere else: a hung request must not keep every button
-      // on her page disabled (2026-08-15: never locked).
-      const ac=new AbortController(), tm=setTimeout(()=>ac.abort(),4000);
+      // 6 s: a hung request must not keep every button on her page disabled
+      // (2026-08-15: never locked), and the budget covers the nonce, a
+      // possible retry and the move — 4 s could run out after the knob had
+      // already turned.
+      const ac=new AbortController(), tm=setTimeout(()=>ac.abort(),6000);
       try{
         const res = await ctl('/api/'+p.op, 'steg='+each, {signal:ac.signal});
         const j = await res.json();
-        if(res.status===403){ m.textContent=REFUSED; break; }
-        if(!j.ok){ m.textContent='Motorn är upptagen – vänta'; break; }
+        if(res.status===403){ note(refusedText(res)); break; }
+        if(!j.ok){ note('Motorn är upptagen – vänta'); break; }
       }finally{ clearTimeout(tm); }
       done++;
     }
-  }catch(e){ m.textContent='Ingen kontakt'; }
+  }catch(e){ note(e.name==='AbortError' ? UNSURE : 'Ingen kontakt'); }
   // The last reply came when the motor stopped. A step that fully happened is
   // somewhere to step on from until the settled ball speaks; anything less
   // waits for that reading.
@@ -1074,8 +1156,8 @@ async function pressFlow(delta){
 }
 async function restart(){
   if(!confirm('Starta om enheten? Bilden återkommer inom en minut.'))return;
-  try{ const res=await ctl('/api/omstart'); if(res.status===403){ document.getElementById('msg').textContent=REFUSED; return; } }catch(e){}
-  document.getElementById('msg').textContent='Startar om...';
+  try{ const res=await ctl('/api/omstart'); if(res.status===403){ note(refusedText(res)); return; } }catch(e){}
+  note('Startar om...');
 }
 </script></body></html>
 )HTML";
@@ -1128,6 +1210,11 @@ static const char *authWhy = "key";
 esp_err_t h_nonce(httpd_req_t *req) {
   if (!nonceReady) { esp_fill_random(nonceSecret, sizeof(nonceSecret)); nonceReady = true; }
   uint32_t t = millis(), c = ++nonceCounter;
+  /* The counter is advanced by anyone (this endpoint is open), and after 2^32
+     requests it would wrap below nonceLastUsed and refuse every signed
+     request until a reboot. A fresh secret voids every older nonce, so the
+     count can start over. */
+  if (c == 0) { esp_fill_random(nonceSecret, sizeof(nonceSecret)); nonceLastUsed = 0; c = ++nonceCounter; }
   uint8_t tag[8]; nonceTag(t, c, tag);
   char hex[33];
   snprintf(hex, sizeof(hex), "%08lx%08lx", (unsigned long)t, (unsigned long)c);

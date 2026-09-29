@@ -1174,12 +1174,15 @@ async function ctlFetch(h, path, params, opts){
     const nj=await (await fetch('http://'+h+'/api/nonce', opts)).json();
     const qs=(p?p+'&':'')+'n='+nj.n;
     const res=await fetch('http://'+h+path+'?'+qs+'&h='+hmacHex(key, path+'?'+qs), opts);
-    if(res.status!==403 || i>=1) return res;
-    const why=await res.clone().json().then(j=>j.why).catch(()=>'');
-    if(why!=='nonce') return res;
+    if(res.status!==403) return res;
+    // Kept on the response: only a 'key' refusal is about the key field.
+    res.why=await res.clone().json().then(j=>j.why).catch(()=>'key');
+    if(res.why!=='nonce' || i>=1) return res;
   }
 }
 const REFUSED='Enheten godtog inte nyckeln — kontrollera fältet "nyckel".';
+const RACE='Någon annan styrde enheten samtidigt (två gånger i rad) — försök igen.';
+const refusedText=(res)=>res.why==='nonce' ? RACE : REFUSED;
 /* The link that pairs her phone: opened once there, it stores the key in that
    browser for syrgas.local and removes it from the address. Behind #, it is
    not sent over the network. Send it privately. */
@@ -1198,7 +1201,7 @@ async function fwCheckNow(){
   if(!host){ el.textContent='Tryck Starta först.'; return; }
   try{
     const res=await ctlFetch(host, '/api/fw-check', '');
-    el.textContent = res.status===403 ? REFUSED
+    el.textContent = res.status===403 ? refusedText(res)
       : res.ok ? 'Enheten kollar nu efter en armerad firmware. Installerar den, startar den om inom en minut.'
       : 'Enheten känner inte till anropet (firmware före 1.11.1).';
   }catch(e){ el.textContent='Nådde inte enheten.'; }
@@ -1319,7 +1322,7 @@ async function lightCall(q){
   const tm=setTimeout(()=>ac.abort(), 4000);   // same budget as motor()
   try{
     const res=await ctlFetch(host, '/api/light', q.replace(/^\?/,''), {signal:ac.signal});
-    if(res.status===403) throw new Error(REFUSED);
+    if(res.status===403) throw new Error(refusedText(res));
     const j=await res.json();
     lightStandard=j.standard;
     document.getElementById('lOn').checked=j.on;
@@ -1345,7 +1348,7 @@ async function lightCall(q){
        was: an old firmware's 404 and a PIN-protected 403 carry no CORS
        header, so cross-origin they arrive as the same opaque error as a dead
        wifi, and naming one would send the operator after the wrong one. */
-    el.textContent = e.message===REFUSED ? REFUSED
+    el.textContent = e.message===REFUSED || e.message===RACE ? e.message
       : e.name==='AbortError'
       ? 'Enheten svarade inte i tid – osäkert om ändringen gick fram. Kontrollera lampan.'
       : 'Ingen kontakt med lampan – enheten svarade inte, '+
@@ -1380,12 +1383,12 @@ async function ledTest(){
   const tm=setTimeout(()=>ac.abort(), 4000);
   try{
     const res=await ctlFetch(host, '/api/led-test', '', {signal:ac.signal});
-    if(res.status===403) throw new Error(REFUSED);
+    if(res.status===403) throw new Error(refusedText(res));
     el.className='hint';
     el.textContent='Färgtest igång: rött, grönt, blått, vitt – en sekund var.';
   }catch(e){
     el.className='hint warn';
-    el.textContent = e.message===REFUSED ? REFUSED
+    el.textContent = e.message===REFUSED || e.message===RACE ? e.message
       : e.name==='AbortError'
       ? 'Enheten svarade inte i tid – osäkert om testet startade.'
       : 'Nådde inte enheten.';
@@ -1533,7 +1536,7 @@ async function motor(op,n){
     // actually applied after clamping. Asking for 180 and silently getting 90
     // is exactly the kind of thing that must not be invisible.
     const res = await ctlFetch(host, '/api/'+op, 'steg='+deg, {signal:ac.signal});
-    if(res.status===403){ document.getElementById('status').textContent=REFUSED; return; }
+    if(res.status===403){ document.getElementById('status').textContent=refusedText(res); return; }
     const j = await res.json();
     document.getElementById('status').textContent =
       j.steg===deg ? '' : 'Enheten begränsade '+deg+' till '+j.steg+' grader.';
@@ -1655,7 +1658,7 @@ async function resetCounter(){
   if(!confirm('Nollställa räknaren? (endast vid ominstallation)')) return;
   try{
     const res=await ctlFetch(host, '/api/nollstall', '');
-    document.getElementById('status').textContent= res.status===403 ? REFUSED : 'Räknaren nollställd.';
+    document.getElementById('status').textContent= res.status===403 ? refusedText(res) : 'Räknaren nollställd.';
   }catch(e){ document.getElementById('status').textContent='Kunde inte nollställa.'; }
 }
 function copyLog(){ navigator.clipboard.writeText(document.getElementById('log').value); }
@@ -1735,7 +1738,7 @@ async function kcPress(op, deg){
   const ac=new AbortController(), tm=setTimeout(()=>ac.abort(),4000);
   try{
     const res=await ctlFetch(kcRun.host, '/api/'+op, 'steg='+deg, {signal:ac.signal});
-    if(res.status===403) throw new Error('enheten godtog inte nyckeln');
+    if(res.status===403) throw new Error(res.why==='nonce' ? 'någon annan styrde enheten samtidigt' : 'enheten godtog inte nyckeln');
     const j=await res.json();
     if(!j.ok) throw new Error('enheten vägrade trycket (motorn upptagen?)');
     if(j.steg!==deg) throw new Error('enheten ändrade '+deg+' till '+j.steg+' grader');
