@@ -296,14 +296,16 @@ LED heartbeat 1 s/4 s; page loads, footer shows the new version; `/bild`
 returns a JPEG; +/− move the motor and `Position:` logs tick.
 
 Since v1.10.0 also: `Light: WS2812 on D3, constant` in the boot log and the
-pixel actually lit, then `syrgas.local/api/led-test` from any browser — red,
-green, blue, white, one second each. **Green where the code says red means
+pixel actually lit, then the control panel's "Färgtest" (with CONTROL_AUTH 1
+a plain browser visit to `/api/led-test` is refused: it must be signed) —
+red, green, blue, white, one second each. **Green where the code says red means
 the batch is GRB**: switch `LED_ORDER` to `LED_COLOR_ORDER_GRB` and reflash.
 
 Claude Code can compile-check, but **every change must be flashed and
 verified by the user before it reaches the unit at my mother's** — it will
-run unattended there. Remote recovery exists ("Starta om enheten" link /
-`/api/omstart`), USB power-cycle is the manual fallback.
+run unattended there. Remote recovery exists (the "Starta om enheten" link on
+her page, which signs the request; `/api/omstart` typed into a browser is
+refused under CONTROL_AUTH 1), USB power-cycle is the manual fallback.
 
 ## Web UI (balldetector.js, build_webui.mjs, two HTML pages)
 
@@ -1059,6 +1061,64 @@ talking to `/api/light`, plus a "Färgtest" button for `/api/led-test`. It
 loads the current state on "Starta" with a plain GET, which changes nothing.
 Purpose: the light level for a detector is chosen by watching entydighet and
 kontrast respond, and those numbers are already on this page.
+
+### Access control (v1.12.0)
+For a shared or public wifi at the care home. `#define CONTROL_AUTH 1` (the
+default) means everything that turns the knob or changes the device —
+plus/minus, step size, light, colour test, restart, firmware check, counter
+reset — needs `CONTROL_KEY` from secrets.h; watching (picture, reading,
+/api/status, /log) stays open. 0 is the old behaviour. A build switch, not an
+app switch: a toggle that turns the lock off would itself need the lock. A
+build with 1 and no key of 16+ characters does not compile (the example
+file's key is empty for exactly that reason). A MINOR version: turning it on
+needs more than a flash — pair her phone at the same time, or her buttons
+stay hidden until someone does.
+
+**Challenge-response, not a password in the request.** On an open network
+everyone can read the traffic, so a key sent along would be captured and
+replayed. The client fetches a one-time nonce (`/api/nonce`) and sends
+`h = HMAC-SHA256(key, "<path>?<query up to &h=>")` with the nonce in that
+query. The key never crosses the network. Nonces are STATELESS — issue time,
+a counter and a tag under a key drawn at boot — so asking for them in a loop
+starves nobody (a table of issued nonces could be flushed). Valid 60 s, and
+accepted only with a counter above the last one used; the counter moves only
+on a correctly signed request, so junk sent with a newer nonce cannot void
+hers. Two controllers racing can lose one press; a retry fixes it. The browser side is plain JS (an http page has no
+crypto.subtle), identical in her page and the control panel, and
+`node tools/test_hmac.mjs` checks both copies against node:crypto.
+
+**Her phone is paired once**: the panel's "Kopplingslänk" shows
+`http://syrgas.local/#k=<key>`; opened on her phone, the page stores the key
+in that browser and strips it from the address (behind #, never sent). Without
+it her page shows the picture and the flow but no buttons, and a line asking
+for the link. A refused press says so. The panel keeps a key per device
+address. No lockout on failures: a 128-bit key is not guessed, and a lockout
+would let anyone on the network take her buttons away.
+
+**What it does not solve**: a guest network with client isolation (her phone
+cannot reach the unit at all — test on site before moving it), and one with a
+login page in the browser (the unit cannot click through it). Both need the
+cloud path instead, which is a larger change. Whoever holds her unlocked phone
+can control the flow; that is how she uses it.
+
+**The limit, stated plainly: this stops a listener, not an impostor.** Over
+plain http nothing proves the page came from the unit. Someone on the same
+network who answers for syrgas.local (mDNS) or poses as its address (ARP)
+can serve a page from that origin, read the key out of her browser's
+storage and control the knob from then on. Only a transport the phone can
+verify — https with a certificate it trusts, or the cloud path — closes that.
+On a network with a password that only the care home's residents have, the
+risk is small; on an open one it is real.
+
+**Old copies of the control panel stop turning the knob** under CONTROL_AUTH
+1: unsigned /api/plus and /api/minus get a 403 — a deliberate change of their
+semantics, against the backward-compatibility rule above. Replace any copy on
+a phone with the current file.
+
+A refusal says why (`"why":"nonce"` or `"key"`): both pages retry once on a
+nonce refusal (a race with another controller, or a restart), and only a key
+refusal tells her to ask for a new pairing link. The control panel's "Kolla
+firmware nu" is the signed way to /api/fw-check.
 
 ### Deployment safety
 The system will run live at a patient's home (not yet deployed).

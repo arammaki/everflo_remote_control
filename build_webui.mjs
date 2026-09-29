@@ -125,3 +125,23 @@ if (!check) {
   }
   console.log('engine byte-identical in both pages');
 }
+
+/* The HMAC-SHA256 that signs control requests (v1.12.0) lives twice — in her
+   page inside the sketch and in the control panel — because her page must
+   work without /motor.js. Two hand-kept copies are exactly what broke a
+   quality gate in 2026-08, so both runs check they are identical; if they
+   are not, every press from one of them is refused. The copies are checked
+   against node:crypto by tools/test_hmac.mjs. */
+{
+  const block = (name) => {
+    const t = readFileSync(join(here, name), 'utf8');
+    const a = t.indexOf('const SHA_K=['), b = t.indexOf('\nfunction hmacHex(', a), e = t.indexOf('\n}\n', b);
+    return a < 0 || b < 0 || e < 0 ? null : t.slice(a, e + 2);
+  };
+  const [pg, cp] = ['everflo_remote_control.ino', 'everflo_control_panel.html'].map(block);
+  if (!pg || !cp || pg !== cp) {
+    console.error('MISMATCH: the HMAC block differs between her page (the .ino) and the control panel.');
+    process.exit(4);
+  }
+  console.log('control-key HMAC identical in her page and the control panel');
+}

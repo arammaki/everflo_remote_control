@@ -71,6 +71,12 @@
   <input id="host" value="syrgas.local" placeholder="IP eller syrgas.local">
   <button onclick="start()">Starta</button>
 </div>
+<div class="row">
+  <input id="ctlkey" type="password" autocomplete="off" placeholder="nyckel (om enheten kräver en)">
+  <button onclick="showPairing()">Kopplingslänk</button>
+  <button onclick="fwCheckNow()">Kolla firmware nu</button>
+</div>
+<p class="hint" id="pairing" style="word-break:break-all"></p>
 <div id="status">Ange adress och tryck Starta</div>
 
 <div id="cols">
@@ -131,10 +137,10 @@
   toppen (aldrig över 9) och läser av efter varje steg, mäter glappet när den vänder,
   och vrider sist tillbaka dit flödet stod.
   <b>Flödet ändras över nästan hela skalan under tiden</b> och maskinen larmar under 1:
-  gör det inte medan någon andas från maskinen, och tryck inte i appen under tiden. Tar ungefär 10 minuter.</p>
+  gör det inte medan någon andas från maskinen, och tryck inte i appen under tiden. Tar några minuter.</p>
   <div class="row">
     <label>Steg <input id="kcStep" type="number" value="10" min="4" max="30" inputmode="numeric"> grader</label>
-    <label>Vänta <input id="kcWait" type="number" value="3" min="2" max="10" step="0.5" inputmode="decimal"> s</label>
+    <label>Vänta minst <input id="kcWait" type="number" value="1" min="0.5" max="10" step="0.5" inputmode="decimal"> s</label>
   </div>
   <div class="row">
     <button id="kcStart" onclick="knobCal()">Starta kalibrering</button>
@@ -1010,6 +1016,111 @@ function orient(img,rotation,mirror){
   return t;
 }
 
+/* HMAC-SHA256 in plain JS. An http:// page is not a secure context, so the
+   browser's crypto.subtle is not available to it. Checked against node:crypto
+   by tools/test_hmac.mjs, which reads this exact block out of both pages. */
+const SHA_K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+function sha256(m){
+  const l=m.length, n=((l+9+63)>>6)<<6, b=new Uint8Array(n);
+  b.set(m); b[l]=0x80;
+  const v=new DataView(b.buffer);
+  v.setUint32(n-8, Math.floor(l/0x20000000)); v.setUint32(n-4, (l*8)>>>0);
+  const w=new Uint32Array(64);
+  let h0=0x6a09e667,h1=0xbb67ae85,h2=0x3c6ef372,h3=0xa54ff53a,h4=0x510e527f,h5=0x9b05688c,h6=0x1f83d9ab,h7=0x5be0cd19;
+  for(let i=0;i<n;i+=64){
+    for(let t=0;t<16;t++) w[t]=v.getUint32(i+t*4);
+    for(let t=16;t<64;t++){
+      const x=w[t-15], y=w[t-2];
+      const s0=((x>>>7)|(x<<25))^((x>>>18)|(x<<14))^(x>>>3);
+      const s1=((y>>>17)|(y<<15))^((y>>>19)|(y<<13))^(y>>>10);
+      w[t]=(w[t-16]+s0+w[t-7]+s1)|0;
+    }
+    let a=h0,c=h2,d=h3,e=h4,f=h5,g=h6,h=h7,bb=h1;
+    for(let t=0;t<64;t++){
+      const S1=((e>>>6)|(e<<26))^((e>>>11)|(e<<21))^((e>>>25)|(e<<7));
+      const t1=(h+S1+((e&f)^(~e&g))+SHA_K[t]+w[t])|0;
+      const S0=((a>>>2)|(a<<30))^((a>>>13)|(a<<19))^((a>>>22)|(a<<10));
+      const t2=(S0+((a&bb)^(a&c)^(bb&c)))|0;
+      h=g; g=f; f=e; e=(d+t1)|0; d=c; c=bb; bb=a; a=(t1+t2)|0;
+    }
+    h0=(h0+a)|0; h1=(h1+bb)|0; h2=(h2+c)|0; h3=(h3+d)|0; h4=(h4+e)|0; h5=(h5+f)|0; h6=(h6+g)|0; h7=(h7+h)|0;
+  }
+  const o=new Uint8Array(32), ov=new DataView(o.buffer);
+  [h0,h1,h2,h3,h4,h5,h6,h7].forEach(function(x,i){ ov.setUint32(i*4, x>>>0); });
+  return o;
+}
+function hmacHex(key, msg){
+  const enc=new TextEncoder();
+  let k=enc.encode(key); if(k.length>64) k=sha256(k);
+  const ip=new Uint8Array(64), op=new Uint8Array(64);
+  for(let i=0;i<64;i++){ const x=i<k.length?k[i]:0; ip[i]=x^0x36; op[i]=x^0x5c; }
+  const m=enc.encode(msg), inner=new Uint8Array(64+m.length); inner.set(ip); inner.set(m,64);
+  const outer=new Uint8Array(96); outer.set(op); outer.set(sha256(inner),64);
+  let s=''; sha256(outer).forEach(function(x){ s+=(x<16?'0':'')+x.toString(16); });
+  return s;
+}
+/* ---- the control key ----
+   A device built with CONTROL_AUTH 1 accepts a turn or a change only when it
+   is signed: fetch a one-time nonce, send HMAC-SHA256(key, "<path>?<query>")
+   with the nonce in the query. The key is kept per device address in this
+   browser and never sent. Without a key the call goes unsigned, which a
+   device without the lock accepts and one with it refuses with 403. */
+const keyFor=(h)=>{ try{ return localStorage.getItem('ev_key:'+h)||''; }catch(e){ return ''; } };
+// The address the key belongs to is the one in the field, normalised the way
+// start() does — not whichever host was last started, so editing the address
+// and then the key cannot file the key under the old one.
+const hostInField=()=>document.getElementById('host').value.trim()
+  .replace(/^https?:\/\//i,'').replace(/[\/?#].*$/,'');
+document.getElementById('ctlkey').oninput=(e)=>{
+  const h=hostInField(); if(!h) return;
+  try{ localStorage.setItem('ev_key:'+h, e.target.value.trim()); }catch(err){}
+  document.getElementById('pairing').textContent='';
+};
+async function ctlFetch(h, path, params, opts){
+  const key=keyFor(h), p=params||'';
+  if(!key) return fetch('http://'+h+path+(p?'?'+p:''), opts);
+  // Twice at most: a refusal for the nonce is fixed by a fresh one, one for
+  // the key is not.
+  for(let i=0;;i++){
+    const nj=await (await fetch('http://'+h+'/api/nonce', opts)).json();
+    const qs=(p?p+'&':'')+'n='+nj.n;
+    const res=await fetch('http://'+h+path+'?'+qs+'&h='+hmacHex(key, path+'?'+qs), opts);
+    if(res.status!==403 || i>=1) return res;
+    const why=await res.clone().json().then(j=>j.why).catch(()=>'');
+    if(why!=='nonce') return res;
+  }
+}
+const REFUSED='Enheten godtog inte nyckeln — kontrollera fältet "nyckel".';
+/* The link that pairs her phone: opened once there, it stores the key in that
+   browser for syrgas.local and removes it from the address. Behind #, it is
+   not sent over the network. Send it privately. */
+function showPairing(){
+  const key=keyFor(host), el=document.getElementById('pairing');
+  el.textContent = !host ? 'Tryck Starta först.'
+    : !key ? 'Skriv in nyckeln först (den står i secrets.h, CONTROL_KEY).'
+    // Always syrgas.local: the key is kept per address in her browser, and the
+    // address she uses is syrgas.local even if this panel is on an IP.
+    : 'Öppna på hennes telefon, en gång: http://syrgas.local/#k='+encodeURIComponent(key);
+}
+/* Ask the device to check for an armed build now instead of within 15
+   minutes. Signed like any other change since 1.12.0. */
+async function fwCheckNow(){
+  const el=document.getElementById('pairing');
+  if(!host){ el.textContent='Tryck Starta först.'; return; }
+  try{
+    const res=await ctlFetch(host, '/api/fw-check', '');
+    el.textContent = res.status===403 ? REFUSED
+      : res.ok ? 'Enheten kollar nu efter en armerad firmware. Installerar den, startar den om inom en minut.'
+      : 'Enheten känner inte till anropet (firmware före 1.11.1).';
+  }catch(e){ el.textContent='Nådde inte enheten.'; }
+}
 function start(){
   // Tolerate a pasted full URL, a trailing slash and ?/# – otherwise they end
   // up in the path and the motor calls hit the wrong thing (or nothing).
@@ -1017,6 +1128,12 @@ function start(){
        .replace(/^https?:\/\//i,'').replace(/[\/?#].*$/,'');
   document.getElementById('host').value=host;
   try{localStorage.setItem('ev_host',host);}catch(e){}
+  // What is in the key field when Starta is pressed is this host's key (a new
+  // one replaces the old); an empty field loads the one kept for it.
+  const typed=document.getElementById('ctlkey').value.trim();
+  if(typed){ try{ localStorage.setItem('ev_key:'+host, typed); }catch(e){} }
+  document.getElementById('ctlkey').value=keyFor(host);
+  document.getElementById('pairing').textContent='';
   if(timer) clearInterval(timer);
   fetchingSince=0;
   presetFor=null; presetUnknown=null; presetError=null;   // a different host may be a different machine
@@ -1118,7 +1235,9 @@ async function lightCall(q){
   const ac=new AbortController();
   const tm=setTimeout(()=>ac.abort(), 4000);   // same budget as motor()
   try{
-    const j=await (await fetch('http://'+host+'/api/light'+q, {signal:ac.signal})).json();
+    const res=await ctlFetch(host, '/api/light', q.replace(/^\?/,''), {signal:ac.signal});
+    if(res.status===403) throw new Error(REFUSED);
+    const j=await res.json();
     lightStandard=j.standard;
     document.getElementById('lOn').checked=j.on;
     document.getElementById('lLevel').value=j.level;
@@ -1143,7 +1262,8 @@ async function lightCall(q){
        was: an old firmware's 404 and a PIN-protected 403 carry no CORS
        header, so cross-origin they arrive as the same opaque error as a dead
        wifi, and naming one would send the operator after the wrong one. */
-    el.textContent = e.name==='AbortError'
+    el.textContent = e.message===REFUSED ? REFUSED
+      : e.name==='AbortError'
       ? 'Enheten svarade inte i tid – osäkert om ändringen gick fram. Kontrollera lampan.'
       : 'Ingen kontakt med lampan – enheten svarade inte, '+
         'eller kör firmware före 1.10.0.';
@@ -1176,12 +1296,14 @@ async function ledTest(){
   const ac=new AbortController();
   const tm=setTimeout(()=>ac.abort(), 4000);
   try{
-    await fetch('http://'+host+'/api/led-test',{signal:ac.signal});
+    const res=await ctlFetch(host, '/api/led-test', '', {signal:ac.signal});
+    if(res.status===403) throw new Error(REFUSED);
     el.className='hint';
     el.textContent='Färgtest igång: rött, grönt, blått, vitt – en sekund var.';
   }catch(e){
     el.className='hint warn';
-    el.textContent = e.name==='AbortError'
+    el.textContent = e.message===REFUSED ? REFUSED
+      : e.name==='AbortError'
       ? 'Enheten svarade inte i tid – osäkert om testet startade.'
       : 'Nådde inte enheten.';
   }finally{ clearTimeout(tm); }
@@ -1327,7 +1449,9 @@ async function motor(op,n){
     // v1.7.1, so the reply can be read — and it carries the step the firmware
     // actually applied after clamping. Asking for 180 and silently getting 90
     // is exactly the kind of thing that must not be invisible.
-    const j = await (await fetch('http://'+host+'/api/'+op+'?steg='+deg, {signal:ac.signal})).json();
+    const res = await ctlFetch(host, '/api/'+op, 'steg='+deg, {signal:ac.signal});
+    if(res.status===403){ document.getElementById('status').textContent=REFUSED; return; }
+    const j = await res.json();
     document.getElementById('status').textContent =
       j.steg===deg ? '' : 'Enheten begränsade '+deg+' till '+j.steg+' grader.';
     if(j.steg!==deg) document.getElementById('d'+n).value=j.steg;
@@ -1447,8 +1571,8 @@ async function resetCounter(){
   if(!host){ document.getElementById('status').textContent='Tryck Starta först'; return; }
   if(!confirm('Nollställa räknaren? (endast vid ominstallation)')) return;
   try{
-    await fetch('http://'+host+'/api/nollstall');
-    document.getElementById('status').textContent='Räknaren nollställd.';
+    const res=await ctlFetch(host, '/api/nollstall', '');
+    document.getElementById('status').textContent= res.status===403 ? REFUSED : 'Räknaren nollställd.';
   }catch(e){ document.getElementById('status').textContent='Kunde inte nollställa.'; }
 }
 function copyLog(){ navigator.clipboard.writeText(document.getElementById('log').value); }
@@ -1489,7 +1613,9 @@ async function kcPress(op, deg){
   kcRun.last=null;                     // whatever was seen before this press is no longer current
   const ac=new AbortController(), tm=setTimeout(()=>ac.abort(),4000);
   try{
-    const j=await (await fetch('http://'+kcRun.host+'/api/'+op+'?steg='+deg,{signal:ac.signal})).json();
+    const res=await ctlFetch(kcRun.host, '/api/'+op, 'steg='+deg, {signal:ac.signal});
+    if(res.status===403) throw new Error('enheten godtog inte nyckeln');
+    const j=await res.json();
     if(!j.ok) throw new Error('enheten vägrade trycket (motorn upptagen?)');
     if(j.steg!==deg) throw new Error('enheten ändrade '+deg+' till '+j.steg+' grader');
     // The device counts presses (lage, ±1 each). Moved by more than this
@@ -1506,26 +1632,41 @@ async function kcPress(op, deg){
   }finally{ clearTimeout(tm); }
   kcRun.deg += op==='plus' ? deg : -deg;
 }
-/* Median of three frames REQUESTED after the wait. Max aborts. flow is the
-   engine's number even in the bottom state (it has one, just not a trusted
-   one), which is what lets a stalled knob be noticed down there too. */
+/* The reading once the ball has SETTLED, not after a fixed wait. The press
+   reply comes when the motor has stopped (the firmware answers after the
+   move), so what is left is the float settling, and that is measured: five
+   frames in a row, all requested after a minimum wait from the stop, with no
+   trend between their ends and a spread the ball's own bob explains; a
+   refused frame starts the run over. Their median is the reading. The frames come at ~4 Hz during a run (knobCal speeds the poll),
+   so a settled ball is usually confirmed 1-2 s after the stop. Max aborts.
+   flow is the engine's number even in the bottom state (it has one, just
+   not a trusted one), which is what lets a stalled knob be noticed there too. */
 async function kcRead(){
   await sleep(kcRun.wait);
-  const since=Date.now(), got=[];
-  while(got.length<3){
+  const since=Date.now();
+  let got=[];
+  for(;;){
     if(kcRun.stop) throw new Error('stoppad');
-    if(Date.now()-since>15000) throw new Error('ingen avläsning på 15 s');
-    await sleep(250);
+    if(Date.now()-since>15000) throw new Error('ingen stilla avläsning på 15 s');
+    await sleep(100);
     const r=lastRead;
-    if(r && r.at>since && (got.length===0 || r.at>got[got.length-1].at)){
-      if(!r.ok) continue;            // refused frame: wait for the next
-      if(r.max){ kcRun.last={max:true}; throw new Error('avläsningen säger Max'); }
-      got.push(r);
-      kcRun.last={flow:r.flow, number:r.number, below:r.below};   // what was last SEEN, even mid-read
+    if(!(r && r.at>since && (got.length===0 || r.at>got[got.length-1].at))) continue;
+    if(!r.ok){ got=[]; continue; }    // refused frame: the run of consecutive frames starts over
+    if(r.max){ kcRun.last={max:true}; throw new Error('avläsningen säger Max'); }
+    kcRun.last={flow:r.flow, number:r.number, below:r.below};   // what was last SEEN, even mid-read
+    got.push(r); if(got.length>5) got.shift();
+    // Five frames in a row (~1.2 s at 4 Hz): still means NO TREND — the first
+    // two and the last two agree within 0.04 — and a spread the ball's own bob
+    // explains (under 0.15; it bobs about ±0.05). A creeping float fails the
+    // trend test; a bobbing one passes the spread test.
+    if(got.length===5){
+      const fs5=got.map(x=>x.flow);
+      const trend=Math.abs((fs5[0]+fs5[1])/2-(fs5[3]+fs5[4])/2);
+      if(trend<0.04 && Math.max(...fs5)-Math.min(...fs5)<0.15) break;   // still: done
     }
   }
   const fl=got.map(r=>r.flow).sort((a,b)=>a-b);
-  const x={flow:fl[1], number:got.every(r=>r.number), below:got.some(r=>r.below)};
+  const x={flow:fl[2], number:got.every(r=>r.number), below:got.some(r=>r.below)};
   kcRun.last=x;
   return x;
 }
@@ -1547,13 +1688,17 @@ async function knobCal(){
   if(motorBusy){ kcSay('Ett tryck pågår — vänta en sekund och starta igen.'); return; }
   const top=kcTop(), maxFlow=kcMaxFlow();
   if(!confirm('Kalibrera ratten? Flödet ändras mellan '+LOW_LABEL.toLowerCase()+' och '+top.toFixed(1)+
-              ' L/min i ungefär 10 minuter. Ingen får andas från maskinen, och ingen får trycka på knapparna i appen under tiden.')) return;
+              ' L/min i några minuter. Ingen får andas från maskinen, och ingen får trycka på knapparna i appen under tiden.')) return;
   const step=Math.round(Number(document.getElementById('kcStep').value));
   const wait=Math.round(1000*Number(document.getElementById('kcWait').value));
-  if(!(step>=4 && step<=30) || !(wait>=2000 && wait<=10000)){ kcSay('Steg 4–30 grader, vänta 2–10 s.'); return; }
+  if(!(step>=4 && step<=30) || !(wait>=500 && wait<=10000)){ kcSay('Steg 4–30 grader, vänta 0,5–10 s.'); return; }
   kcRun={stop:false, deg:0, total:0, wait, host, last:null, lage:null};
   document.getElementById('kcOut').value='';
   kcLock(true);
+  // Frames at ~4 Hz while it runs (her page polls that fast anyway), back to
+  // 1 Hz after: the settle test needs consecutive frames close together.
+  if(timer) clearInterval(timer);
+  timer=setInterval(fetchFrame, 250);
   let start=null;
   /* The flow must follow the knob. Both checks restart at every change of
      direction, because the backlash makes the first steps after one move
@@ -1672,6 +1817,8 @@ async function knobCal(){
     kcLog('# avbruten: '+e.message);
   }finally{
     kcRun=null;
+    if(timer) clearInterval(timer);
+    timer=setInterval(fetchFrame, 1000);
     kcLock(false);
   }
 }

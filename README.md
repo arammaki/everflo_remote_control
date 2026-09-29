@@ -26,9 +26,15 @@ images crawl.
 | `http://syrgas.local/motor.js` | The detection engine, served from flash so the page can read the ball |
 | `http://syrgas.local/api/status` | `{"ok":true,"lage":N}` |
 | `http://syrgas.local/api/steg` | Degrees per press; `?v=N` sets it, clamped, RAM only |
-| `http://syrgas.local/api/plus` · `/api/minus` | One press |
-| `http://syrgas.local/api/nollstall` | Zero the press counter |
-| `http://syrgas.local/api/omstart` | Reboot the device — the remote recovery path |
+| `http://syrgas.local/api/plus` · `/api/minus` | One press (signed since 1.12.0 — see below) |
+| `http://syrgas.local/api/nollstall` | Zero the press counter (signed) |
+| `http://syrgas.local/api/omstart` | Reboot the device — the remote recovery path (signed: use "Starta om enheten" on her page) |
+| `http://syrgas.local/api/nonce` | A one-time nonce for signing a control request |
+
+With `CONTROL_AUTH 1` (v1.12.0, the default) every request that turns the
+knob or changes the device must carry an HMAC over a nonce, keyed with
+`CONTROL_KEY` from secrets.h; her page and the control panel do it for you.
+See "Access control" in CLAUDE.md.
 | `http://syrgas.local:81/stream` | MJPEG. Legacy: nothing uses it, Safari + mDNS is flaky there |
 
 If `syrgas.local` does not resolve, use the IP from the `Connected! IP:` line
