@@ -88,7 +88,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.12.0"
+#define FW_VERSION "1.12.1"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -126,15 +126,16 @@
   #define PRESET_ID       "platinum9"
   /* Chosen on the unit 2026-09-26, "for now": the smallest about the
      EverFlo's, the two larger ones shorter (60/120 against 90/160) on a knob
-     where 1 L/min is ~25 image rows. The same cup fits, and the direction
+     where 1 L/min is ~21 image rows (since the 2026-09-29 camera move). The same cup fits, and the direction
      carried over from the EverFlo unchanged. */
   #define DEG_PER_PRESS   40
   #define STEP_MEDIUM     60
   #define STEP_LARGE      120
   #define DIRECTION       -1
-  /* The level the 2026-09-26 sweep and its reference were taken at, bound to
-     the preset exactly as EverFlo's references are bound to 50. Change it and
-     the Platinum needs a new sweep. */
+  /* The level the 2026-09-29 sweep and its reference were taken at (the
+     compiled default, assuming the panel's light slider was not moved),
+     bound to the preset exactly as EverFlo's references are bound to 50.
+     Change it and the Platinum needs a new sweep. */
   #define LED_LEVEL       50
 #else
   #error "CONCENTRATOR must be CONC_EVERFLO or CONC_PLATINUM9"

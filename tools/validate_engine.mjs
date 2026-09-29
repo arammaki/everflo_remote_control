@@ -93,7 +93,7 @@ const presetId = presetFlag ?? presetFile;
 /* A sweep may carry its own tolerance against its labels, in a file named
    TOLERANCE (a number of L/min, on its first line). It is how precisely the
    labels were set, not how well the engine must read: the Platinum sweep was
-   set by eye on 0.5 L/min marks ~11 px apart, where EverFlo's were ~29 px.
+   set by eye on 0.5 L/min marks ~10-11 px apart, where EverFlo's were ~29 px.
    Visible in the directory, printed on every run, never loosened in code. */
 try {
   const t = Number(readFileSync(join(imageDir, 'TOLERANCE'), 'utf8').split('\n')[0].trim());

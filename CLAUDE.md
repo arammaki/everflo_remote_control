@@ -640,55 +640,65 @@ each number is what it is. In order:
 8. **Day and evening references** come afterwards from a day or two of
    uploads, ball positions spread (see "Daylight is a second lighting regime").
 
-### The Platinum 9 calibration (v1.11.2, 2026-09-26)
+### The Platinum 9 calibration (v1.12.1, 2026-09-29)
 Everything is in the `platinum9` preset with a comment per number; the short
-version, and what to watch:
+version, and what to watch. The first calibration (v1.11.2, 2026-09-26, night
+with the ceiling lamp) died when the camera was moved: it refused all 21
+frames of the new sweep at registration 0.31-0.46. Its sweep is now
+`test/negative-platinum9-2026-09-26/`, refused 21/21. **The unit is to be
+moved again** (as of 2026-09-29), which will mean a third sweep.
 
-- **The ball is dark with a bright highlight** a few pixels to its lower left,
-  and the LED's reflection runs down the tube at x~300. A band centred on the
-  highlight cancels against the dark body (contrast 0.03). The band sits on
-  the dark body, x 312..324.
-- **Margins are thinner than EverFlo's** on every gate: contrast 0.146,
-  ambiguity 4.8x, registration 0.952 (EverFlo 0.173 / 15.9x / 0.982). 9 L/min
-  fit in ~230 rows. Against the straight-on labels: mean 0.08, worst 0.26.
-- **The tilt is a known disagreement.** A hand-drawn line says 3.3 degrees
-  (tan 0.058); the zero-deviation plateau and the gates say 0.03. The anchor
-  is horizontal ticks, which pin a tilt weakly. First suspect if a later
-  lighting regime starts refusing.
-- **One reference, lit by the LED AND the ceiling lamp** ('kväll'). A dark
-  kitchen at night and daylight are further regimes; build their references
-  from uploads with the ball at varied positions, as was done for EverFlo.
-- **At the red line the ambiguity is thin**: the sweep frame reads at 5.1x,
-  but a real upload at the same position (id 6488) refused at 2.6x. It refuses,
-  it does not misread; a flow she does not use.
-- Her page crops to the meter (`VIEW_*`, vertical too since 1.11.2), about
-  1.6x the size the whole frame gave.
-- Buttons 40/60/120 degrees, chosen on the unit "for now".
-- **The curve is fitted to the printed scale, not to the labels**
-  (2026-09-27). Above ~5 the motor mount blocks the front view, so those
-  labels were read from the side, and parallax made them read high — the
-  label-fitted curve was up to 0.4 over the scale at the top. The method: find
-  the ticks as dark rows in the reference's anchor band (sheared by
-  BASE_TILT), number them from the frames, fit the offset between the engine's
-  y and the tick against the straight-on frames only, leaving out the two it
-  then judges (6.75 px), and fit the
-  quadratic through the ticks 1..9 (within 0.09 of each). Frames read at an
-  angle are named `<n>_approx`: held to label − 1 .. label + TOLERANCE, never
-  fitted to.
-  calibrate.mjs does not do the tick fit yet, and warns rather than let its
-  label-fitted snippet be pasted over this preset.
+- **One reference, and it is DAYLIGHT** ('dag', WS2812 on). Night — lamp off
+  or on — is a different lighting and is refused until it has its own
+  reference: a short sweep, or uploads with the ball at varied positions.
+  The old 'kväll' reference went with the old pose; a reference is bound to
+  the camera as well as the light.
+- **The ball in daylight is a dark ring with a bright highlight on its
+  left.** A band that takes in the highlight cancels against it (contrast
+  0.08). The band sits on the dark part, x 327..337.
+- **Margins are thin**: contrast 0.118 (gate 0.10), ambiguity 3.4x (3.0),
+  registration 0.968, spread 38. Daylight lays a bright streak down the lower
+  tube through the ball's own columns; YBOT 392 keeps it out (398 refuses
+  the 4 frame, 405 the 3.5 and 4). Against the straight-on labels: mean 0.10, worst 0.29.
+- **The camera moves with the knob**: dx runs smoothly from -3 px at the
+  bottom of the scale to +6 at the red line — the mount twists. Registration
+  absorbs it.
+- **The tilt**: the gates choose 0.065 (3.7 degrees); a line drawn along the
+  tube says 5.4. Last time 3.3 against 1.7. The hand line sits consistently
+  ~1.7 degrees steeper — it follows the tube's edge, the engine the ball and
+  the ticks. Trust the search, and re-measure rather than nudge.
+- **The curve is fitted to the printed scale, not to the labels.** Labels
+  read from the side (above 7.5 in this sweep; above 5 in the first, before
+  the motor mount was made smaller) carry parallax, and half marks are a
+  midpoint judged by eye — in this sweep they drift with height, 5-6 px off
+  at 1.5/2.5 and 13-14 at 5.5/6.5, while the whole marks 1..7 all sit within
+  9-12 px of their ticks. The method: find the ticks as dark rows
+  in the reference INSIDE THE BALL BAND (sheared by BASE_TILT — measuring them
+  in a band 20 px to the left puts them 1-4 px off under a 3.7 degree tilt), number
+  them against the printed digits, fit the offset between the engine's y and
+  the tick against the straight-on frames only, leaving out 1.5 and 2.5 (10.1
+  px — the float is read at its top, y is its centre), and fit the quadratic
+  through the ticks 1..9 (within 0.1 of each). Frames read at an angle are
+  named `<n>_approx`: held to label − 1 .. label + TOLERANCE, never fitted
+  to. The whole marks give an offset of 9.9 against the 10.1 used (0.01
+  L/min, not re-baked). TOLERANCE is 0.35 for the half marks (2.5 reads
+  +0.29, 6.5 −0.25). calibrate.mjs does
+  not do the tick fit, and warns rather than let its label-fitted snippet be
+  pasted over this preset.
 - **Below 1 L/min there is no number**, only "Under 1": the scale is
   stretched there and the tick-fitted curve reads low. The boundary sits at
-  0.8 on the curve (~0.9 on the scale) so a clean 1.0 (reads 0.95) does not
-  flip. **Max starts at the red line** (engine y 165); the sweep's `max`
-  frame was judged from the side and sits just under it, reading 9.33.
+  0.8 on the curve (~0.9 on the scale) so a clean 1.0 (reads 1.00) does not
+  flip. **Max starts at the red line** (tick-space 168, engine y 178); the
+  sweep's `max` frame was judged from the side and reads 9.23, at the 9 mark.
+- Her page crops to the meter (`VIEW_*`), moved with the camera.
+- Buttons 40/60/120 degrees, chosen on the unit "for now".
 - **Open risks, measured nowhere yet:** the engine's pixel constants (the
   60-row ambiguity exclusion, spread 75, the ±35 centroid window, 20 px
-  shift) were set for EverFlo's ~50 rows per L/min; on the Platinum's ~25
-  the exclusion spans ~2.4 L/min, so a rival that close is invisible to the
+  shift) were set for EverFlo's ~50 rows per L/min; on the Platinum's ~21
+  the exclusion spans ~2.9 L/min, so a rival that close is invisible to the
   ambiguity gate. The `max` frame asserts only "a number", and no frame
-  exercises Max above the red line. Every build carries all four references
-  (~560 kB of base64) — fine for now, gateable at build time if it bites.
+  exercises Max above the red line. Afternoon and evening sun are untested:
+  the sweep is 14:39-14:45.
 
 ### Engine invariants
 Grayscale -> flatfield (3-pass box blur ~ sigma 41) -> horizontal

@@ -218,6 +218,8 @@ E.PRESETS.__measure = {
   // Every display-crop key the engine knows, null: derived, so a new one
   // cannot break the measurement the way VIEW_Y/VIEW_H once did.
   ...Object.fromEntries(E.PRESET_KEYS.filter((k) => k.startsWith("VIEW_")).map((k) => [k, null])),
+  // No knob table: it steers her flow buttons and has nothing to do with y.
+  KNOB: null, BACKLASH: null,
   refs: () => [["placeholder", "natt"]],
 };
 E.usePreset("__measure");

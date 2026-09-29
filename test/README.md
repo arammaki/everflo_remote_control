@@ -1,15 +1,17 @@
 # Test images
 
-Two sets, and they are checked in opposite directions. Both run through the
-same harness so the two directions cannot drift apart:
+Sets checked in opposite directions — a sweep must read, an old pose must be
+refused. All run through the same harness so the two directions cannot drift apart:
 
 ```sh
 node tools/validate_engine.mjs test/sweep-2026-08-22
 node tools/validate_engine.mjs test/negative-old-poses --expect-rejected
+node tools/validate_engine.mjs test/platinum9-sweep-2026-09-29
+node tools/validate_engine.mjs test/negative-platinum9-2026-09-26 --expect-rejected
 ```
 
 Every directory carries a `PRESET` file naming the concentrator its frames
-are of (`everflo` for both of these). The harness reads it and refuses to
+are of (`everflo` or `platinum9`). The harness reads it and refuses to
 run without one: a sweep scored against the wrong machine's calibration is
 refused wholesale, which looks exactly like an engine that has broken. A new
 machine's sweep goes in its own directory with its own `PRESET`.
@@ -61,27 +63,34 @@ frames, occlusions, large shifts and wrong rotation are still uncovered, as is
 the tolerance suite that says a 15 px shift, blur or a thin occluder must
 still read about right. Those are constructible from the sweep above.
 
-## `platinum9-sweep-2026-09-26/` — the Invacare Platinum 9's calibration
+## `platinum9-sweep-2026-09-29/` — the Invacare Platinum 9's calibration
 
-21 labelled frames, 0 to 9.5 L/min in half steps (6.5 was not taken), the
-resting stop (`0_min`) and the ball ON the red line (`max`, which must read as
-a number — the Max state begins above the line). Taken 2026-09-26
-21:31–21:35 at night with the WS2812 and the kitchen's ceiling lamp on. The 5
-and 5.5 frames were retaken a few minutes later and renamed into sequence.
+21 labelled frames, 0 to 9 L/min in half steps, the resting stop (`0_min`)
+and the ball on the red line (`max`, which must read as a number — the Max
+state begins above the line). Taken 2026-09-29 14:39–14:45 in DAYLIGHT with
+the WS2812 on, after the camera had been moved.
 
-Above about 5 L/min the motor mount blocks the front view, so those labels
-were read from the side — parallax, growing toward the top. They are named
-`<n>_approx` (as are 0.5 and 0.75, below the calibrated range) and are
-held only to a loose bound — between the label
-minus 1 and the label plus the tolerance — and never fitted to. The curve comes from the printed scale,
-not from these labels: see the CAL comment in the preset.
+The motor mount had been made smaller, so this time the labels up to 7 were
+read straight on; from 7.5 up they were read from the side and are named
+`<n>_approx`, as are 0.5 and 0.75 below the calibrated range. They are held only to a loose bound — between the label
+minus 1 and the label plus the tolerance — and never fitted to. The curve
+comes from the printed scale: see the CAL comment in the preset.
 
-Its `TOLERANCE` is 0.3 L/min, not the default 0.2, and the reason is two
-straight-on labels: 1.5 and 2.5 read +0.20 and +0.27, and the printed scale
-puts the ball above those marks too. That is how precisely the knob was set,
-not a looser gate — the engine's quality thresholds are the same for every
-machine.
+Its `TOLERANCE` is 0.35 L/min, not the default 0.2, and the reason is the
+half marks: 1.5 and 2.5 read +0.16 and +0.29, 5.5 and 6.5 −0.20 and −0.25.
+Against the printed ticks they drift steadily with height (5-6 px off at the
+bottom, 13-14 at the top), while every whole mark 1..7 sits within 9-12 px of
+its tick — a midpoint judged by eye, not a curve error. That is how the knob
+was set, not a looser gate — the engine's quality thresholds are the same for
+every machine.
 
-Cross-checked 2026-09-26: these frames read as `everflo` are refused 21/21,
+Cross-checked 2026-09-29: these frames read as `everflo` are refused 21/21,
 and the EverFlo sweep plus the 78 old poses read as `platinum9` are refused
-101/101. A frame from the wrong machine never produces a number.
+101/101.
+
+## `negative-platinum9-2026-09-26/` — the Platinum's first pose, refused
+
+The first Platinum sweep (2026-09-26 21:31–21:35, night, WS2812 plus the
+ceiling lamp). The camera has been moved since, so like `negative-old-poses/`
+it is run with `--expect-rejected`: all 21 refused (registration 0.62 at
+best, against the 0.75 gate).
