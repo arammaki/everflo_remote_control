@@ -88,7 +88,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.12.12"
+#define FW_VERSION "1.12.13"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -640,6 +640,9 @@ static const char PAGE[] = R"HTML(
 <!DOCTYPE html><html lang="sv"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Syrgas">
 <title>Syrgas – fjärrkontroll</title>
 <style>
  body{font-family:-apple-system,Helvetica,Arial,sans-serif;margin:0;background:#f4f4f2;
@@ -692,6 +695,12 @@ static const char PAGE[] = R"HTML(
  button:disabled{opacity:.45}
  #msg{min-height:1.3em;font-size:1rem;color:#a33;text-align:center;max-width:480px}
  #pair{font-size:.95rem;color:#8a5a00;text-align:center;max-width:480px}
+ /* Pairing inside the page: a home-screen web app has its own storage and no
+    address bar, so a #k= link opened in Safari never reaches it. */
+ #pairform{display:flex;gap:8px;width:100%;max-width:480px}
+ #pairform[hidden]{display:none}
+ #pairin{flex:1 1 0;min-width:0;font-size:1rem;padding:10px;border:1px solid #bbb;border-radius:10px}
+ #pairform button{font-size:1.1rem;padding:10px 18px;background:#555;letter-spacing:0}
  .small{font-size:.85rem;color:#888;margin-top:12px;text-align:center}
 </style></head><body>
 <h1>Syrgas</h1>
@@ -723,6 +732,7 @@ static const char PAGE[] = R"HTML(
 </div>
 <div id="msg"></div>
 <div id="pair"></div>
+<div id="pairform" hidden><input id="pairin" placeholder="Klistra in kopplingslänken" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button onclick="pairFromField()">Koppla</button></div>
 <div class="small"><a href="#" onclick="restart();return false">Starta om enheten</a> · v%VER%</div>
 <script src="/motor.js?v=%VER%"></script>
 <script>
@@ -828,10 +838,26 @@ async function ctl(path, params, opts, key){
 }
 /* A key refusal also clears the pairing line: "Telefonen är kopplad" must not
    stand next to "not approved". */
+let keyRefused=false;   // the device has refused this phone's key: offer the field
 function refusedText(res){
   if(res.why==='nonce') return RACE;
   const p=document.getElementById('pair'); if(p) p.textContent='';
+  keyRefused=true;
   return REFUSED;
+}
+/* The same pairing as a #k= link, from a pasted link or a bare key — the way
+   in for a home-screen web app, which has its own storage and no address bar.
+   checkPairing() asks the device before anything is stored. */
+function pairFromField(){
+  const f=document.getElementById('pairin'), v=f.value.trim();
+  const m=v.match(/[#&]k=([^&\s]+)/);
+  let k=m ? m[1] : v;
+  try{ k=decodeURIComponent(k); }catch(e){}
+  if(!k) return;
+  f.value='';
+  pairingLink=k;
+  setMode();
+  checkPairing();
 }
 /* A key from a pairing link is taken only if the device accepts it: a signed
    read of /api/steg, which changes nothing. Refused: the link is wrong, and
@@ -856,6 +882,7 @@ async function checkPairing(){
     m.textContent='Kopplingslänken godtogs inte av enheten'+(had?' – den tidigare kopplingen gäller fortfarande.':'.');
   }else if(res && res.ok || !had){
     KEY=k; try{ localStorage.setItem('ev_key',KEY); }catch(e){}
+    if(res && res.ok) keyRefused=false;
     // Only a key the device accepted is called paired. Kept unconfirmed, it
     // says so, and a key refusal at the first press clears this line.
     m.textContent = res && res.ok ? 'Telefonen är kopplad.'
@@ -1076,10 +1103,11 @@ function setMode(){
   // Both ways: a first pairing finishes AFTER this has run with no key, and a
   // class only ever added kept her buttons hidden until a reload (1.12.5).
   document.body.classList.toggle('unpaired', !paired());
+  document.getElementById('pairform').hidden = !AUTH || pairingLink!==null || (paired() && !keyRefused);
   if(!paired()){
     document.getElementById('mode').textContent = pairingLink!==null
       ? 'Prövar kopplingslänken …'
-      : 'Den här telefonen är inte kopplad till fjärrkontrollen – be om en kopplingslänk. Bilden och flödet visas ändå.';
+      : 'Den här telefonen är inte kopplad till fjärrkontrollen – klistra in kopplingslänken nedan. Bilden och flödet visas ändå.';
     return;
   }
   if(pressing) return;                 // no switching under her finger

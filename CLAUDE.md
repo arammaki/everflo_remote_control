@@ -1191,7 +1191,13 @@ a second one is not. Under CONTROL_AUTH 0 the link is stored as before, so a
 phone can be paired ahead of the lock-on build. The outcome stays on its own
 line (`#pair`); an unconfirmed first pairing says it is unconfirmed, and a
 key refusal clears that line. A link opened again in a tab already showing
-the page is a hash change, not a reload, and is handled too. A timed-out
+the page is a hash change, not a reload, and is handled too. **A pairing
+field on the page** (1.12.13): a home-screen web app on iPhone has its own
+storage and no address bar, so a link opened in Safari never reaches it —
+while the phone is unpaired, or after the device refused its key, the page
+shows a field to paste the link (or the bare key) into, checked by the device
+exactly like a link. The page declares itself a web app
+(`apple-mobile-web-app-capable`, title "Syrgas"). A timed-out
 press says "osäkert om ratten vreds" rather than "Ingen kontakt": the device
 may have turned the knob before the reply was lost. **What happened to her
 last tap holds `#msg` for 12 s** (`note()`) — the frame loop rewrites that
