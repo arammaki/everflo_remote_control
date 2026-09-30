@@ -100,6 +100,19 @@ try {
   if (!(t > 0 && t < 1)) { console.error(`${imageDir}/TOLERANCE must be a number of L/min between 0 and 1`); process.exit(2); }
   TOLERANCE = t;
 } catch (e) { if (e.code !== 'ENOENT') throw e; }
+/* ALLOW_REFUSED: labels (one per line, '#' starts a comment) that may be
+   REFUSED in this sweep without failing it — a refusal is the safe outcome,
+   and some sweeps have frames the engine is right to refuse (the Platinum's
+   night sweep at the bottom of the scale, 2026-09-30). Only a refusal is
+   allowed: a listed frame that READS is still held to its label. Listed and
+   printed, never implied. */
+const allowRefused = new Set();
+try {
+  for (const line of readFileSync(join(imageDir, 'ALLOW_REFUSED'), 'utf8').split('\n')) {
+    const l = line.replace(/#.*/, '').trim(); if (l) allowRefused.add(l);
+  }
+} catch (e) { if (e.code !== 'ENOENT') throw e; }
+let allowedRefusals = 0;
 if (!presetId) {
   console.error(`Which concentrator? Put its preset id in ${imageDir}/PRESET, or pass --preset <id>.`);
   process.exit(2);
@@ -276,7 +289,7 @@ for (const f of files) {
   } else if (p.expect === 'max') {
     if (verdict !== 'Max') failures++;
   } else if (!read) {
-    failures++;
+    if (verdict === 'REJECTED' && allowRefused.has(label)) allowedRefusals++; else failures++;
   } else if (p.expect === 'approx') {
     /* A label read at an angle reads HIGH (parallax), so the truth is at or
        under it; one below the calibrated range is about the bottom. Either way
@@ -306,5 +319,6 @@ console.log(expectRejected
     `${failures} produced a reading`
   : `\n${files.length} frames, mean ${n ? (sum / n).toFixed(3) : '-'} L/min over the ` +
     `${n} with a labelled value, worst ${n ? worst.toFixed(3) : '-'}, ` +
-    `${failures} outside tolerance or rejected`);
+    `${failures} outside tolerance or rejected` +
+    (allowRefused.size ? `, ${allowedRefusals} refused as ALLOW_REFUSED permits (${[...allowRefused].join(', ')})` : ''));
 process.exit(failures ? 1 : 0);

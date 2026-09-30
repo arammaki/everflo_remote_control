@@ -665,8 +665,9 @@ FOURTH camera pose: the kitchen (2026-09-26, -29), the care home's morning
 Sweep file names carry UTC (`toISOString()`); the times here are local.
 
 - **Two references**, 'dag' (hall lamp on, 14:21-14:26) and 'natt' (lamp
-  off, curtains drawn, 14:27-14:30). Both read fully under the free tilt
-  search — day 21/21, night 20/20, mean 0.094 each; the night sweep is never
+  off, curtains drawn, 14:27-14:30). Day 21/21, night 17/20 (mean 0.094 and
+  0.093) — the night sweep's resting ball, 0.5 and 1 L/min are refused at the
+  calibrated tilt, listed in its `ALLOW_REFUSED` (see TILT_MARGIN below); the night sweep is never
   fitted to, so it checks the curve independently. The knob table and backlash
   are the machine's and carry over through every pose.
 - **The camera moves when the motor turns the knob** — the operator confirms
@@ -687,8 +688,8 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
   (morning pose: 11 -> 20). Fitted as a line over the straight-on whole
   marks; a constant does worse (mean 0.14 against 0.09 on the labels). The
   quadratic through the ticks weights the 1 mark 5x — the alarm boundary —
-  so a clean 1 L/min reads 1.01 by day. At night the one 1 L/min frame reads
-  0.86 ("0,9 (osäkert)", 1.2 px from "Under 1"); her flows are 1.5 and up. Whole marks 1..7 read within 0.12; the half
+  so a clean 1 L/min reads 1.01 by day. In the dark the bottom of the scale
+  (rest, 0.5, 1) is refused; her flows are 1.5 and up. Whole marks 1..7 read within 0.12; the half
   marks, judged by eye between ticks, are off by up to 0.33 (TOLERANCE 0.35).
 - **Max at the red line, by extrapolation** (engine y 190; 9.0-9.67 are
   numbers). The `max` frame, "on the red line" judged from the side, reads
@@ -696,9 +697,9 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
   the ball clearly past the line; take an `over_max` at the next visit.
 - **Negative sets**: the morning pose (`negative-platinum9-2026-09-30/`), the
   first kitchen pose (`-09-26/`) and 33 of the 41 frames of 2026-09-29
-  (`-09-29/`) are refused in full. The other 8 of 2026-09-29 READ against this
-  calibration, and read right (within 0.13 of their labels, the side-read 7.5
-  −0.31): the camera ended up close to its kitchen pose. They are
+  (`-09-29/`) are refused in full. The other 8 of 2026-09-29 read against this
+  calibration (7 since 1.12.14 — the side-read 7.5 is refused), and read right,
+  within 0.13 of their labels: the camera ended up close to its kitchen pose. They are
   `test/platinum9-kitchen-2026-09-29/`, outside the suite. The 33 are kept
   because they are the only Platinum frames refused by dx alone (17) or by
   ambiguity alone (2) — the morning and 09-26 sets fail 3-4 gates at once, so
@@ -720,10 +721,25 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
   of 'dag'); the engine's pixel constants (60-row ambiguity exclusion, spread
   75, ±35 centroid window) are EverFlo-sized — at ~22 rows per L/min the
   exclusion spans ~2.7 L/min.
-- **Do not lock the tilt at 0 in this pose** (the kitchen advice below): the
-  base tilt here is 0.07 and the free search reads both sweeps in full; at
-  tilt 0 the night sweep refuses 0, 0.5 and 1 L/min — exactly where "Kalibrera
-  ratten" starts. Clear the panel's band fields (they are kept per machine).
+- **The tilt search keeps the calibrated tilt unless another registers 0.03
+  better** (`TILT_MARGIN`, 1.12.14). On the unit at 16:10 a steady 3.8 L/min
+  flickered to "Osäker": the search stepped 2 degrees off for a registration
+  gain of 0.001-0.022, and the sheared band ran onto the ticks near the top —
+  the third time in two days (the kitchen evening and night sweeps before).
+  Only the READING moves to the base tilt: `reg` stays the best over all
+  tilts, since it also ranks the references and gates the fallback — the
+  first version of this took the base tilt's lower value there, and a review
+  found night frames turned 1.25 degrees read 1.64 for a true 2 through 'dag'.
+  Measured over every set: 12/12 live frames at 3.8 read (10/12 before, and
+  3.77-3.84 became 3.83-3.87); no negative frame leaks; the day sweep moves
+  one frame by 0.02, the EverFlo sweep one by 0.01, 39 of 312 EverFlo uploads
+  by at most 0.05; sweep frames turned −2..+2 degrees give no reading outside
+  tolerance on either machine (the old engine had one, day sweep at −1..−2).
+  The cost: a real 1-degree tip is no longer compensated (2 degrees still
+  is) — at night that shows as refusals; and the night sweep's bottom (rest,
+  0.5, 1) was only readable because the free search happened to step off
+  there, and is now refused. Clear the panel's band fields; they are no
+  longer needed for this.
 
 **What the care home's morning pose taught (2026-09-30, v1.12.6-1.12.9):**
 - The parallax can grow with height — check the ball-to-tick offset on every
@@ -743,8 +759,8 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
   midpoint judged by eye and drifted 5-14 px — and fit the quadratic through
   the ticks. In the kitchen the offset was constant (~10 px); at the care home
   it is not, so check. calibrate.mjs does not do this, and warns.
-- **Lock the tilt at 0 when calibrating the knob** — kitchen only, and not in
-  the care home's afternoon pose (see above) — in a lighting whose
+- **Lock the tilt at 0 when calibrating the knob** — kitchen only; since
+  1.12.14 TILT_MARGIN keeps the calibrated tilt by itself — in a lighting whose
   reference was built from a creeping camera: the 1-degree tilt search
   stepped off and the ticks near the top became rivals (the 2026-09-29
   evening reference). And keep the panel visible — a hidden Safari tab stalls.
@@ -835,7 +851,10 @@ its right — perspective on a round glass cylinder), so no single number is
 "correct" by measurement alone; the sweep picks it.
 
 Tilt is still searched per frame over roughly +/-3 degrees AROUND that base,
-so the search finds how far the camera has tipped SINCE calibration. `analyze()`
+so the search finds how far the camera has tipped SINCE calibration — but
+since 1.12.14 it only moves off the base when another tilt registers
+`TILT_MARGIN` (0.03) better, so a 1-degree tip usually reads at the base tilt
+now (2 degrees is still compensated), and the example below is history. `analyze()`
 reports that deviation, not the absolute angle, and `opts.tilt` overrides the
 deviation too — 0 means "as calibrated" everywhere a tilt is shown or entered.
 The objective is

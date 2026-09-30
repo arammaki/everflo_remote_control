@@ -75,8 +75,12 @@ reference, shifted into the day one's coordinates, and never fitted to. Labels
 up to 7 were read straight on; 0.5, 0.75 and 7.5 up are `<n>_approx`, held to
 label − 1 .. label + tolerance.
 
-Day 21/21, mean 0.094, worst 0.33; night 20/20, mean 0.094, worst 0.29 — both
-under the free tilt search. `TOLERANCE` is 0.35 in both for the half marks,
+Day 21/21, mean 0.094, worst 0.33; night 17/20, mean 0.093, worst 0.29. The
+night sweep's resting ball, 0.5 and 1 L/min are refused at the calibrated
+tilt (since `TILT_MARGIN`, 1.12.14) and listed in its `ALLOW_REFUSED` — a
+file the harness reads: a listed label may be refused without failing the
+sweep, anything else refused still fails it, and a listed frame that reads is
+still held to its label. `TOLERANCE` is 0.35 in both for the half marks,
 judged by eye between ticks (day 2.5 +0.33, night 6.5 −0.29); the whole marks
 1..7 read within 0.12 (day) and 0.18 (night). `ALIGN_GEOMETRY.json` is the
 geometry each reference was aligned with (see tools/align_reference.mjs).
@@ -96,9 +100,10 @@ came. 33 are refused against it (`negative-…`, in the suite) — and they are
 the only Platinum frames refused by dx alone (17, at 24–29 px) or ambiguity
 alone (2), which is what they are kept for: the other Platinum negative sets
 fail three or four gates at once. The other 8 (`platinum9-kitchen-…`, 3.5 to
-7.5 of the daylight sweep) READ, registration 0.77–0.82, and read right:
-3.63, 3.94, 4.47, 5.43, 6.07, 6.38, 7.03, 7.19 against 3.5, 4, 4.5, 5.5, 6,
-6.5, 7, 7.5 — within 0.13 except the side-read 7.5. The camera at the care
+7.5 of the daylight sweep) read, registration 0.77–0.82, and read right:
+3.63, 3.94, 4.47, 5.43, 6.07, 6.38, 7.05 against 3.5, 4, 4.5, 5.5, 6, 6.5, 7
+— within 0.13; the side-read 7.5 read 7.19 until 1.12.14 and is refused
+since. The camera at the care
 home ended up close to where it sat in the kitchen. That set is not in the
 suite: it reads by coincidence of pose, and a future pose may refuse it.
 

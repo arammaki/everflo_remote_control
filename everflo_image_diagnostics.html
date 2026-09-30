@@ -164,6 +164,9 @@ const T={contrast:0.10, margin:3.0, reg:0.75, spread:75};
    when the best refuses — see the fallback in analyze(). An algorithm
    constant, shared by every preset like T. */
 const FALLBACK_REG_GAP=0.05;
+/* How much better a tilt other than the calibrated one must register before
+   the search takes it — see analyzeWith(). */
+const TILT_MARGIN=0.03;
 
 /* ---------- presets: one per concentrator model ----------
    Everything bound to ONE machine seen from ONE camera pose lives here: the
@@ -355,10 +358,11 @@ const PRESETS={
     /* Under 1 the scale is stretched and this curve reads low there (the 0.5
        tick comes out at -0.02), so no honest number exists below 1: it is one
        state, "Under 1". The boundary sits at 0.8 on the curve (y 369) so a
-       clean 1 L/min (reads 1.01 by day) does not flip with the ball's bob. At
-       night the one 1 L/min frame reads 0.86, flagged extrapolated and 1.2 px
-       from the boundary: "0,9 (osäkert)", no flow buttons, and a bob can show
-       "Under 1". Her flows are 1.5 and up. The resting ball reads -0.76. */
+       clean 1 L/min (reads 1.01 by day) does not flip with the ball's bob. In
+       the dark, since TILT_MARGIN (1.12.14), the bottom of the scale is
+       REFUSED — the resting ball, 0.5 and 1 L/min: at the calibrated tilt the
+       ticks near the top rival the ball there. "Osäker", not a number; her
+       flows are 1.5 and up. By day the resting ball reads -0.76. */
     LOW_FLOW:0.8, LOW_LABEL:'Under 1',
     LOW_REASON:"Flödet är under 1 L/min — maskinen larmar för lågt flöde, eller så är den avstängd.",
     MAX_REASON:"Bollen står ovanför den röda linjen — maskinen ska inte ställas högre, syrehalten sjunker.",
@@ -856,14 +860,31 @@ function analyzeWith(R, ff, forceTilt, forceDx){
   // opts.tilt overrides the DEVIATION, not the absolute angle. So 0 means "as
   // calibrated" everywhere a tilt is shown or entered, which is the only
   // reading that tells the operator whether the camera has moved.
-  let hy=null, tilt=BASE_TILT;
+  let hy=null, tilt=BASE_TILT, hBase=null;
   const candidates = (typeof forceTilt==='number')
     ? [BASE_TILT+forceTilt] : TILTS.map(t=>BASE_TILT+t);
   for(const t of candidates){
     const h=align(centre(bandProfile(ff,AX1+xo,AX2+xo,t)), R.anchor, SEARCH, 40, 600);
+    if(t===BASE_TILT) hBase=h;
     if(!hy || h.quality>hy.quality){ hy=h; tilt=t; }
   }
-  const dy=hy.shift, reg=hy.quality;
+  /* The calibrated tilt unless another is CLEARLY better. The anchor is
+     horizontal ticks, which pin a tilt weakly: on the Platinum the search
+     stepped 1-2 degrees off for a registration gain of 0.001-0.022, the
+     sheared band ran onto the ticks near the top, and a steady 3.8 L/min
+     flickered to "Osäker" (2026-09-30, 16:10) — the third time in two days
+     after the kitchen evening and night sweeps. A camera that has really
+     tipped registers clearly better at its tilt, and still gets it.
+     Only the READING moves to the base tilt: `reg` stays the best over all
+     tilts, because it also ranks the references and decides whether a second
+     one may answer. Taking the base tilt's lower value there let the wrong
+     lighting win — night frames turned 1.25 degrees read 1.64 for a true 2
+     through 'dag' (review of 1.12.14). */
+  const regBest=hy.quality;
+  if(typeof forceTilt!=='number' && hBase && tilt!==BASE_TILT && hy.quality-hBase.quality<TILT_MARGIN){
+    hy=hBase; tilt=BASE_TILT;
+  }
+  const dy=hy.shift, reg=regBest;
 
   // difference profile, shift compensated
   const pf=bandProfile(ff,XL+xo,XR+xo,tilt);
