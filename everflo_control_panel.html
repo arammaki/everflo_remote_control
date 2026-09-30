@@ -183,6 +183,7 @@
 
 <div class="row">
   <input id="label" placeholder="avläst flöde (t.ex. 2.5)" inputmode="decimal">
+  <label>+ <input id="labelStep" type="number" value="0.5" min="0" max="5" step="0.1" inputmode="decimal" style="width:4.5em"> efter varje</label>
   <button onclick="saveImage()">Spara bild</button>
 </div>
 <div class="row">
@@ -1637,6 +1638,12 @@ function saveImage(){
     a.download='bild_'+f+'L_'+tid+'.jpg';
     a.click();
   },'image/jpeg',0.92);
+  // A sweep walks the scale in even steps: the next label is ready when the
+  // knob is. Only a plain number steps ('min', 'max', '9_approx' stay put, so
+  // a state is never turned into a value by accident); 0 turns it off.
+  const step=parseFloat(String(document.getElementById('labelStep').value).replace(',','.'));
+  if(/^\d+(\.\d+)?$/.test(f) && step>0)
+    document.getElementById('label').value=String(Math.round((parseFloat(f)+step)*100)/100);
 }
 async function resetCounter(){
   if(!host){ document.getElementById('status').textContent='Tryck Starta först'; return; }

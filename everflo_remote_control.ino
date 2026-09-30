@@ -88,7 +88,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.12.8"
+#define FW_VERSION "1.12.9"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -701,12 +701,10 @@ static const char PAGE[] = R"HTML(
 <div id="mode"></div>
 <div class="buttons flow">
 <div class="row">
-<button class="plus" onclick="pressFlow(0.2)">+0,2</button>
 <button class="plus" onclick="pressFlow(1)">+1</button>
 <button class="plus" onclick="pressFlow(2)">+2</button>
 </div>
 <div class="row">
-<button class="minus" onclick="pressFlow(-0.2)">&minus;0,2</button>
 <button class="minus" onclick="pressFlow(-1)">&minus;1</button>
 <button class="minus" onclick="pressFlow(-2)">&minus;2</button>
 </div>
@@ -1015,7 +1013,10 @@ async function press(op,deg){
   setMode();
 }
 /* ---- flow steps ----
-   The buttons say "+0,2 / +1 / +2" when there is something to step FROM: a
+   The buttons say "+1 / +2" when there is something to step FROM: a
+   (the +0,2 pair was dropped 2026-09-30 on the operator's judgement: too
+   unreliable — a step that small sits inside the reading's own error and the
+   knob's slack) — 
    measured knob table for this machine (KNOB in its preset) and a number
    read within the last 3 s. Otherwise the fixed-degree buttons, with a line
    saying so — never locked (2026-08-15: a remote control that locks when

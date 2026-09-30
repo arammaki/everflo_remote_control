@@ -1089,7 +1089,8 @@ the fold.
 "Kalibrera ratten" measures how many degrees the knob needs per L/min along
 the scale — the data for the flow-step buttons on her page (v1.11.3), which
 stay hidden until its KNOB/BACKLASH line is in the preset. With a table and a
-settled number read within 3 s she gets "+0,2 / +1 / +2" and the same down,
+settled number read within 3 s she gets "+1 / +2" and the same down (a
++0,2 pair until 1.12.9, dropped as too unreliable),
 clamped to the table and to 1..9 L/min; otherwise the fixed-degree buttons
 with a line saying why — never locked (August's rule). knobPlan() in the
 engine sizes the turn; the page comments say what each guard is for. The routine turns under 1, back up to 1 (approaching from
