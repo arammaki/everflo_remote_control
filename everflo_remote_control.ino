@@ -88,7 +88,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.12.11"
+#define FW_VERSION "1.12.12"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -128,7 +128,7 @@
      EverFlo's, the two larger ones shorter (60/120 against 90/160) on a knob
      where 1 L/min is ~21 image rows (since the 2026-09-29 camera move). The same cup fits, and the direction
      carried over from the EverFlo unchanged. */
-  #define DEG_PER_PRESS   40
+  #define DEG_PER_PRESS   30      // 40 until 1.12.12 (2026-09-30, the operator's call)
   #define STEP_MEDIUM     60
   #define STEP_LARGE      120
   #define DIRECTION       -1
