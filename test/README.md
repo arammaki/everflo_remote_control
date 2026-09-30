@@ -6,7 +6,8 @@ refused. All run through the same harness so the two directions cannot drift apa
 ```sh
 node tools/validate_engine.mjs test/sweep-2026-08-22
 node tools/validate_engine.mjs test/negative-old-poses --expect-rejected
-node tools/validate_engine.mjs test/platinum9-sweep-2026-09-29
+node tools/validate_engine.mjs test/platinum9-sweep-2026-09-30
+node tools/validate_engine.mjs test/negative-platinum9-2026-09-29 --expect-rejected
 node tools/validate_engine.mjs test/negative-platinum9-2026-09-26 --expect-rejected
 ```
 
@@ -63,42 +64,29 @@ frames, occlusions, large shifts and wrong rotation are still uncovered, as is
 the tolerance suite that says a 15 px shift, blur or a thin occluder must
 still read about right. Those are constructible from the sweep above.
 
-## `platinum9-sweep-2026-09-29/` — the Invacare Platinum 9's calibration
+## `platinum9-sweep-2026-09-30/` — the Invacare Platinum 9's calibration
 
-21 labelled frames, 0 to 9 L/min in half steps, the resting stop (`0_min`)
-and the ball on the red line (`max`, which must read as a number — the Max
-state begins above the line). Taken 2026-09-29 16:39–16:45 local in DAYLIGHT with
-the WS2812 on, after the camera had been moved.
+20 labelled frames taken 2026-09-30 11:51–11:55 local at the care home, a lamp
+on in the hall and the WS2812 on: the resting stop (`0_min`), 0.5 to 9 in half
+steps and the ball on the red line (`max`, which must read as a number — the
+Max state begins above the line). Labels up to 7 were read straight on; 0.5
+and 7.5 up are `<n>_approx`, held to label − 1 .. label + tolerance and never
+fitted to. The curve comes from the printed scale with a height-dependent
+parallax; see the CAL comment in the preset.
 
-The motor mount had been made smaller, so this time the labels up to 7 were
-read straight on; from 7.5 up they were read from the side and are named
-`<n>_approx`, as are 0.5 and 0.75 below the calibrated range. They are held only to a loose bound — between the label
-minus 1 and the label plus the tolerance — and never fitted to. The curve
-comes from the printed scale: see the CAL comment in the preset.
+Its `TOLERANCE` is 0.3 L/min, not the default 0.2, for one label: 5.5 reads
+−0.24 and sits 18 px from its neighbour 6 where every other half step is 9–13.
+The other straight-on labels read within 0.15.
 
-Its `TOLERANCE` is 0.35 L/min, not the default 0.2, and the reason is the
-half marks: 1.5 and 2.5 read +0.16 and +0.29, 5.5 and 6.5 −0.20 and −0.25.
-Against the printed ticks they drift steadily with height (5-6 px off at the
-bottom, 13-14 at the top), while every whole mark 1..7 sits within 9-12 px of
-its tick — a midpoint judged by eye, not a curve error. That is how the knob
-was set, not a looser gate — the engine's quality thresholds are the same for
-every machine.
+Cross-checked 2026-09-30: these frames read as `everflo` are refused 20/20,
+and the EverFlo sweep plus the 78 old poses read as `platinum9` 101/101.
 
-Cross-checked 2026-09-29: these frames read as `everflo` are refused 21/21,
-and the EverFlo sweep plus the 78 old poses read as `platinum9` are refused
-101/101.
+## `negative-platinum9-2026-09-29/` — the kitchen pose, refused
 
-## `platinum9-sweep-2026-09-29-kvall/` — the second Platinum reference
-
-20 labelled frames taken 17:47–17:52 local the same day, late-afternoon light with
-no sun in the room, from which `REF_PNG_PLATINUM9_KVALL` is built (each frame
-shifted back by its own dx/dy against the day reference first: the camera sat
-8–14 px further right by then). **Not a must-pass set yet**: under the free
-tilt search 7 frames are refused (0_min, 0.5, 1, 1.5, 3.5, 4.5, 6.5 — the
-search steps 1 degree off and the ticks near the top become rivals; 1, 1.5
-and 3.5 were read 0.2-0.3 off through the fallback before 1.12.4). With the tilt locked at
-0 all 20 read, within 0.15 of their labels on the whole marks. The camera
-crept during the sweep; see the comment at the preset's `refs`.
+Both sweeps of 2026-09-29 in the kitchen (16:39–16:45 daylight, 17:47–17:52
+later light; the file names carry UTC), 41 frames. They calibrated the
+Platinum for a day; the unit then moved to the care home and the camera with
+it. Run with `--expect-rejected`: all 41 refused.
 
 ## `negative-platinum9-2026-09-26/` — the Platinum's first pose, refused
 
