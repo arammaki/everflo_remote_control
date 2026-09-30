@@ -74,19 +74,22 @@ and 7.5 up are `<n>_approx`, held to label − 1 .. label + tolerance and never
 fitted to. The curve comes from the printed scale with a height-dependent
 parallax; see the CAL comment in the preset.
 
-Its `TOLERANCE` is 0.3 L/min, not the default 0.2, for one label: 5.5 reads
-−0.24 and sits 18 px from its neighbour 6 where every other half step is 9–13.
+`ALIGN_GEOMETRY.json` is the first-guess geometry the reference was aligned
+with (see tools/align_reference.mjs). Its `TOLERANCE` is 0.3 L/min, not the
+default 0.2, for one label: 5.5 reads
+−0.25 and sits 18 px from its neighbour 6 where every other half step is 9–13.
 The other straight-on labels read within 0.15.
 
 Cross-checked 2026-09-30: these frames read as `everflo` are refused 20/20,
-and the EverFlo sweep plus the 78 old poses read as `platinum9` 101/101.
+and the EverFlo sweep plus the 78 old poses read as `platinum9` are refused
+101/101.
 
 ## `platinum9-sweep-2026-09-30-natt/` — the night reference
 
 20 labelled frames, 11:56–12:02 local the same day, the lamp off and the
 curtains drawn: the WS2812 alone. `REF_PNG_PLATINUM9_NATT` is built from them.
 Never fitted to, so they check the curve independently: 18/20 read, mean
-0.087, worst 0.20. **Not a must-pass set**: `0_min` and `0.5_approx` are
+0.089, worst 0.22 (1.5 at +0.22 is why its `TOLERANCE` is 0.3). **Not a must-pass set**: `0_min` and `0.5_approx` are
 refused under the free tilt search (1.5x and 2.6x — it steps 1 degree off and
 the ticks near the top become rivals). With the tilt locked at 0 all 20 read.
 
@@ -101,5 +104,9 @@ it. Run with `--expect-rejected`: all 41 refused.
 
 The first Platinum sweep (2026-09-26 21:31–21:35 UTC, night, WS2812 plus the
 ceiling lamp). The camera has been moved since, so like `negative-old-poses/`
-it is run with `--expect-rejected`: all 21 refused (registration 0.62 at
-best, against the 0.75 gate).
+it is run with `--expect-rejected`: all 21 refused. Registration against the
+care-home references reaches 0.72 at best (`8_approx`, the 'natt' reference;
+0.64 with 'dag' alone) — only 0.03 under the 0.75 gate — so this set is now
+held mainly by the shift (dx 18–27 px), ambiguity (1.1–2.0x) and a pinned
+tilt. Recorded 2026-09-30; a further reference that pushes it past 0.75
+leaves those gates as the only protection here.

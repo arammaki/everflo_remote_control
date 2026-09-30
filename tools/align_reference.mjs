@@ -5,6 +5,7 @@
    reference — so every band and the curve apply to it unchanged.
 
        node tools/align_reference.mjs <sweep dir> <out prefix>
+                 [--base ref.png] [--geometry g.json] [--shift dx,dy]
 
    Per frame: dx/dy measured by the engine against the first reference, the
    frame resampled as ref(x,y) = frame(x+dx, y+dy) (how analyzeWith() applies
@@ -13,7 +14,17 @@
    sweep's PRESET file. Check the result: registered against the first
    reference it should come out at dx ~0, dy ~0 (2026-09-29: 0.02 / -0.02).
 
-   Made for REF_PNG_PLATINUM9_KVALL. It does not fix a camera that has
+   --base aligns against a given PNG instead of the preset's first reference:
+   a NEW camera pose has no reference yet, so build the plain median with
+   calibrate.mjs, align against it, and align again against that result
+   (2026-09-30, REF_PNG_PLATINUM9_DAG). --geometry (the nine keys calibrate.mjs
+   takes) measures dx/dy with bands for the new pose instead of the preset's.
+   A second lighting in the SAME pose goes the same way against its own median,
+   and is then shifted into the first reference's coordinates by the median's
+   own offset against it — --shift dx,dy resamples the finished median by that
+   offset (REF_PNG_PLATINUM9_NATT: --shift 0.77,-2.51).
+
+   First made for the kitchen 'kväll' reference of 2026-09-29. It does not fix a camera that has
    ROTATED or moved closer — only a sideways/vertical creep — and it does not
    re-fit anything: if the sweep reads wrong against its own reference, the
    geometry has to be re-measured with calibrate.mjs instead.
@@ -25,8 +36,16 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { pathToFileURL } from 'node:url';
 import { deflateSync } from 'node:zlib';
-const [DIR, OUT] = process.argv.slice(2);
-if (!DIR || !OUT) { console.error('Usage: node tools/align_reference.mjs <sweep dir> <out prefix>'); process.exit(2); }
+const argv = process.argv.slice(2), pos = [], opt = {};
+for (let i = 0; i < argv.length; i++) {
+  if (argv[i] === '--base' || argv[i] === '--geometry' || argv[i] === '--shift') { opt[argv[i].slice(2)] = argv[++i]; }
+  else pos.push(argv[i]);
+}
+const [DIR, OUT] = pos;
+if (!DIR || !OUT || pos.length !== 2) {
+  console.error('Usage: node tools/align_reference.mjs <sweep dir> <out prefix> [--base ref.png] [--geometry g.json] [--shift dx,dy]');
+  process.exit(2);
+}
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
 const PRESET = readFileSync(join(DIR, 'PRESET'), 'utf8').trim();
 const work = mkdtempSync(join(tmpdir(), 'align-ref-'));
@@ -36,8 +55,9 @@ const readBmp = (p) => { const d = readFileSync(p), off = d.readUInt32LE(10), w 
 writeFileSync(join(work, 'e.mjs'), readFileSync(join(REPO, 'balldetector.js'), 'utf8') + '\nexport {toGray,flatfield,buildRef,analyzeWith,usePreset,PRESETS,W,H};\n');
 const E = await import(pathToFileURL(join(work, 'e.mjs')).href);
 E.usePreset(PRESET);
+if (opt.geometry) { Object.assign(E.PRESETS[PRESET], JSON.parse(readFileSync(opt.geometry, 'utf8'))); E.usePreset(PRESET); }
 const W = E.W, H = E.H;
-const [dayUrl] = E.PRESETS[PRESET].refs()[0];
+const dayUrl = opt.base ? 'data:image/png;base64,' + readFileSync(opt.base).toString('base64') : E.PRESETS[PRESET].refs()[0][0];
 const dayPng = join(work, 'day.png'); writeFileSync(dayPng, Buffer.from(dayUrl.split(',')[1], 'base64'));
 const Rday = E.buildRef(E.flatfield(E.toGray(readBmp(toBmp(dayPng, 'day')))));
 const files = readdirSync(DIR).filter((f) => f.endsWith('.jpg')).sort();
@@ -57,6 +77,16 @@ for (const f of files) {
 }
 const med = new Uint8Array(W * H), col = new Float64Array(shifted.length), n = shifted.length;
 for (let i = 0; i < W * H; i++) { for (let k = 0; k < n; k++) col[k] = shifted[k][i]; col.sort(); const m = n % 2 ? col[(n - 1) / 2] : (col[n / 2 - 1] + col[n / 2]) / 2; med[i] = Math.max(0, Math.min(255, Math.round(m))); }
+if (opt.shift) {                          // into another reference's coordinates
+  const [sdx, sdy] = opt.shift.split(',').map(Number);
+  if (!Number.isFinite(sdx) || !Number.isFinite(sdy)) { console.error('--shift dx,dy: two numbers'); process.exit(2); }
+  const src = Float32Array.from(med);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const sx = Math.min(W - 1.001, Math.max(0, x + sdx)), sy = Math.min(H - 1.001, Math.max(0, y + sdy));
+    const x0 = Math.floor(sx), y0 = Math.floor(sy), fx = sx - x0, fy = sy - y0;
+    med[y * W + x] = Math.round((src[y0 * W + x0] * (1 - fx) + src[y0 * W + x0 + 1] * fx) * (1 - fy) + (src[(y0 + 1) * W + x0] * (1 - fx) + src[(y0 + 1) * W + x0 + 1] * fx) * fy);
+  }
+}
 const crcT = new Uint32Array(256).map((_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
 const crc = (b) => { let c = 0xffffffff; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
 const chunk = (t, d) => { const l = Buffer.alloc(4); l.writeUInt32BE(d.length); const td = Buffer.concat([Buffer.from(t), d]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([l, td, c]); };

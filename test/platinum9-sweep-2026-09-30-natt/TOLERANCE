@@ -1,2 +1,2 @@
 0.3
-The 5.5 label sits 18 px from its neighbour 6 where every other half step is 9-13, and reads -0.24; the other straight-on labels 1..7 read within 0.15. See test/README.md.
+Half marks and whole marks set by eye in the dark: 1.5 reads +0.22 (the one over the default 0.2), 2.5 +0.18, 4 +0.17, 7 +0.16. These frames were never fitted to. See test/README.md.

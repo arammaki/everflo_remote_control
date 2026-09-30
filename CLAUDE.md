@@ -667,22 +667,27 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
   and 'natt' (lamp off, curtains drawn, WS2812 alone, 11:56-12:02; v1.12.7),
   the night one aligned to itself and then shifted by its median's offset
   against 'dag' (0.77, -2.51) into the same coordinates. The night sweep,
-  never fitted to, reads 18/20 at mean 0.087 — an independent check of the
+  never fitted to, reads 18/20 at mean 0.089 — an independent check of the
   curve. Its resting ball and 0.5 refuse under the free tilt search (the old
   1-degree step onto the ticks); at tilt 0 all 40 frames of both sweeps read.
   The knob table and backlash are the machine's, not the camera's, and
   carried over unchanged.
-- **Build references aligned.** The camera moved during the sweep (dx −4 ->
-  +8 px in four minutes). Built plainly the median was blurred at the top of
-  the tube and three frames refused; `tools/align_reference.mjs`, run twice
-  against the plain median, gave a sharp one and registration 0.93-1.00.
-- **The camera moves with the knob here, repeatably.** Both care-home sweeps
-  ran dx −4 -> +8 from 0 to max, and between them, with the knob turned back
-  down, the camera was back where the first sweep started (night median vs
-  day: dx 0.8). So at the care home it follows the knob's position, not time
-  — unlike 2026-09-29 in the kitchen, where frames taken with the flow going
-  down sat at a constant 7 px. Registration absorbs a repeatable offset; the
-  dx gate is 20 px, and a stiffer mount is what removes it.
+- **References aligned, and why that is a trade-off.** The camera moved during
+  the sweep (dx −4 -> +8). `tools/align_reference.mjs --base <plain median>`,
+  run twice, gives a median that is sharp at the top of the tube: contrast
+  0.235 against 0.197 for the plain one — but ambiguity 3.6x against 5.6x.
+  Both read 20/20. The aligned one was kept because the night reference is
+  built in its coordinates. (The first draft of this note said the plain one
+  refused three frames; that was at a first-guess geometry, not this one.)
+- **The camera seems to move with the knob here.** Both care-home sweeps ran
+  dx −4 -> +8 from 0 to max, and between them, with the knob turned back down,
+  the camera came back to within ~1 px of where the first sweep started in x —
+  but ~2.5 px off in y (the night median sits at dx 0.77, dy −2.51 against
+  the day one, measured under the free tilt search; at tilt 0 dy −2.96). One
+  return, and within each sweep knob and time are still confounded (both went
+  bottom-up). In the kitchen on 2026-09-29, frames taken with the flow going
+  down sat at a constant 7 px. Registration absorbs it; the dx gate is 20 px,
+  and a stiffer mount is what removes it.
 - **Margins are good in this pose**: contrast 0.235, ambiguity 3.6x (lowest,
   one frame; most are 10-70x), registration 0.934, spread 35. Band x 298..308
   at tilt 0, anchor on the digits (325..345), window 140..395.
@@ -690,14 +695,31 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
   tick at 1 and 20 at 7 (camera lower relative to the tube: the ball inside
   it drops further below the printed ticks the higher it rises), so the
   offset is fitted as a line over the straight-on whole marks, not a
-  constant. Against the 13 straight-on labels: mean 0.08, worst 0.24 (5.5,
-  which disagrees with its neighbour 6 — TOLERANCE 0.3 for it). The frame
-  read from the side as 9 reads 9.00.
-- **Max starts at the red line**, which sits ~0.8 L/min above the 9 mark (engine
-  y 155), so 9.0-9.8 are numbers; below 1 there is only "Under 1".
-- **Open risks**: the engine's pixel constants (60-row ambiguity exclusion,
-  spread 75, ±35 centroid window) are EverFlo-sized; at ~23 rows per L/min the
-  exclusion spans ~2.6 L/min. Only one lighting seen.
+  constant (a constant does worse: mean 0.14 on the labels). The line leans on
+  the 7 mark; without it the top reads ~0.12 lower. The quadratic weights the
+  1 mark 5x — the alarm boundary; unweighted a clean 1 L/min read 0.94, shown
+  "0,9" and outside the flow buttons. Against the 13 straight-on labels: mean
+  0.09, worst 0.25 (5.5, which disagrees with its neighbour 6 — TOLERANCE 0.3
+  for it). The frame read from the side as 9 reads 9.00.
+- **Max is placed at the red line by extrapolation, not by a frame** (engine
+  y 155; the line sits ~0.9 L/min above the 9 mark, so 9.0-9.9 are numbers).
+  The `max` frame, judged "on the red line" from the side, reads 9.42 at y
+  165 — 10 px under the boundary. Take an `over_max` frame (ball clearly past
+  the line) at the next visit to settle it. Below 1 there is only "Under 1".
+- **Rebuilding the references**: 'dag' = `tools/align_reference.mjs` twice,
+  `--base` the plain median (`calibrate.mjs --out`) then the first pass's
+  result, both with `--geometry test/platinum9-sweep-2026-09-30/ALIGN_GEOMETRY.json`
+  (the first-guess bands); 'natt' = the same twice against its own median with
+  the committed geometry, then `--shift 0.77,-2.51`. Reproduced bit for bit.
+- **Open risks**: the Max boundary above; the day frames at the top of the
+  tube have only 0.059 of registration between 'dag' and 'natt' (gate 0.05) —
+  with BASE_TILT −0.015 'natt' answered one of them through the fallback,
+  close to the right value; the 09-26 negatives now reach registration 0.72
+  (gate 0.75); the engine header grew to ~736 kB with two references, which is
+  what her phone downloads once after each flash; the engine's pixel constants
+  (60-row ambiguity exclusion, spread 75, ±35 centroid window) are
+  EverFlo-sized — at ~23 rows per L/min the exclusion spans ~2.6 L/min; and
+  only two lightings seen (hall lamp by day, dark).
 
 **What the kitchen poses taught (2026-09-26/29), still worth knowing:**
 - **Tick-fitting beats label-fitting** when labels above some height are read
