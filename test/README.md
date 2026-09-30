@@ -6,7 +6,9 @@ refused. All run through the same harness so the two directions cannot drift apa
 ```sh
 node tools/validate_engine.mjs test/sweep-2026-08-22
 node tools/validate_engine.mjs test/negative-old-poses --expect-rejected
-node tools/validate_engine.mjs test/platinum9-sweep-2026-09-30
+node tools/validate_engine.mjs test/platinum9-sweep-2026-09-30b
+node tools/validate_engine.mjs test/platinum9-sweep-2026-09-30b-natt
+node tools/validate_engine.mjs test/negative-platinum9-2026-09-30 --expect-rejected
 node tools/validate_engine.mjs test/negative-platinum9-2026-09-29 --expect-rejected
 node tools/validate_engine.mjs test/negative-platinum9-2026-09-26 --expect-rejected
 ```
@@ -64,49 +66,46 @@ frames, occlusions, large shifts and wrong rotation are still uncovered, as is
 the tolerance suite that says a 15 px shift, blur or a thin occluder must
 still read about right. Those are constructible from the sweep above.
 
-## `platinum9-sweep-2026-09-30/` — the Invacare Platinum 9's calibration
+## `platinum9-sweep-2026-09-30b/` and `-natt/` — the Platinum 9's calibration
 
-20 labelled frames taken 2026-09-30 11:51–11:55 local at the care home, a lamp
-on in the hall and the WS2812 on: the resting stop (`0_min`), 0.5 to 9 in half
-steps and the ball on the red line (`max`, which must read as a number — the
-Max state begins above the line). Labels up to 7 were read straight on; 0.5
-and 7.5 up are `<n>_approx`, held to label − 1 .. label + tolerance and never
-fitted to. The curve comes from the printed scale with a height-dependent
-parallax; see the CAL comment in the preset.
+The fourth camera pose, at the care home. Day: 21 labelled frames, 14:21–14:26
+local, the hall lamp on — the reference, the bands and the curve come from it.
+Night: 20 frames, 14:27–14:30, the lamp off and the curtains drawn — its own
+reference, shifted into the day one's coordinates, and never fitted to. Labels
+up to 7 were read straight on; 0.5, 0.75 and 7.5 up are `<n>_approx`, held to
+label − 1 .. label + tolerance.
 
-`ALIGN_GEOMETRY.json` is the first-guess geometry the reference was aligned
-with (see tools/align_reference.mjs). Its `TOLERANCE` is 0.3 L/min, not the
-default 0.2, for one label: 5.5 reads
-−0.25 and sits 18 px from its neighbour 6 where every other half step is 9–13.
-The other straight-on labels read within 0.15.
+Day 21/21, mean 0.094, worst 0.33; night 20/20, mean 0.094, worst 0.29 — both
+under the free tilt search. `TOLERANCE` is 0.35 in both for the half marks,
+judged by eye between ticks (day 2.5 +0.33, night 6.5 −0.29); the whole marks
+1..7 read within 0.12 (day) and 0.18 (night). `ALIGN_GEOMETRY.json` is the
+geometry each reference was aligned with (see tools/align_reference.mjs).
 
-Cross-checked 2026-09-30: these frames read as `everflo` are refused 20/20,
-and the EverFlo sweep plus the 78 old poses read as `platinum9` are refused
-101/101.
+Cross-checked 2026-09-30: both read as `everflo` are refused 41/41, and the
+EverFlo sweep plus the 78 old poses read as `platinum9` are refused 101/101.
 
-## `platinum9-sweep-2026-09-30-natt/` — the night reference
+## `negative-platinum9-2026-09-30/` — the care home's morning pose, refused
 
-20 labelled frames, 11:56–12:02 local the same day, the lamp off and the
-curtains drawn: the WS2812 alone. `REF_PNG_PLATINUM9_NATT` is built from them.
-Never fitted to, so they check the curve independently: 18/20 read, mean
-0.089, worst 0.22 (1.5 at +0.22 is why its `TOLERANCE` is 0.3). **Not a must-pass set**: `0_min` and `0.5_approx` are
-refused under the free tilt search (1.5x and 2.6x — it steps 1 degree off and
-the ticks near the top become rivals). With the tilt locked at 0 all 20 read.
+The two sweeps of 2026-09-30 11:51–12:02 (day and dark), from the pose the
+camera had before it was moved again at noon: 40 frames, all refused.
 
-## `negative-platinum9-2026-09-29/` — the kitchen pose, refused
+## `negative-platinum9-2026-09-29/` and `platinum9-kitchen-2026-09-29/`
 
-Both sweeps of 2026-09-29 in the kitchen (16:39–16:45 daylight, 17:47–17:52
-later light; the file names carry UTC), 41 frames. They calibrated the
-Platinum for a day; the unit then moved to the care home and the camera with
-it. Run with `--expect-rejected`: all 41 refused.
+The kitchen sweeps of 2026-09-29 (41 frames), split when the fourth pose
+came. 33 are refused against it (`negative-…`, in the suite) — and they are
+the only Platinum frames refused by dx alone (17, at 24–29 px) or ambiguity
+alone (2), which is what they are kept for: the other Platinum negative sets
+fail three or four gates at once. The other 8 (`platinum9-kitchen-…`, 3.5 to
+7.5 of the daylight sweep) READ, registration 0.77–0.82, and read right:
+3.63, 3.94, 4.47, 5.43, 6.07, 6.38, 7.03, 7.19 against 3.5, 4, 4.5, 5.5, 6,
+6.5, 7, 7.5 — within 0.13 except the side-read 7.5. The camera at the care
+home ended up close to where it sat in the kitchen. That set is not in the
+suite: it reads by coincidence of pose, and a future pose may refuse it.
 
 ## `negative-platinum9-2026-09-26/` — the Platinum's first pose, refused
 
 The first Platinum sweep (2026-09-26 21:31–21:35 UTC, night, WS2812 plus the
 ceiling lamp). The camera has been moved since, so like `negative-old-poses/`
 it is run with `--expect-rejected`: all 21 refused. Registration against the
-care-home references reaches 0.72 at best (`8_approx`, the 'natt' reference;
-0.64 with 'dag' alone) — only 0.03 under the 0.75 gate — so this set is now
-held mainly by the shift (dx 18–27 px), ambiguity (1.1–2.0x) and a pinned
-tilt. Recorded 2026-09-30; a further reference that pushes it past 0.75
-leaves those gates as the only protection here.
+current references reaches 0.52 at best (it reached 0.72 against the
+morning pose's, 2026-09-30).

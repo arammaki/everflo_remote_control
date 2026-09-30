@@ -655,71 +655,84 @@ each number is what it is. In order:
 8. **Day and evening references** come afterwards from a day or two of
    uploads, ball positions spread (see "Daylight is a second lighting regime").
 
-### The Platinum 9 calibration (v1.12.6, 2026-09-30, the care home)
+### The Platinum 9 calibration (v1.12.10, 2026-09-30 afternoon, the care home)
 Everything is in the `platinum9` preset with a comment per number. The unit is
-at the care home since 2026-09-30, on its wifi (RSSI −64..−66, uploads fine).
-Third camera pose: the kitchen poses of 2026-09-26 and 2026-09-29 refuse every
-frame and are negative sets (`test/negative-platinum9-2026-09-26/`, `-09-29/`).
+at the care home since 2026-09-30, on its wifi (RSSI −64..−66, uploads and
+`syrgas.local` from a laptop on the same network both work). This is the
+FOURTH camera pose: the kitchen (2026-09-26, -29), the care home's morning
+(2026-09-30 11:51) and this one (14:21) after the camera was moved again.
 
 Sweep file names carry UTC (`toISOString()`); the times here are local.
 
-- **Two references**: 'dag' (the room with the hall lamp on, 11:51-11:55)
-  and 'natt' (lamp off, curtains drawn, WS2812 alone, 11:56-12:02; v1.12.7),
-  the night one aligned to itself and then shifted by its median's offset
-  against 'dag' (0.77, -2.51) into the same coordinates. The night sweep,
-  never fitted to, reads 18/20 at mean 0.089 — an independent check of the
-  curve. Its resting ball and 0.5 refuse under the free tilt search (the old
-  1-degree step onto the ticks); at tilt 0 all 40 frames of both sweeps read.
-  The knob table and backlash are the machine's, not the camera's, and
-  carried over unchanged.
-- **References aligned, and why that is a trade-off.** The camera moved during
-  the sweep (dx −4 -> +8). `tools/align_reference.mjs --base <plain median>`,
-  run twice, gives a median that is sharp at the top of the tube: contrast
-  0.235 against 0.197 for the plain one — but ambiguity 3.6x against 5.6x.
-  Both read 20/20. The aligned one was kept because the night reference is
-  built in its coordinates. (The first draft of this note said the plain one
-  refused three frames; that was at a first-guess geometry, not this one.)
-- **The camera seems to move with the knob here.** Both care-home sweeps ran
-  dx −4 -> +8 from 0 to max, and between them, with the knob turned back down,
-  the camera came back to within ~1 px of where the first sweep started in x —
-  but ~2.5 px off in y (the night median sits at dx 0.77, dy −2.51 against
-  the day one, measured under the free tilt search; at tilt 0 dy −2.96). One
-  return, and within each sweep knob and time are still confounded (both went
-  bottom-up). In the kitchen on 2026-09-29, frames taken with the flow going
-  down sat at a constant 7 px. Registration absorbs it; the dx gate is 20 px,
-  and a stiffer mount is what removes it.
-- **Margins are good in this pose**: contrast 0.235, ambiguity 3.6x (lowest,
-  one frame; most are 10-70x), registration 0.934, spread 35. Band x 298..308
-  at tilt 0, anchor on the digits (325..345), window 140..395.
-- **The parallax grows with height here.** The engine's y sits 11 px below the
-  tick at 1 and 20 at 7 (camera lower relative to the tube: the ball inside
-  it drops further below the printed ticks the higher it rises), so the
-  offset is fitted as a line over the straight-on whole marks, not a
-  constant (a constant does worse: mean 0.14 on the labels). The line leans on
-  the 7 mark; without it the top reads ~0.12 lower. The quadratic weights the
-  1 mark 5x — the alarm boundary; unweighted a clean 1 L/min read 0.94, shown
-  "0,9" and outside the flow buttons. Against the 13 straight-on labels: mean
-  0.09, worst 0.25 (5.5, which disagrees with its neighbour 6 — TOLERANCE 0.3
-  for it). The frame read from the side as 9 reads 9.00.
-- **Max is placed at the red line by extrapolation, not by a frame** (engine
-  y 155; the line sits ~0.9 L/min above the 9 mark, so 9.0-9.9 are numbers).
-  The `max` frame, judged "on the red line" from the side, reads 9.42 at y
-  165 — 10 px under the boundary. Take an `over_max` frame (ball clearly past
-  the line) at the next visit to settle it. Below 1 there is only "Under 1".
-- **Rebuilding the references**: 'dag' = `tools/align_reference.mjs` twice,
-  `--base` the plain median (`calibrate.mjs --out`) then the first pass's
-  result, both with `--geometry test/platinum9-sweep-2026-09-30/ALIGN_GEOMETRY.json`
-  (the first-guess bands); 'natt' = the same twice against its own median with
-  the committed geometry, then `--shift 0.77,-2.51`. Reproduced bit for bit.
-- **Open risks**: the Max boundary above; the day frames at the top of the
-  tube have only 0.059 of registration between 'dag' and 'natt' (gate 0.05) —
-  with BASE_TILT −0.015 'natt' answered one of them through the fallback,
-  close to the right value; the 09-26 negatives now reach registration 0.72
-  (gate 0.75); the engine header grew to ~736 kB with two references, which is
-  what her phone downloads once after each flash; the engine's pixel constants
-  (60-row ambiguity exclusion, spread 75, ±35 centroid window) are
-  EverFlo-sized — at ~23 rows per L/min the exclusion spans ~2.6 L/min; and
-  only two lightings seen (hall lamp by day, dark).
+- **Two references**, 'dag' (hall lamp on, 14:21-14:26) and 'natt' (lamp
+  off, curtains drawn, 14:27-14:30). Both read fully under the free tilt
+  search — day 21/21, night 20/20, mean 0.094 each; the night sweep is never
+  fitted to, so it checks the curve independently. The knob table and backlash
+  are the machine's and carry over through every pose.
+- **The camera moves when the motor turns the knob** — the operator confirms
+  it is how the unit is fastened: dx −5.8 -> +7 px from 0 to max in this
+  sweep, the same shape in every sweep at the care home. Registration absorbs
+  it; the dx gate is 20 px.
+- **Build references aligned** — `tools/align_reference.mjs --base`, twice
+  against the median, then for a second lighting `--shift` by its median's
+  offset against the first. Exact commands below. In the morning pose the
+  aligned reference traded ambiguity margin for contrast; here the chosen
+  geometry has both by day (ambiguity 6.0x, contrast 0.197, registration
+  0.955). At night it is thinner: 3.6x at 4 L/min, 4.6x at 1.5.
+- **Geometry**: band x 306..318, tilt 0.07 (4 degrees — the tube leans in
+  this pose; the morning pose was 0), anchor on the ticks at 272..292,
+  window 170..420.
+- **The parallax grows with height** in both care-home poses: the engine's y
+  sits below the tick the ball stands at by 5.7 px at 1, growing to 12 at 7
+  (morning pose: 11 -> 20). Fitted as a line over the straight-on whole
+  marks; a constant does worse (mean 0.14 against 0.09 on the labels). The
+  quadratic through the ticks weights the 1 mark 5x — the alarm boundary —
+  so a clean 1 L/min reads 1.01 by day. At night the one 1 L/min frame reads
+  0.86 ("0,9 (osäkert)", 1.2 px from "Under 1"); her flows are 1.5 and up. Whole marks 1..7 read within 0.12; the half
+  marks, judged by eye between ticks, are off by up to 0.33 (TOLERANCE 0.35).
+- **Max at the red line, by extrapolation** (engine y 190; 9.0-9.67 are
+  numbers). The `max` frame, "on the red line" judged from the side, reads
+  9.43, 5 px under it — closer than in the morning pose. Still no frame with
+  the ball clearly past the line; take an `over_max` at the next visit.
+- **Negative sets**: the morning pose (`negative-platinum9-2026-09-30/`), the
+  first kitchen pose (`-09-26/`) and 33 of the 41 frames of 2026-09-29
+  (`-09-29/`) are refused in full. The other 8 of 2026-09-29 READ against this
+  calibration, and read right (within 0.13 of their labels, the side-read 7.5
+  −0.31): the camera ended up close to its kitchen pose. They are
+  `test/platinum9-kitchen-2026-09-29/`, outside the suite. The 33 are kept
+  because they are the only Platinum frames refused by dx alone (17) or by
+  ambiguity alone (2) — the morning and 09-26 sets fail 3-4 gates at once, so
+  without them a change loosening dx or ambiguity would pass every Platinum
+  suite.
+- **Rebuilding the references**: plain medians with `calibrate.mjs --out`
+  (any geometry — the median does not depend on it), then 'dag' =
+  `align_reference.mjs test/platinum9-sweep-2026-09-30b <out> --base <plain
+  median> --geometry test/platinum9-sweep-2026-09-30b/ALIGN_GEOMETRY.json`,
+  and again with `--base` the first pass's PNG; 'natt' = the same on
+  `-30b-natt` with its own ALIGN_GEOMETRY.json, the second pass with
+  `--shift -0.19,-1.28`.
+- **Open risks**: the Max boundary above; **a lighting between the two
+  references** — on the dark frames 'dag' passes every gate and reads 1-2
+  L/min about 0.3 low (a true 2 as 1.66), kept out only by 'natt'
+  registering 0.07-0.09 better; dusk or the hall lamp at night could let it
+  answer, and her flow buttons size their turn from that number (the
+  reverse, 'natt' 0.13-0.17 high on the top day frames, is within 0.03-0.04
+  of 'dag'); the engine's pixel constants (60-row ambiguity exclusion, spread
+  75, ±35 centroid window) are EverFlo-sized — at ~22 rows per L/min the
+  exclusion spans ~2.7 L/min.
+- **Do not lock the tilt at 0 in this pose** (the kitchen advice below): the
+  base tilt here is 0.07 and the free search reads both sweeps in full; at
+  tilt 0 the night sweep refuses 0, 0.5 and 1 L/min — exactly where "Kalibrera
+  ratten" starts. Clear the panel's band fields (they are kept per machine).
+
+**What the care home's morning pose taught (2026-09-30, v1.12.6-1.12.9):**
+- The parallax can grow with height — check the ball-to-tick offset on every
+  whole mark before assuming it constant. Weight the 1 mark in the fit.
+- A reference from a camera that moves during the sweep: align it. Record the
+  geometry it was aligned with, or it cannot be rebuilt.
+- The reason written down for a choice must be the one measured at the
+  geometry committed — a first-guess run once put "three frames refused" into
+  a comment that the final geometry did not reproduce.
 
 **What the kitchen poses taught (2026-09-26/29), still worth knowing:**
 - **Tick-fitting beats label-fitting** when labels above some height are read
@@ -730,7 +743,8 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
   midpoint judged by eye and drifted 5-14 px — and fit the quadratic through
   the ticks. In the kitchen the offset was constant (~10 px); at the care home
   it is not, so check. calibrate.mjs does not do this, and warns.
-- **Lock the tilt at 0 when calibrating the knob** in a lighting whose
+- **Lock the tilt at 0 when calibrating the knob** — kitchen only, and not in
+  the care home's afternoon pose (see above) — in a lighting whose
   reference was built from a creeping camera: the 1-degree tilt search
   stepped off and the ticks near the top became rivals (the 2026-09-29
   evening reference). And keep the panel visible — a hidden Safari tab stalls.

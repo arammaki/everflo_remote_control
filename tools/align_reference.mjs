@@ -22,7 +22,8 @@
    A second lighting in the SAME pose goes the same way against its own median,
    and is then shifted into the first reference's coordinates by the median's
    own offset against it — --shift dx,dy resamples the finished median by that
-   offset (REF_PNG_PLATINUM9_NATT: --shift 0.77,-2.51).
+   offset (REF_PNG_PLATINUM9_NATT: --shift -0.19,-1.28 in the care home's
+   afternoon pose; 0.77,-2.51 in the morning one).
 
    First made for the kitchen 'kväll' reference of 2026-09-29. It does not fix a camera that has
    ROTATED or moved closer — only a sideways/vertical creep — and it does not
