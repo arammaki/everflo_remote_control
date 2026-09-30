@@ -378,13 +378,23 @@ const PRESETS={
          5..6 about 140. Every smoothing keeps it, so it is the knob, not the
          reading: the valve, or the cup slipping there under more torque — the
          flow still followed every step. A second run would tell which. */
-    KNOB:[[1,-4],[1.5,38],[2,95],[2.5,141],[3,182],[3.5,234],[4,277],[4.5,382],[5,487],[5.5,558],[6,627],[6.5,693],[7,794],[7.5,863],[8,944],[8.5,1094],[8.81,1145]],
+    /* SWITCHED OFF 2026-09-30 (1.12.11) by the operator: the flow-step
+       buttons are gone, her page offers the fixed-degree buttons + ++ +++
+       only. Too uncertain — the camera moves with the knob, and every pose
+       change costs a recalibration the steps then lean on. The measured
+       table, kept for if they come back (it is the machine's, not the
+       camera's):
+         KNOB:[[1,-4],[1.5,38],[2,95],[2.5,141],[3,182],[3.5,234],[4,277],[4.5,382],[5,487],[5.5,558],[6,627],[6.5,693],[7,794],[7.5,863],[8,944],[8.5,1094],[8.81,1145]],
+         BACKLASH:21
+       A null KNOB is the switch: her page shows the degree buttons with no
+       line about it (knobPlan() and the flow buttons stay compiled in). */
+    KNOB:null,
     /* The routine printed 35: the reading first fell 0.08 on the fourth 10°
        step back from 8.81 (40°), less half a step. But 0.08 L/min of fall is
        also ball movement — 0.29 L/min over the table's last 50°, so about
        14° — and that is not slack. 40 - 5 - 14 = 21, give or take half a step.
        The routine subtracts it itself since 1.12.4. */
-    BACKLASH:21,
+    BACKLASH:null,
     /* Two references, both of this pose: 'dag' (the hall lamp on) and 'natt'
        (lamp off, curtains drawn, the WS2812 alone), the night one shifted into
        the day one's coordinates by its median's offset (dx -0.19, dy -1.28).

@@ -1100,6 +1100,13 @@ free to fill the viewport pushes the number this page exists to show below
 the fold.
 
 ### Knob calibration on the control panel (2026-09-27)
+**Switched off on the Platinum since 1.12.11 (2026-09-30)**: the operator
+judged the flow-step buttons too uncertain — the camera moves with the knob,
+and each pose change costs a recalibration they lean on. `KNOB`/`BACKLASH`
+are null in the preset (the measured table is kept in a comment there), so
+her page shows only the fixed-degree buttons + ++ +++. Everything below
+still describes the code, which stays in place.
+
 "Kalibrera ratten" measures how many degrees the knob needs per L/min along
 the scale — the data for the flow-step buttons on her page (v1.11.3), which
 stay hidden until its KNOB/BACKLASH line is in the preset. With a table and a
