@@ -81,6 +81,15 @@ The other straight-on labels read within 0.15.
 Cross-checked 2026-09-30: these frames read as `everflo` are refused 20/20,
 and the EverFlo sweep plus the 78 old poses read as `platinum9` 101/101.
 
+## `platinum9-sweep-2026-09-30-natt/` — the night reference
+
+20 labelled frames, 11:56–12:02 local the same day, the lamp off and the
+curtains drawn: the WS2812 alone. `REF_PNG_PLATINUM9_NATT` is built from them.
+Never fitted to, so they check the curve independently: 18/20 read, mean
+0.087, worst 0.20. **Not a must-pass set**: `0_min` and `0.5_approx` are
+refused under the free tilt search (1.5x and 2.6x — it steps 1 degree off and
+the ticks near the top become rivals). With the tilt locked at 0 all 20 read.
+
 ## `negative-platinum9-2026-09-29/` — the kitchen pose, refused
 
 Both sweeps of 2026-09-29 in the kitchen (16:39–16:45 daylight, 17:47–17:52

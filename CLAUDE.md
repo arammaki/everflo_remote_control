@@ -663,18 +663,26 @@ frame and are negative sets (`test/negative-platinum9-2026-09-26/`, `-09-29/`).
 
 Sweep file names carry UTC (`toISOString()`); the times here are local.
 
-- **One reference**, 'dag': the room with the hall lamp on, 11:51-11:55. The
-  lamp off, evening and night are refused until they have their own, built
-  aligned like this one. The knob table and backlash are the machine's, not
-  the camera's, and carried over unchanged.
+- **Two references**: 'dag' (the room with the hall lamp on, 11:51-11:55)
+  and 'natt' (lamp off, curtains drawn, WS2812 alone, 11:56-12:02; v1.12.7),
+  the night one aligned to itself and then shifted by its median's offset
+  against 'dag' (0.77, -2.51) into the same coordinates. The night sweep,
+  never fitted to, reads 18/20 at mean 0.087 — an independent check of the
+  curve. Its resting ball and 0.5 refuse under the free tilt search (the old
+  1-degree step onto the ticks); at tilt 0 all 40 frames of both sweeps read.
+  The knob table and backlash are the machine's, not the camera's, and
+  carried over unchanged.
 - **Build references aligned.** The camera moved during the sweep (dx −4 ->
   +8 px in four minutes). Built plainly the median was blurred at the top of
   the tube and three frames refused; `tools/align_reference.mjs`, run twice
   against the plain median, gave a sharp one and registration 0.93-1.00.
-- **The camera keeps moving**, in every sweep so far, always while the knob
-  was turned upward — so time and knob cannot be told apart (the operator
-  says the machine vibrates more than the EverFlo, and something was moved).
-  The dx gate is 20 px. Fixing the mount is what removes it.
+- **The camera moves with the knob here, repeatably.** Both care-home sweeps
+  ran dx −4 -> +8 from 0 to max, and between them, with the knob turned back
+  down, the camera was back where the first sweep started (night median vs
+  day: dx 0.8). So at the care home it follows the knob's position, not time
+  — unlike 2026-09-29 in the kitchen, where frames taken with the flow going
+  down sat at a constant 7 px. Registration absorbs a repeatable offset; the
+  dx gate is 20 px, and a stiffer mount is what removes it.
 - **Margins are good in this pose**: contrast 0.235, ambiguity 3.6x (lowest,
   one frame; most are 10-70x), registration 0.934, spread 35. Band x 298..308
   at tilt 0, anchor on the digits (325..345), window 140..395.
