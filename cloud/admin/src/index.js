@@ -215,6 +215,7 @@ function renderPage(rows, now, latest, nav) {
     is set from its measured height). The picture is capped at 30vh and put
     beside the number rather than above it, so the block stays short. */
  .kand{font-size:.85rem;display:block;margin:4px 0}
+ #cap{font-size:.9rem;font-weight:600;color:#333;margin-bottom:2px}
  @media (max-width:720px){
  #sticky{position:sticky;top:0;z-index:5;background:#f4f4f2;padding:6px 0 6px;
            margin:0 -16px;padding-left:16px;padding-right:16px;
@@ -231,7 +232,8 @@ function renderPage(rows, now, latest, nav) {
    th{top:var(--sticky,0px)}
    tbody tr{scroll-margin-top:calc(var(--sticky,0px) + 6px)}
    /* Vridning and RSSI are in the meta line for the selected row, so the
-      table can drop them and fit the width; seconds go the same way. */
+      table can drop them and fit the width; the seconds are in the caption
+      above the picture. */
    th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none}
    .sek{display:none}
    table{font-size:.82rem} th,td{padding:6px 5px}
@@ -245,6 +247,7 @@ ${banner}
 <div class="top">
   <div class="shot"><canvas id="cv" width="480" height="640"></canvas></div>
   <div class="info">
+    <div id="cap"></div>
     <div id="flow">–<small> L/min</small></div>
     <div id="reason"></div>
     <div id="meta"></div>
@@ -526,8 +529,10 @@ async function select(i,{scroll}={}){
   rows.forEach(t=>t.classList.remove('sel'));
   const tr=rows[i]; tr.classList.add('sel'); sel=i;
   if(scroll) reveal(tr);
+  // Which frame this is, said where the eye is: on top of the reading.
+  document.getElementById('cap').textContent='Bild '+tr.dataset.id+' · '+(tr.dataset.lokal||'').replace('T',' ');
   document.getElementById('meta').textContent=
-    (tr.dataset.lokal||'').replace('T',' ')+' · '+tr.dataset.orsak+
+    tr.dataset.orsak+
     (tr.dataset.vrid?' · vridning '+(tr.dataset.vrid>0?'+':'')+tr.dataset.vrid+'°':'')+
     (tr.dataset.rssi?' · '+tr.dataset.rssi+' dBm':'')+
     (tr.dataset.fw?' · v'+tr.dataset.fw:'')+
