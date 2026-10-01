@@ -214,8 +214,9 @@ function renderPage(rows, now, latest, nav) {
     selected row scrolls to just below the sticky block (scroll-margin-top
     is set from its measured height). The picture is capped at 30vh and put
     beside the number rather than above it, so the block stays short. */
+ .kand{font-size:.85rem;display:block;margin:4px 0}
  @media (max-width:720px){
-   #sticky{position:sticky;top:0;z-index:5;background:#f4f4f2;padding:6px 0 6px;
+ #sticky{position:sticky;top:0;z-index:5;background:#f4f4f2;padding:6px 0 6px;
            margin:0 -16px;padding-left:16px;padding-right:16px;
            border-bottom:1px solid var(--line)}
    .top{gap:12px;margin:0 0 6px}
@@ -253,6 +254,7 @@ ${banner}
   <button id="prev">↑ Föregående</button>
   <button id="next">↓ Nästa</button>
 </div>
+<label class="kand"><input type="checkbox" id="kand" checked> Visa kandidater i bilden</label>
 </div>
 <div class="chips" id="chips"></div>
 
@@ -358,6 +360,65 @@ function chips(r){
        neighbours, so it belongs beside the numbers rather than nowhere. */
     (r.ref?f('referens',r.ref+(r.fallback?' (reserv)':''),!r.fallback):'');
 }
+/* What the engine weighed, drawn over the frame: the ball band it reads (shifted
+   by dx, sheared by the tilt it used), the difference profile along it as bars
+   to its right, the window it searches, the strongest candidate (green) and the
+   strongest one outside the 60 rows around it (red) — the rival that
+   "två lika starka kandidater" is about. Same arithmetic as analyzeWith():
+   profile row y is frame row y+dy. Display only; nothing here feeds a reading. */
+function candidates(r){
+  if(!document.getElementById('kand').checked || r.uncalibrated || !r.profile) return;
+  const d=r.profile, xo=Math.round(r.dx), t=BASE_TILT+(r.tilt||0);
+  let yp=0; for(let y=0;y<H;y++) if(d[y]>d[yp]) yp=y;
+  let y2=-1, p2=0; for(let y=0;y<H;y++) if(Math.abs(y-yp)>60 && d[y]>p2){ p2=d[y]; y2=y; }
+  const fy=(y)=>y+r.dy;
+  const xl=(y)=>XL+xo+Math.round(t*(fy(y)-H/2));
+  const xr=(y)=>XR+xo+Math.round(t*(fy(y)-H/2));
+  ctx.save(); ctx.setTransform(1,0,0,1,0,0);
+  // the excluded zone around the ball
+  ctx.fillStyle='rgba(40,160,80,0.10)';
+  ctx.fillRect(xl(yp-60)-2, fy(yp-60), (XR-XL)+4, 120);
+  // the band, over the search window
+  ctx.strokeStyle='rgba(0,200,255,0.9)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(xl(YTOP),fy(YTOP)); ctx.lineTo(xl(YBOT),fy(YBOT));
+  ctx.moveTo(xr(YTOP),fy(YTOP)); ctx.lineTo(xr(YBOT),fy(YBOT)); ctx.stroke();
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(xl(YTOP)-8,fy(YTOP)); ctx.lineTo(xr(YTOP)+70,fy(YTOP));
+  ctx.moveTo(xl(YBOT)-8,fy(YBOT)); ctx.lineTo(xr(YBOT)+70,fy(YBOT)); ctx.stroke();
+  ctx.setLineDash([]);
+  // the profile, one bar per row, scaled so the peak is 60 px
+  const k=60/Math.max(d[yp],1e-6);
+  for(let y=YTOP;y<YBOT;y++){
+    if(d[y]<=0) continue;
+    ctx.fillStyle = Math.abs(y-yp)<=60 ? 'rgba(40,200,90,0.85)'
+                  : (y2>=0 && Math.abs(y-y2)<=12) ? 'rgba(230,50,40,0.9)' : 'rgba(255,255,255,0.7)';
+    ctx.fillRect(xr(y)+6, fy(y), Math.max(1,d[y]*k), 1);
+  }
+  /* Labels LEFT of the tube, on two lines, so they cover neither the profile
+     bars nor the tube itself: the band sits near the right edge of the frame
+     on the Platinum. Sized for how large the canvas is SHOWN (a phone draws it
+     at ~0.4x). The marker line crosses the band only, with a thin lead to the
+     label. */
+  const px=Math.round(Math.min(28, 13/Math.max(0.45, cv.clientWidth/480 || 1)));
+  const mark=(y,col,name,value)=>{
+    ctx.strokeStyle=col; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(xl(y)-6,fy(y)); ctx.lineTo(xr(y)+6,fy(y)); ctx.stroke();
+    ctx.font='bold '+px+'px -apple-system,Helvetica,Arial,sans-serif';
+    const w=Math.max(ctx.measureText(name).width, ctx.measureText(value).width);
+    const right=Math.max(w+10, xl(y)-70), left=right-w-8, h=px*2.5;
+    const top=Math.min(640-h-2, Math.max(2, fy(y)-h/2));
+    ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(right,fy(y)); ctx.lineTo(xl(y)-6,fy(y)); ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(left, top, w+8, h);
+    ctx.fillStyle=col;
+    ctx.fillText(name, left+4, top+px*1.05);
+    ctx.fillText(value, left+4, top+px*2.2);
+  };
+  mark(r.y, '#2bd36b', 'boll', d[yp].toFixed(2));
+  if(y2>=0 && p2>0) mark(y2, '#ff5a4a', 'rival', p2.toFixed(2) + ' (' + (d[yp]/p2).toFixed(1) + '×)');
+  ctx.restore();
+}
+document.getElementById('kand').addEventListener('change',()=>{ if(sel>=0) select(sel); });
 class UnknownPreset extends Error {}
 class Superseded extends Error {}
 class LoadFailed extends Error {}
@@ -491,6 +552,8 @@ async function select(i,{scroll}={}){
     else if(b.maxState) show(b.label,'över skalans slut','warn');
     else if(b.bottomState) show(b.label,'L/min','warn');
     else show(r.flow.toFixed(2),'L/min'+(b.extrapolated?' (osäkert)':''));
+    // Last, and on its own: a display aid must never replace a verdict.
+    try{ candidates(r); }catch(e){ console.warn('candidates', e); }
   }catch(e){
     if(e instanceof Superseded || rows[sel]!==tr) return;
     // Unless this row's own frame made it onto the canvas, what is there now
