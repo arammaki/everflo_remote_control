@@ -163,14 +163,14 @@ if (images.length < 5) {
 /* ---------- engine ---------- */
 const src = readFileSync(ENGINE, 'utf8');
 writeFileSync(join(work, 'engine.mjs'), src +
-  '\nexport { T,W,H,toGray,flatfield,buildRef,analyze,PRESETS,PRESET_KEYS,usePreset,setRefs,isCalibrated };\n');
+  '\nexport { T,SHIFT_X,SHIFT_Y,W,H,toGray,flatfield,buildRef,analyze,PRESETS,PRESET_KEYS,usePreset,setRefs,isCalibrated };\n');
 const E = await import(pathToFileURL(join(work, 'engine.mjs')).href);
 if (!Object.prototype.hasOwnProperty.call(E.PRESETS, presetId)) {
   console.error(`Unknown preset "${presetId}". The engine has: ${Object.keys(E.PRESETS).join(', ')}`);
   process.exit(2);
 }
 const preset = E.PRESETS[presetId];
-const { W, H, T } = E;
+const { W, H, T, SHIFT_X, SHIFT_Y } = E;
 
 /* The committed state, taken before anything below edits the in-memory preset. */
 const committed = {
@@ -319,7 +319,7 @@ function gates(r) {
   if (r.peak < T.contrast) fails.push('contrast');
   if (r.margin < T.margin) fails.push('ambiguity');
   if (r.spread > T.spread) fails.push('spread');
-  if (Math.abs(r.dx) > 20 || Math.abs(r.dy) > 20) fails.push('shift');
+  if (Math.abs(r.dx) > SHIFT_X || Math.abs(r.dy) > SHIFT_Y) fails.push('shift');
   return fails;
 }
 

@@ -10,6 +10,7 @@ node tools/validate_engine.mjs test/platinum9-sweep-2026-09-30b
 node tools/validate_engine.mjs test/platinum9-sweep-2026-09-30b-natt
 node tools/validate_engine.mjs test/negative-platinum9-2026-09-30 --expect-rejected
 node tools/validate_engine.mjs test/negative-platinum9-2026-09-29 --expect-rejected
+node tools/validate_engine.mjs test/platinum9-kitchen-2026-09-29
 node tools/validate_engine.mjs test/negative-platinum9-2026-09-26 --expect-rejected
 ```
 
@@ -77,7 +78,9 @@ label − 1 .. label + tolerance.
 
 Day 21/21, mean 0.094, worst 0.33; night 17/20, mean 0.093, worst 0.29. The
 night sweep's resting ball, 0.5 and 1 L/min are refused at the calibrated
-tilt (since `TILT_MARGIN`, 1.12.14) and listed in its `ALLOW_REFUSED` — a
+tilt (since `TILT_MARGIN`, 1.12.14) and listed in its `ALLOW_REFUSED` (since
+1.13.0's references only the resting ball is, and the file lists only it:
+19/20, mean 0.095) — a
 file the harness reads: a listed label may be refused without failing the
 sweep, anything else refused still fails it, and a listed frame that reads is
 still held to its label. `TOLERANCE` is 0.35 in both for the half marks,
@@ -95,17 +98,28 @@ camera had before it was moved again at noon: 40 frames, all refused.
 
 ## `negative-platinum9-2026-09-29/` and `platinum9-kitchen-2026-09-29/`
 
-The kitchen sweeps of 2026-09-29 (41 frames), split when the fourth pose
-came. 33 are refused against it (`negative-…`, in the suite) — and they are
-the only Platinum frames refused by dx alone (17, at 24–29 px) or ambiguity
-alone (2), which is what they are kept for: the other Platinum negative sets
-fail three or four gates at once. The other 8 (`platinum9-kitchen-…`, 3.5 to
-7.5 of the daylight sweep) read, registration 0.77–0.82, and read right:
-3.63, 3.94, 4.47, 5.43, 6.07, 6.38, 7.05 against 3.5, 4, 4.5, 5.5, 6, 6.5, 7
-— within 0.13; the side-read 7.5 read 7.19 until 1.12.14 and is refused
-since. The camera at the care
-home ended up close to where it sat in the kitchen. That set is not in the
-suite: it reads by coincidence of pose, and a future pose may refuse it.
+The kitchen sweeps of 2026-09-29 (41 frames), from two poses 15–22 px and
+24–29 px to the side of the care home's afternoon sweep. Split when the fourth
+pose came, and re-split in 1.13.0.
+
+`platinum9-kitchen-…` (24 frames, in the suite since 1.13.0) must READ, within
+0.35 (`TOLERANCE`). It is the evidence behind `SHIFT_X` 30: with the sideways
+gate at 20, 12 of these were refused by dx ALONE, and once allowed they read
+2 → 2.02, 3 → 2.99, 4 → 4.01, 4.5 → 4.47, 7 → 6.99 through 'dag' — a 25 px
+move and 8 px of dy, and the curve still holds on the whole marks. The half
+marks (1.5 → 1.75, 2.5 → 2.76) are judged by eye, 8.5 and 9 from the side.
+Six read through the 1.13.0 reference 'hall2' (1 → 0.86, 7.5, 8, 8.5, 9, max)
+and one 8.5 through 'natt'. The largest |dx| that reads is 27.8, which is why
+`SHIFT_X` is 30 and not more. Mean 0.088, worst 0.26.
+
+`negative-…` (17 frames) stays `--expect-rejected`: all 17 are refused by
+ambiguity (1.1–2.97x), registration 0.78–0.86 above its gate; eight of them
+(dx 25–30) were also refused by dx before 1.13.0. These are a pose that reads
+RIGHT where it reads, so the set guards the ambiguity gate conservatively
+rather than proving the refusals necessary. Nothing in the suite constrains
+a sideways move between 30 px and the 40 px search edge:
+`negative-old-poses/` saturates at 40, and the EverFlo slide of 34 px that
+read 1.73 for 2.0 (2026-08-16) is not in it.
 
 ## `negative-platinum9-2026-09-26/` — the Platinum's first pose, refused
 

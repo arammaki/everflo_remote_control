@@ -354,7 +354,7 @@ function chips(r){
     f('kontrast',r.peak.toFixed(3),r.peak>=T.contrast)+
     f('entydighet',r.margin.toFixed(1)+'×',r.margin>=T.margin)+
     f('passning',r.reg.toFixed(2),r.reg>=T.reg)+
-    f('skift',r.dx.toFixed(1)+'/'+r.dy.toFixed(1)+' px',Math.abs(r.dx)<=20&&Math.abs(r.dy)<=20)+
+    f('skift',r.dx.toFixed(1)+'/'+r.dy.toFixed(1)+' px',Math.abs(r.dx)<=SHIFT_X&&Math.abs(r.dy)<=SHIFT_Y)+
     f('lutning',(r.tilt*57.3).toFixed(1)+'°',true)+
     f('utbredning',r.spread,r.spread<=T.spread)+
     /* Not a gate — which lighting answered, and whether it had to be asked
@@ -785,7 +785,7 @@ const QUALITY = { reg: 3, peak: 3, margin: 1, dx: 1, dy: 1, spread: 0 };
    this row that could carry anything. `fallback` says the best-registering
    reference REFUSED and this came from the next one (v1.10.12), which is what
    explains a reading sitting a few hundredths off its span months later. */
-const REFS = new Set(['natt', 'dag', 'kväll']);
+const REFS = new Set(['natt', 'dag', 'kväll', 'natt2', 'hall2', 'dag2']);
 function cleanQuality(q) {
   if (!q || typeof q !== 'object') return null;
   const out = {};

@@ -481,7 +481,8 @@ The night sweep is unchanged to the last digit and night still wins 23/23.
 
 **What it spends is the protection of being asked once.** A frame that must be
 refused now has to be refused by all three references instead of one, so the
-false-accept surface is three references wide rather than one.
+false-accept surface is as wide as the reference list (five on the Platinum
+since 1.13.0) rather than one.
 
 The 78 wrong-pose frames in `test/negative-old-poses/` DO exercise that, which
 is worth stating precisely because an earlier draft of this section claimed the
@@ -667,13 +668,15 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
 - **Two references**, 'dag' (hall lamp on, 14:21-14:26) and 'natt' (lamp
   off, curtains drawn, 14:27-14:30). Day 21/21, night 17/20 (mean 0.094 and
   0.093) — the night sweep's resting ball, 0.5 and 1 L/min are refused at the
-  calibrated tilt, listed in its `ALLOW_REFUSED` (see TILT_MARGIN below); the night sweep is never
+  calibrated tilt, listed in its `ALLOW_REFUSED` (see TILT_MARGIN below) —
+  since 1.13.0 only the resting ball is (19/20, mean 0.095: 0.5 says "Under 1"
+  and 1 reads 0.89, through the new references); the night sweep is never
   fitted to, so it checks the curve independently. The knob table and backlash
   are the machine's and carry over through every pose.
 - **The camera moves when the motor turns the knob** — the operator confirms
   it is how the unit is fastened: dx −5.8 -> +7 px from 0 to max in this
   sweep, the same shape in every sweep at the care home. Registration absorbs
-  it; the dx gate is 20 px.
+  it; the dx gate is 30 px since 1.13.0 (20 before — see below).
 - **Build references aligned** — `tools/align_reference.mjs --base`, twice
   against the median, then for a second lighting `--shift` by its median's
   offset against the first. Exact commands below. In the morning pose the
@@ -688,23 +691,22 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
   (morning pose: 11 -> 20). Fitted as a line over the straight-on whole
   marks; a constant does worse (mean 0.14 against 0.09 on the labels). The
   quadratic through the ticks weights the 1 mark 5x — the alarm boundary —
-  so a clean 1 L/min reads 1.01 by day. In the dark the bottom of the scale
-  (rest, 0.5, 1) is refused; her flows are 1.5 and up. Whole marks 1..7 read within 0.12; the half
+  so a clean 1 L/min reads 1.01 by day. In the dark the resting ball is
+  refused (0.5 and 1 too until 1.13.0); her flows are 1.5 and up. Whole marks 1..7 read within 0.12; the half
   marks, judged by eye between ticks, are off by up to 0.33 (TOLERANCE 0.35).
 - **Max at the red line, by extrapolation** (engine y 190; 9.0-9.67 are
   numbers). The `max` frame, "on the red line" judged from the side, reads
   9.43, 5 px under it — closer than in the morning pose. Still no frame with
   the ball clearly past the line; take an `over_max` at the next visit.
 - **Negative sets**: the morning pose (`negative-platinum9-2026-09-30/`), the
-  first kitchen pose (`-09-26/`) and 33 of the 41 frames of 2026-09-29
-  (`-09-29/`) are refused in full. The other 8 of 2026-09-29 read against this
-  calibration (7 since 1.12.14 — the side-read 7.5 is refused), and read right,
-  within 0.13 of their labels: the camera ended up close to its kitchen pose. They are
-  `test/platinum9-kitchen-2026-09-29/`, outside the suite. The 33 are kept
-  because they are the only Platinum frames refused by dx alone (17) or by
-  ambiguity alone (2) — the morning and 09-26 sets fail 3-4 gates at once, so
-  without them a change loosening dx or ambiguity would pass every Platinum
-  suite.
+  first kitchen pose (`-09-26/`) and 17 of the 41 frames of 2026-09-29
+  (`-09-29/`) are refused in full. The other 24 of 2026-09-29 are
+  `test/platinum9-kitchen-2026-09-29/`, IN the suite since 1.13.0 and required
+  to read: they are the evidence for `SHIFT_X` (below). The 17 are ambiguity
+  and registration refusals of a pose that reads right where it reads, so they
+  guard the ambiguity gate conservatively; nothing in the suite constrains a
+  sideways move between 30 px and the 40 px search edge — and the EverFlo's
+  34 px slide that read 1.73 for 2.0 is not in any set.
 - **Rebuilding the references**: plain medians with `calibrate.mjs --out`
   (any geometry — the median does not depend on it), then 'dag' =
   `align_reference.mjs test/platinum9-sweep-2026-09-30b <out> --base <plain
@@ -740,6 +742,61 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
   0.5, 1) was only readable because the free search happened to step off
   there, and is now refused. Clear the panel's band fields; they are no
   longer needed for this.
+
+**The camera moved again, and the unit was taught the new pose from its own
+uploads (v1.13.0, 2026-10-01).** Between the presses of 2026-09-30 18:02 and
+18:23 the camera settled 18-19 px to the side, and at about 20:00 a little
+further (the engine measures 22-27 px against the 1.13.0 references); top and
+bottom of the scale measured separately show a few tenths of a degree of
+turn and the lower tube ~2 px further down than the upper. Every frame after
+it was refused — 131 of 142 — while the ball sat where the engine had found
+it; the operator confirmed that frame by frame in the admin overlay. Two
+causes, two fixes:
+- **The sideways gate was too strict.** `SHIFT_X` 30 (dy stays 20). The
+  kitchen frames of 2026-09-29, 24-28 px to the side and 8 px down, read the
+  whole marks within 0.14 once allowed (`test/platinum9-kitchen-2026-09-29/`,
+  24 frames, mean 0.088); every negative set was re-run with the gate at 40
+  and stays refused. The evidence reaches 27.8 px and stops — and the
+  EverFlo's 34 px slide (2026-08-16) passed every other gate and read 1.73 for
+  2.0, so a slide CAN bend the curve. A first draft had 35; review caught that
+  the EverFlo case sits under it and is in no test set. The gate is shared by
+  both machines, like every gate. Current frames sit at 22-27, so the
+  headroom is small: a further creep of a few px refuses again, and says so.
+- **The references no longer matched** — reflections in the glass and the
+  fitting at the foot look different from the new angle, and read as rivals
+  at y 385/415 (the "rival under the 0 tick"). Three new references,
+  'natt2', 'hall2', 'dag2' (dark, hall lamp, daylight), built from UPLOADED
+  frames rather than a sweep: ball at varied positions, each frame aligned to
+  a first median, then the median shifted onto the printed scale of 'dag' —
+  the tick rows inside the ball band (where the curve was fitted) and the
+  tube's column profile. Residual after the shift: ticks -0.9 px at the top,
+  +0.9 at the bottom (the pose's own stretch), about 0.04 L/min. 'dag' and
+  'natt' stay, so the sweeps the curve rests on still test it.
+- **Held out**: only even ids went into the references. On the odd ids after
+  the move, 0 of 62 read before and 62 of 62 after; all 146 frames of
+  6630-6775 read. Ambiguity on the dark frames went from 1.3-2.5x to 6-40x.
+  Spans agree across references: 2.42 ('natt2', 06:47) -> 2.35 ('dag2',
+  07:02) with no press between, 2.35-2.42 overnight as 'natt2' and 'hall2'
+  alternate. A first 'dag2' that was aligned only by registration against the
+  lamp-lit 'dag' (0.62-0.72) read 0.24 low there — the scale shift is what
+  fixed it, so do not skip it.
+- **The recipe, for the next move**: pick frames from one lighting with the
+  ball spread over at least ~80 rows (no row covered by the ball in more than
+  half of them), align against the preset's first reference, again against
+  that median, measure the median's offset against 'dag' on the ticks in the
+  ball band, shift, and score the held-out half. The scratch scripts were not
+  promoted to tools — `align_reference.mjs` does the alignment for sweep
+  frames, which are already oriented; uploads need the panel's orientation
+  (rotate 90°, mirror) first.
+- **Not solved**: a camera that keeps moving needs this again. The step after
+  this one is a per-frame check that the scale's top and bottom still agree
+  with the curve, so a pure slide can pass while a turn or zoom refuses.
+- `judge()` now tests the shift BEFORE contrast/ambiguity/spread (after
+  registration), so a moved camera says "Kameran har flyttat sig" instead of
+  "två lika starka kandidater". Accept/refuse is unchanged by the order; the
+  admin page's uncertain/no-reading split for such frames is.
+- The engine grew by three references: `motor.js` is 1.2 MB, the sketch 2.55
+  MB of 3.34.
 
 **What the care home's morning pose taught (2026-09-30, v1.12.6-1.12.9):**
 - The parallax can grow with height — check the ball-to-tick offset on every
@@ -778,7 +835,7 @@ against scale ticks (anchor band x 296-320, sampled at the shifted x) -> clipped
 difference vs reference in ball band (x 252-292) -> smoothed profile ->
 peak + centroid -> quadratic calibration. Never remove the quality
 gates (registration >=0.75, contrast >=0.10, ambiguity >=3.0x,
-|dx| and |dy| <=20 px, extent <=75 rows): the engine must say "no reading"
+|dx| <=30 and |dy| <=20 px since 1.13.0, extent <=75 rows): the engine must say "no reading"
 rather than output a plausible wrong number — it reads oxygen flow for
 a patient. Two states besides a number, and both are measured against the
 checked-in sweep rather than asserted (2026-09-05):
@@ -872,7 +929,7 @@ with it in a way no gate can see. Confidence is not accuracy.
 **Order matters**: dx is computed first, because the camera slides sideways
 and every band below is at a fixed x — measured 34 px on 2026-08-16. Sample
 the anchor band at its old x after a sideways slip and dy is meaningless.
-The search runs to +/-40 px while the gate rejects beyond 20: a big shift
+The search runs to +/-40 px while the gate rejects beyond 30 (20 for dy): a big shift
 should be measured and named in the Swedish reason, not silently saturate
 at the edge of the search and look like noise.
 
@@ -914,9 +971,10 @@ gate — but they are caught by dy saturating at -40 and by spread at 159 rows,
 so nothing gets through.
 
 **Measure each gate separately; `judge()`'s text cannot tell you which one
-matters.** It returns on the first gate that fires and tests margin before
-dx/dy, so a frame that fails BOTH prints "två lika starka kandidater" and
-reads as an ambiguity catch. Evaluating all five gates independently over the
+matters.** It returns on the first gate that fires — and until 1.13.0 it
+tested margin before dx/dy, so a frame that failed BOTH printed "två lika
+starka kandidater" and read as an ambiguity catch (since 1.13.0 the shift is
+tested right after registration). Evaluating all five gates independently over the
 78 (2026-09-05):
 
 | gate | refuses | is the ONLY gate refusing |

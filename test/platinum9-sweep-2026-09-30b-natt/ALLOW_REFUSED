@@ -1,6 +1,6 @@
 # Refused at the calibrated tilt in the dark: the ticks near the top of the tube
 # rival the ball at the bottom of the scale (the camera turns a little with the
 # knob, and the night median blends those poses). Refusal, not a wrong number.
+# Only the resting ball since 1.13.0: 0.5 and 1 read through the new references,
+# and 1 L/min is the alarm boundary, so a refusal there must fail the sweep again.
 0_min
-0.5_approx
-1
