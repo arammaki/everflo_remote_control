@@ -4,7 +4,10 @@ Sets checked in opposite directions — a sweep must read, an old pose must be
 refused. All run through the same harness so the two directions cannot drift apart:
 
 ```sh
-node tools/validate_engine.mjs test/sweep-2026-08-22
+node tools/validate_engine.mjs test/everflo-sweep-2026-10-05-hall
+node tools/validate_engine.mjs test/everflo-sweep-2026-10-05-natt
+node tools/validate_engine.mjs test/everflo-sweep-2026-10-05-rum
+node tools/validate_engine.mjs test/negative-everflo-2026-08-22 --expect-rejected
 node tools/validate_engine.mjs test/negative-old-poses --expect-rejected
 node tools/validate_engine.mjs test/platinum9-sweep-2026-09-30b
 node tools/validate_engine.mjs test/platinum9-sweep-2026-09-30b-natt
@@ -20,9 +23,36 @@ run without one: a sweep scored against the wrong machine's calibration is
 refused wholesale, which looks exactly like an engine that has broken. A new
 machine's sweep goes in its own directory with its own `PRESET`.
 
-## `sweep-2026-08-22/` — the calibration in force
+## `everflo-sweep-2026-10-05-hall/` — the EverFlo calibration in force
 
-The 23 labelled frames the current engine is built from: `REF_PNG`, the bands,
+13 frames, 2026-10-05 15:51–15:53 UTC, the EverFlo back on the unit with the
+camera much closer to the tube than in the kitchen, the hall lamp on: the
+resting ball, 0.5 to 5 in halves (read straight on), the top thick line
+(`max`, reads 5.83 as a number) and one past it (`over_max`, must say Max).
+`REF_PNG_EVERFLO_HALL`, the bands, `BASE_TILT` and `CAL` come from these;
+`GEOMETRY.json` is the geometry they were measured with (calibrate.mjs
+`--geometry`). Mean 0.012 L/min, worst 0.029; ambiguity 4.6x at worst (the
+over-scale frame), registration 0.98.
+
+## `everflo-sweep-2026-10-05-natt/` — the same pose in the dark
+
+13 frames five minutes later, lamps off and curtains drawn: the 'natt'
+reference. Not fitted to — the curve is the hall sweep's — so it checks the
+curve independently: mean 0.016, worst 0.041. `over_max` is refused here
+(ambiguity 2.5x) instead of called Max, listed in `ALLOW_REFUSED`.
+
+## `everflo-sweep-2026-10-05-rum/` — the same pose, the room lamp on
+
+13 frames at 16:01–16:03 UTC, hall lamp off, room lamp on: the 'rum'
+reference. Not fitted to either: mean 0.024, worst 0.049, `over_max` says Max.
+
+## `negative-everflo-2026-08-22/` — the kitchen calibration, refused since 1.14.1
+
+Until 1.14.1 this was `sweep-2026-08-22/`, the calibration in force. The
+camera pose it was taken in is gone, so like the other old poses it must now
+be refused: all 23 are. What follows is its history as the calibration.
+
+The 23 labelled frames the kitchen engine was built from: `REF_PNG`, the bands,
 `BASE_TILT` and `CAL` all come from these. Taken 2026-08-22 20:06–20:14 under
 the WS2812 at level 50 in a dark kitchen — the lighting the unit actually runs
 in. The 21 frames carrying a number must read within 0.2 L/min of it.

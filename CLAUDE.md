@@ -336,6 +336,11 @@ breaks. Any new endpoints the pages read need the same headers —
 are fire-and-forget by design.
 
 ### Calibration is baked in — do not regenerate casually
+**The numbers in this section and in "Engine invariants" are the EverFlo's
+KITCHEN calibration (2026-08-22), history since 1.14.1** — the reasoning
+holds, the values do not. The EverFlo's current ones are in its preset and in
+"The EverFlo again"; the Platinum's in its own sections.
+
 Both files embed a reference image (median of the 23 labelled frames of the
 2026-08-22 sweep, 20:06-20:14, taken under the WS2812 at level 50 in a dark
 kitchen, 8-bit grayscale — the engine converts to gray as its
@@ -656,6 +661,46 @@ each number is what it is. In order:
 8. **Day and evening references** come afterwards from a day or two of
    uploads, ball positions spread (see "Daylight is a second lighting regime").
 
+### The EverFlo again (v1.14.0-1.14.1, 2026-10-05)
+The EverFlo went back on the unit "for now" on 2026-10-05: 1.14.0 is the
+Platinum build with `CONCENTRATOR` switched (armed with `--switch-machine`),
+1.14.1 its new calibration. The camera sits much closer to the tube than in
+the kitchen; the kitchen calibration refused every frame of the new pose
+(registration 0.13-0.54) and its sweep is now `test/negative-everflo-2026-08-22/`,
+refused in full like the other old poses.
+
+- **Three lightings: the hall lamp on, dark (lamps off, curtains drawn), and
+  the room lamp on with the hall lamp off** — `test/everflo-sweep-2026-10-05-hall/`,
+  `-natt/` and `-rum/`, references 'hall', 'natt', 'rum', 13 frames each, 0.5..5
+  in halves read straight on, plus rest, the top line and past it. References
+  all three are plain medians — the camera barely crept (dx -1.0..+3.2,
+  dy -0.6..+3.5 over the three sweeps, each against its own median) — and need no shift: the dark median's own curve differs from
+  the hall CAL by at most 0.020 L/min over y 187..428. The curve was fitted to
+  the hall sweep only, so the dark sweep is an independent check: it reads
+  within 0.041 (mean 0.016). Its past-the-scale frame is REFUSED in the dark
+  (ambiguity 2.5x: the ball runs weak there and a glare artefact near 2 L/min
+  rivals it) rather than called Max — allowed in its `ALLOW_REFUSED`, which
+  since 1.14.1 also covers an `over_max` (a number there still fails). Before
+  the dark reference, dark frames registered 0.40-0.46 against 'hall' and were
+  refused, not misread. The room lamp puts a glare streak in the tube around
+  3-4 L/min; even without 'rum' the other two read that sweep within 0.07
+  (ambiguity 4.9-12.1x), with it within 0.049 (9.5-53x; its past-the-scale
+  frame says Max at 3.2x, the thinnest margin of the three).
+- **Label-fitted, not tick-fitted**: the labels were read straight on and the
+  halves sit on the curve as well as the whole marks — mean 0.012, worst
+  0.029 (4 L/min). The parallax lessons of the Platinum did not apply here.
+- **Geometry from a grid over the sweep** (the tool for it: score each
+  candidate's fit and its worst contrast, ambiguity, registration and spread):
+  band 285..304, anchor 245..265, tilt 0.035 sit on one plateau, ambiguity
+  4.4-4.8x, registration 0.98. Mind that `buildRef()` bakes the CURRENT
+  geometry into a reference — a grid that builds the reference once and then
+  changes the anchor band measures nonsense (it did, for an hour).
+- **Max**: `Y_MAX_STATE` 149 splits the top thick line (y 153, reads 5.83 as a
+  number) from past it (145, Max) — 4 px each side, the kitchen's precedent.
+- **Display crop** x 205..375, y 90..510.
+- 7020-7022 (2026-10-05 15:02-15:15 UTC) were taken while the camera was being
+  set up and carry `preset` platinum9 (the firmware still was): ignore them.
+
 ### The Platinum 9 calibration (v1.12.10, 2026-09-30 afternoon, the care home)
 Everything is in the `platinum9` preset with a comment per number. The unit is
 at the care home since 2026-09-30, on its wifi (RSSI −64..−66, uploads and
@@ -829,6 +874,9 @@ causes, two fixes:
   a band that takes in the highlight cancels against it. Band on the dark part.
 
 ### Engine invariants
+(Pixel values below — bands, YTOP/YBOT, Y_MAX_STATE, the rows quoted — are the
+kitchen calibration's; see the note under "Calibration is baked in".)
+
 Grayscale -> flatfield (3-pass box blur ~ sigma 41) -> horizontal
 registration (column profile of rows 100-460) -> vertical registration
 against scale ticks (anchor band x 296-320, sampled at the shifted x) -> clipped
@@ -952,9 +1000,12 @@ negative and tolerance cases are the part `validate_engine.mjs` does not
 cover, and `reg >= 0.75` in particular was chosen by that negative
 suite, not by the sweep.
 
-**In this repo, with its images** (added 2026-09-05): `test/sweep-2026-08-22/`
-holds the 23 labelled frames the current calibration is built from, and
-`node tools/validate_engine.mjs test/sweep-2026-08-22` runs the real
+**In this repo, with its images** (added 2026-09-05; since 1.14.1 the directory
+is `test/negative-everflo-2026-08-22/`, refused as an old pose — the EverFlo's
+calibration in force is `test/everflo-sweep-2026-10-05-hall/`): `test/sweep-2026-08-22/`
+held the 23 labelled frames the kitchen calibration was built from, and
+`node tools/validate_engine.mjs test/sweep-2026-08-22` (now
+`test/negative-everflo-2026-08-22 --expect-rejected`) ran the real
 `balldetector.js` against them, failing (non-zero) on any rejection or a
 reading more than 0.2 L/min off its label. The repo had contained everything
 DERIVED from that sweep — `REF_PNG`, the bands, `BASE_TILT`, `CAL` — and

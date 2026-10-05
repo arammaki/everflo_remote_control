@@ -88,7 +88,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.14.0"
+#define FW_VERSION "1.14.1"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -120,8 +120,9 @@
   #define STEP_LARGE      160     // her +++ and −−− buttons
   #define DIRECTION       -1      // 1 or -1 when + turns the wrong way
                                   // (-1 since v1.6.2: verified on site)
-  #define LED_LEVEL       50      // ~20% of full. All three EverFlo references
-                                  // were built under it — see the light section
+  #define LED_LEVEL       50      // ~20% of full. The EverFlo's references (the
+                                  // kitchen's, and 2026-10-05's) were built under
+                                  // it — see the light section
 #elif CONCENTRATOR == CONC_PLATINUM9
   #define PRESET_ID       "platinum9"
   /* Chosen on the unit 2026-09-26, "for now": the smallest about the

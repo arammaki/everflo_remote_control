@@ -3,7 +3,7 @@
    Runs the real balldetector.js against a directory of labelled
    images and reports the error against the label in each filename.
 
-       node tools/validate_engine.mjs test/sweep-2026-08-22
+       node tools/validate_engine.mjs test/everflo-sweep-2026-10-05-hall
 
    Which concentrator preset to validate against comes from a file named
    PRESET in the directory (one line, e.g. "everflo"), or from --preset <id>.
@@ -287,7 +287,10 @@ for (const f of files) {
   if (expectRejected) {
     if (verdict !== 'REJECTED') failures++;
   } else if (p.expect === 'max') {
-    if (verdict !== 'Max') failures++;
+    // Refusing the past-the-scale frame is allowed when listed; a NUMBER never
+    // is — that would mean the y<Y_MAX_STATE guard has stopped guarding.
+    if (verdict === 'REJECTED' && allowRefused.has(label)) allowedRefusals++;
+    else if (verdict !== 'Max') failures++;
   } else if (!read) {
     if (verdict === 'REJECTED' && allowRefused.has(label)) allowedRefusals++; else failures++;
   } else if (p.expect === 'approx') {

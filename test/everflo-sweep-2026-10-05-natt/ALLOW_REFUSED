@@ -1,0 +1,4 @@
+# Refused in the dark rather than called Max: the ball past the top line
+# runs weak (peak 0.196) and a glare artefact near 2 L/min (y 332, 0.078)
+# takes ambiguity to 2.5x. A refusal, not a number; her flows are 1.5-3.
+over_max
