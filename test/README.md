@@ -7,6 +7,8 @@ refused. All run through the same harness so the two directions cannot drift apa
 node tools/validate_engine.mjs test/everflo-sweep-2026-10-05-hall
 node tools/validate_engine.mjs test/everflo-sweep-2026-10-05-natt
 node tools/validate_engine.mjs test/everflo-sweep-2026-10-05-rum
+node tools/validate_engine.mjs test/everflo-sweep-2026-10-18-ljus
+node tools/validate_engine.mjs test/everflo-sweep-2026-10-18-natt
 node tools/validate_engine.mjs test/negative-everflo-2026-08-22 --expect-rejected
 node tools/validate_engine.mjs test/negative-old-poses --expect-rejected
 node tools/validate_engine.mjs test/platinum9-sweep-2026-09-30b
@@ -45,6 +47,15 @@ curve independently: mean 0.016, worst 0.041. `over_max` is refused here
 
 13 frames at 16:01–16:03 UTC, hall lamp off, room lamp on: the 'rum'
 reference. Not fitted to either: mean 0.024, worst 0.049, `over_max` says Max.
+
+## `everflo-sweep-2026-10-18-ljus/` and `-natt/` — the camera's next pose
+
+Taken by someone on site after the camera had moved ~11 px: the 'ljus' and
+'natt2' references, aligned into the 10-05 coordinates. Not fitted to. The
+bottom and top labels were corrected with the operator ("0" is 0.5, "0.5" is
+0.75, "Övre max" a second max) — see each `LABELS.md`. No resting ball and no
+ball past the top line in either. ljus mean 0.026 worst 0.046; natt mean 0.027
+worst 0.062.
 
 ## `negative-everflo-2026-08-22/` — the kitchen calibration, refused since 1.14.1
 

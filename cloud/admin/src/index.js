@@ -785,7 +785,7 @@ const QUALITY = { reg: 3, peak: 3, margin: 1, dx: 1, dy: 1, spread: 0 };
    this row that could carry anything. `fallback` says the best-registering
    reference REFUSED and this came from the next one (v1.10.12), which is what
    explains a reading sitting a few hundredths off its span months later. */
-const REFS = new Set(['natt', 'dag', 'kväll', 'natt2', 'hall2', 'dag2', 'hall', 'rum']);
+const REFS = new Set(['natt', 'dag', 'kväll', 'natt2', 'hall2', 'dag2', 'hall', 'rum', 'ljus']);
 function cleanQuality(q) {
   if (!q || typeof q !== 'object') return null;
   const out = {};

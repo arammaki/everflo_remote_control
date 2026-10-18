@@ -700,6 +700,46 @@ refused in full like the other old poses.
 - **Display crop** x 205..375, y 90..510.
 - 7020-7022 (2026-10-05 15:02-15:15 UTC) were taken while the camera was being
   set up and carry `preset` platinum9 (the firmware still was): ignore them.
+- **2026-10-18 (1.14.2): the camera moved, twice, and two new references.**
+  Uploads before 13:10 local sat ~12 px to one side of the 10-05 pose and still
+  read; 13:10-16:10 (9363-9391) the camera hung crooked and every frame was
+  refused (registration 0.32-0.43, dx at the search edge) — correctly; from
+  16:19 it sat ~11 px to the OTHER side, and frames read but with rivals near
+  the top line ("osäker" on the app). Two sweeps in the new pose (operator on
+  site, the user remote): `test/everflo-sweep-2026-10-18-ljus/` and `-natt/`,
+  references 'ljus' and 'natt2', ALIGNED into the 10-05 coordinates (the
+  1.13.0 recipe with sweeps instead of uploads: align_reference.mjs --base the
+  old reference of the same lighting, again against that median). 'natt2'
+  stays in 'natt''s coordinates (registers against it at dy -0.03). 'ljus' has
+  no old reference of its lighting and was shifted by its tick offset against
+  'hall' (0,-0.56). **Do not shift across lightings by registration or ticks
+  against a different lighting**: a first natt2 shifted onto 'hall' that way
+  (-1.36) read 0.02-0.04 low on every dark frame — registration between 'natt'
+  and 'hall' is only 0.43, so the offset was noise. Review caught it.
+  CAL and the bands are kept: the 10-05 curve reads both new sweeps within
+  0.062 (means 0.026/0.027). Labels corrected with the operator: their "0" is
+  0.5 (the knob at its lowest, machine on), "0.5" is 0.75, and "Övre max" is a
+  second `max` (the ball touching the top line from below) — `LABELS.md` in
+  each directory. Result: ambiguity on the new sweeps 2.6-11x -> 5.4-112x;
+  uploads 9393-9402 read 9 of 10 (9396, the ball above the top line, is
+  refused rather than called Max); the crooked ones stay refused; the old
+  three references stay for lightings the new sweeps do not cover, and the
+  10-05 sweeps read the same values. Their MARGINS do not all: in the dark,
+  'natt' and 'natt2' tie on registration (0.001-0.008), and on the 10-05 dark
+  sweep natt2 wins four frames with ambiguity 3.6-5.5x where 'natt' had
+  8-27x; its 5 L/min frame reads only through the fallback. So if the camera
+  swings back to the 10-05 pose, expect "osäker" at night more often than
+  before — refusals, not wrong values. Two pose-bound references for one
+  lighting, aligned into one coordinate system, are not told apart by tick
+  registration; drop 'natt' once the 10-18 pose has held for a while.
+  **Coverage gaps in this pose**: no resting-ball frame (so "Under 0,3" is
+  untested here, though upload 9402 says it) and no ball past the top line
+  (Max untested; 9396 is refused, the safe side). Take both at the next visit.
+  **Headroom**: the sketch is 2.88 MB of the 3.34 MB OTA slot and motor.js
+  1.55 MB, because the engine carries BOTH presets' ten references while a
+  build uses one preset's. Two or three more references fit; past that, emit
+  only the built preset's references into balldetector_js.h (or gzip
+  /motor.js) before adding more.
 
 ### The Platinum 9 calibration (v1.12.10, 2026-09-30 afternoon, the care home)
 Everything is in the `platinum9` preset with a comment per number. The unit is
