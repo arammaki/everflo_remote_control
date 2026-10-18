@@ -1,0 +1,1 @@
+A second light sweep in the 10-18 pose, 15:47-15:48 UTC, after 1.14.3 landed. Labels as sent; "0" is the resting ball (says "Under 0,3"). Not used for any reference — the engine already read it within 0.054 (ambiguity 9.7-29x), so it is a test of the 1.14.2 references, not material for them.

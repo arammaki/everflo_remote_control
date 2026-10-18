@@ -741,9 +741,12 @@ refused in full like the other old poses.
   before — refusals, not wrong values. Two pose-bound references for one
   lighting, aligned into one coordinate system, are not told apart by tick
   registration; drop 'natt' once the 10-18 pose has held for a while.
-  **Coverage gaps in this pose**: no resting-ball frame (so "Under 0,3" is
-  untested here, though upload 9402 says it) and no ball past the top line
-  (Max untested; 9396 is refused, the safe side). Take both at the next visit.
+  **Coverage in this pose**: a second light sweep taken after 1.14.3 landed
+  (`-10-18-ljus2/`, labels right this time) reads within 0.054 at 9.7-29x
+  without being used for anything, and its resting ball says "Under 0,3"; two
+  dark frames sent separately (rest and 0.5) joined `-natt/`, the rest at
+  3.5x. Still missing: a ball past the top line (Max untested here; 9396
+  shows "Osäker / Max / eller 1.8", the safe side).
   **Headroom**: the sketch is 2.88 MB of the 3.34 MB OTA slot and motor.js
   1.55 MB, because the engine carries BOTH presets' ten references while a
   build uses one preset's. Two or three more references fit; past that, emit
