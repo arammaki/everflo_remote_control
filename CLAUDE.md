@@ -166,6 +166,15 @@ Single sketch `everflo_remote_control.ino`. Key pieces:
   120 s portal timeout, restart on failure. `wifiWatchdog()` in `loop()`
   heals runtime drops (3 × 15 s reconnects → `ESP.restart()`).
 - **mDNS**: `syrgas.local`.
+- **Device page** (v1.14.3): an AMBIGUITY refusal ("två lika starka
+  kandidater") shows "Osäker" with both candidates — the stronger one large,
+  "eller <the other>" under it, in amber — instead of only the reason text.
+  The operator's call (2026-10-18): the ball is usually one of the two, and
+  she can tell which from the picture. `judge()` returns `candidates` for that
+  gate only (each through the same Max/bottom states); every other refusal
+  still shows no value, since nothing was measured. It stays `ok:false`:
+  nothing steps from it, and on the Platinum's 6741-6747 the WEAKER candidate
+  was the ball, which is why it is never shown as one number.
 - **Device page** (v1.8.4): the only technician link left is "Starta om
   enheten", the documented remote-recovery path. Zeroing the counter moved
   to the control panel: the patient never needs it, it sat behind a confirm

@@ -794,18 +794,42 @@ function analyzeWith(R, ff, forceTilt, forceDx){
   }
   const ycog=sw>1e-9? sy/sw : yp;
 
-  let p2=0; for(let y=0;y<H;y++) if(Math.abs(y-yp)>60 && d[y]>p2) p2=d[y];
+  let p2=0, y2=-1; for(let y=0;y<H;y++) if(Math.abs(y-yp)>60 && d[y]>p2){ p2=d[y]; y2=y; }
   const margin=peak/Math.max(p2,1e-9);
+  /* Where the rival is, for her page's "Osäker … eller …" (1.14.3) — display
+     only, nothing above or below depends on it. Measured the way the ball is
+     (centroid over ±35 rows above 0.35 of its peak, the ball's own ±60 rows
+     excluded), not as the argmax row: a peak row on a broad blob sits up to
+     0.6 L/min off on the Platinum. And only when the rival is a real peak:
+     a tail clipped at the window's edge, or the ball's own shoulder just past
+     60 rows, is not a candidate, so none is offered (rivalY -1). */
+  let rivalY=-1;
+  if(y2>YTOP && y2<YBOT-1 && d[y2]>=d[y2-1] && d[y2]>=d[y2+1]){
+    let rw=0, ry=0;
+    for(let y=Math.max(0,y2-35);y<Math.min(H,y2+35);y++){
+      if(Math.abs(y-yp)<=60) continue;
+      const w=Math.max(0,d[y]-0.35*p2); rw+=w; ry+=w*y;
+    }
+    rivalY=rw>1e-9? ry/rw : y2;
+  }
 
   let spread=0; for(let y=0;y<H;y++) if(d[y]>0.3*peak) spread++;
 
   const flow=CAL[0]*ycog*ycog + CAL[1]*ycog + CAL[2];
-  return {y:ycog, peak, margin, reg, regx, dy, dx,
+  return {y:ycog, peak, margin, reg, regx, dy, dx, rivalY,
           tilt: tilt-BASE_TILT,          // deviation from calibration, not absolute
           flow, spread, profile:d};
 }
 
 /* ---------- judgement (text stays Swedish: the operator reads it) ---------- */
+/* What a candidate row would say, through the same states judge() uses. */
+function candidate(y){
+  if(!(y>=0)) return null;
+  if(y < Y_MAX_STATE) return {label:"Max"};
+  const flow=CAL[0]*y*y + CAL[1]*y + CAL[2];
+  if(flow < LOW_FLOW) return {label:LOW_LABEL};
+  return {label:flow.toFixed(1), flow};
+}
 function judge(r){
   if(r.uncalibrated)
     return {ok:false, title:"Ingen avläsning",
@@ -824,9 +848,16 @@ function judge(r){
   if(r.peak < T.contrast)
     return {ok:false, title:"Ingen avläsning",
             reason:"Bollen syns inte tillräckligt tydligt. Kan bero på imma, smuts på linsen eller för svag belysning."};
+  /* The one refusal that names what it saw (1.14.3, the operator's call):
+     two candidates, the stronger first, so her page can say "Osäker" and show
+     both — the stronger one large. Still ok:false. It is not a reading: on
+     the Platinum's frames 6741-6747 the WEAKER candidate was the ball, which
+     is why it is shown as a pair and never as one number. Only this gate:
+     registration, shift and contrast refusals mean nothing was measured. */
   if(r.margin < T.margin)
     return {ok:false, title:"Osäker avläsning",
-            reason:"Två lika starka kandidater i röret — går inte att avgöra vilken som är bollen."};
+            reason:"Två lika starka kandidater i röret — går inte att avgöra vilken som är bollen.",
+            candidates:[candidate(r.y), candidate(r.rivalY)].filter(Boolean)};
   if(r.spread > T.spread)
     return {ok:false, title:"Osäker avläsning",
             reason:"Störningen i röret är för utbredd för att vara bollen. Kontrollera att inget hänger framför röret."};

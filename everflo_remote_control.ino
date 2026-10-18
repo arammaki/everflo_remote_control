@@ -88,7 +88,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.14.2"
+#define FW_VERSION "1.14.3"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -652,6 +652,9 @@ static const char PAGE[] = R"HTML(
  #flow{font-size:3.4rem;font-weight:800;color:#1c8a4c;line-height:1;text-align:center}
  #flow small{font-size:1.1rem;color:#666;font-weight:400}
  #flow.warn{color:#b8860b}
+ #flow.unsure{color:#b8860b}
+ #flow .tag{display:block;font-size:1.2rem;font-weight:700;color:#a33;margin-bottom:4px}
+ #flow .alt{display:block;font-size:1.4rem;font-weight:700;color:#666;margin-top:6px}
  /* Flow-step buttons when the machine's knob is measured and a reading
     exists; the fixed-degree buttons otherwise. Never both, never neither. */
  .buttons.flow{display:none}
@@ -946,6 +949,13 @@ function show(text,unit,cls){
   el.className=cls||'';
   el.innerHTML=text+(unit?'<small> '+unit+'</small>':'');
 }
+function showUnsure(main,other){
+  const el=document.getElementById('flow');
+  el.className='unsure';
+  const unit=(s)=>/^[0-9.]+$/.test(s)?'<small> L/min</small>':'';
+  el.innerHTML='<span class="tag">Osäker</span>'+main+unit(main)+
+               '<span class="alt">eller '+other+(/^[0-9.]+$/.test(other)?' L/min':'')+'</span>';
+}
 // Stamped with the REQUEST time: on 2.4 GHz a picture can take seconds to
 // arrive, and one taken while the ball still moved must not count as settled.
 function nextFrame(){ const i=new Image(), asked=Date.now(); i.onload=()=>{ frame(i, asked); setTimeout(nextFrame,250); };
@@ -982,6 +992,13 @@ function frame(img, asked){
   try{ r=analyze(t.getContext('2d').getImageData(0,0,480,640)); b=judge(r); }
   catch(e){ show('Ingen avläsning','','none');
              frameMsg(''); noteReading(null,0); shown='none'; setMode(); return; }
+  // Two candidates (the ambiguity refusal only): "Osäker", the stronger one
+  // large, the other beside it. Not a reading — nothing steps from it.
+  if(!b.ok && b.candidates && b.candidates.length===2){
+    const [a,c]=b.candidates;
+    showUnsure(a.label, c.label);
+    frameMsg(''); noteReading(null,0); shown='none'; setMode(); return;
+  }
   if(!b.ok){ show(b.title,'','none'); frameMsg(b.reason); noteReading(null,0); shown='none'; setMode(); return; }
   frameMsg('');
   // Only a number is something to step from: not Max, not the bottom state,
