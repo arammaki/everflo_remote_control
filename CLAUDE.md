@@ -767,11 +767,31 @@ refused in full like the other old poses.
   dark frames sent separately (rest and 0.5) joined `-natt/`, the rest at
   3.5x. Still missing: a ball past the top line (Max untested here; 9396
   shows "Osäker / Max / eller 1.8", the safe side).
-  **Headroom**: the sketch is 2.88 MB of the 3.34 MB OTA slot and motor.js
-  1.55 MB, because the engine carries BOTH presets' ten references while a
-  build uses one preset's. Two or three more references fit; past that, emit
-  only the built preset's references into balldetector_js.h (or gzip
-  /motor.js) before adding more.
+- **2026-10-19 (1.14.5): knocked, screwed down, two more references.** A knock
+  that morning tipped the camera (and loosened a motor wire — see the device
+  page v1.14.4 bullet); screwed down tighter, it sat near the 10-05 pose (dx ~1,
+  dy 6-10, growing toward the top: the camera still creeps as the motor turns
+  the knob). The old references read the new sweeps right where they read but
+  with rivals: light 1.6-7.2x (four frames refused from 3.5 up), dark 1.5-5.8x.
+  `test/everflo-sweep-2026-10-19-ljus/` and `-natt/` (two minutes apart, ticks
+  agree within 0.2 px), references 'ljus3' and 'natt3'. ljus3: aligned against
+  'ljus', then its own first pass — 0.024 mean, 5.5-88x. natt3: the same
+  against 'natt2', then **shifted -1.7 px onto ljus3 by the ticks in the ball
+  band**, because natt2 itself sits 1.5 px off 'natt' on those ticks (hall,
+  rum and ljus agree within 0.2) and the unshifted natt3 read +0.04 high —
+  0.036 mean after, signed error 0.00, 4.4-182x. Within ONE pose, ticks across
+  two lightings are trustworthy (frames correlate 0.97-0.99 on them); it is
+  registration across lightings that is not (0.43, the 10-18 lesson). Every
+  other sweep reads the same values at the same margins, the negatives stay
+  refused, the 92 uploads of 10-18/19 read the same, and the knocked frames
+  stay refused. Both sweeps also cover the top: `max` (the ball touching the
+  line from below) reads 5.84/5.88 extrapolated, `over_max` says Max.
+  **Headroom is now the constraint**: the sketch is 3.18 MB of the 3.34 MB OTA
+  slot (95%), motor.js 1.84 MB, because the engine carries BOTH presets' twelve
+  references while a build uses one preset's. No further reference fits:
+  before adding one, emit only the built preset's references into
+  balldetector_js.h (or gzip /motor.js), or drop 'natt'/'natt2'/'ljus' once
+  this pose has held.
 
 ### The Platinum 9 calibration (v1.12.10, 2026-09-30 afternoon, the care home)
 Everything is in the `platinum9` preset with a comment per number. The unit is

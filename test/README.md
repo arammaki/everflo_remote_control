@@ -10,6 +10,8 @@ node tools/validate_engine.mjs test/everflo-sweep-2026-10-05-rum
 node tools/validate_engine.mjs test/everflo-sweep-2026-10-18-ljus
 node tools/validate_engine.mjs test/everflo-sweep-2026-10-18-natt
 node tools/validate_engine.mjs test/everflo-sweep-2026-10-18-ljus2
+node tools/validate_engine.mjs test/everflo-sweep-2026-10-19-ljus
+node tools/validate_engine.mjs test/everflo-sweep-2026-10-19-natt
 node tools/validate_engine.mjs test/negative-everflo-2026-08-22 --expect-rejected
 node tools/validate_engine.mjs test/negative-old-poses --expect-rejected
 node tools/validate_engine.mjs test/platinum9-sweep-2026-09-30b
