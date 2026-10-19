@@ -166,6 +166,26 @@ Single sketch `everflo_remote_control.ino`. Key pieces:
   120 s portal timeout, restart on failure. `wifiWatchdog()` in `loop()`
   heals runtime drops (3 × 15 s reconnects → `ESP.restart()`).
 - **mDNS**: `syrgas.local`.
+- **Device page** (v1.14.4): after a press that the device accepted, the page
+  compares the frame from just before it with the first one requested 2.5 s
+  after the motor stopped, and if nothing moved it says "Ingenting rörde sig
+  när du tryckte – motorn får kanske inte tag i ratten …". The firmware has no
+  motor feedback and logs the turn it asked for, so on 2026-10-19 a knock that
+  unseated the unit (and tipped the camera) left every press logged as a turn
+  while the cup stood still — her buttons just did nothing. The comparison is
+  on PIXELS, not the reading, because the same knock moves the camera and the
+  engine then refuses every frame: the largest 16x16-block change of mean gray
+  after matching overall brightness, warning under 8. Over the 43 presses of
+  2026-10-18/19 (each frame against the upload before it, minutes apart): the
+  two after the knock 3.1-4.2, every one that moved the ball 13.4-154 — and a
+  third warning, 5.4, a -39 at 05:36 local that moved nothing either, before
+  the knock and in the same direction as the press before it (so not slack).
+  A hand in the frame counts as movement (no warning: the safe side); a turn
+  that moves nothing (knob at its stop, machine off, slack) warns, and the
+  text says only what was seen. No check when the frame before the tap is over
+  2 s old, when the press failed or timed out (a flow press: unless every part
+  went through), or when no frame arrives within 10 s of the motor stopping.
+  Information only, like everything on her page: nothing is locked.
 - **Device page** (v1.14.3): an AMBIGUITY refusal ("två lika starka
   kandidater") shows "Osäker" with both candidates — the stronger one large,
   "eller <the other>" under it, in amber — instead of only the reason text.

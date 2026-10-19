@@ -88,7 +88,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.14.3"
+#define FW_VERSION "1.14.4"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -978,9 +978,64 @@ const CROP_W=(typeof VIEW_W!=='undefined' && VIEW_W!=null) ? VIEW_W : 480;
 const CROP_Y=(typeof VIEW_Y!=='undefined' && VIEW_Y!=null) ? VIEW_Y : 0;
 const CROP_H=(typeof VIEW_H!=='undefined' && VIEW_H!=null) ? VIEW_H : 640;
 cv.width=CROP_W; cv.height=CROP_H;
+/* ---- did the press move anything? ----
+   The firmware cannot tell: it pulses the driver and logs the turn it asked
+   for, with no feedback from the motor. On 2026-10-19 a knock unseated the
+   unit; every press after it was logged as a turn while the cup stood still,
+   and from her side the buttons simply did nothing. So the page compares the
+   frame taken just before a press with one taken after the motor stopped and
+   the ball had time to settle, and says so when nothing in the picture moved.
+
+   Pixels, not the reading: the knock that unseats the motor moves the camera
+   too, and then the engine refuses every frame (it did that morning). Two
+   frames from the same pose are comparable whatever the calibration says.
+   The measure is the largest change of any 16x16 block's mean gray, after
+   matching the overall brightness (auto-exposure). Measured over the 43
+   presses of 2026-10-18/19, each frame against the upload before it (minutes
+   apart, so noisier than here): the three that moved nothing 3.1-5.4, every
+   one that moved the ball 13.4-154. A person or a hand in the frame
+   reads as movement, so the error goes the safe way — no warning, not a
+   false one. A press that did turn the knob but moved nothing (the knob at
+   its end, the machine off, slack on reversing) is warned about, and the
+   text says only what was seen. */
+const STILL_LEVEL=8, SETTLE_MS=2500;
+let lastShot=null, moveCheck=null;
+function blocks(c){
+  const w=c.width, h=c.height, B=16, nx=Math.floor(w/B), ny=Math.floor(h/B);
+  const d=c.getContext('2d').getImageData(0,0,w,h).data, s=new Float32Array(nx*ny);
+  for(let y=0;y<ny*B;y++){
+    const row=Math.floor(y/B)*nx;
+    for(let x=0;x<nx*B;x++){ const i=(y*w+x)*4; s[row+Math.floor(x/B)]+=d[i]+d[i+1]+d[i+2]; }
+  }
+  return s;
+}
+function blockChange(a,b){
+  let sa=0, sb=0;
+  for(let i=0;i<a.length;i++){ sa+=a[i]; sb+=b[i]; }
+  const k=sa/Math.max(sb,1); let m=0;
+  for(let i=0;i<a.length;i++) m=Math.max(m, Math.abs(a[i]-k*b[i]));
+  return m/(16*16*3);
+}
+// The frame before a press: at most 2 s old, or there is nothing to compare.
+function shotBefore(){ return lastShot && Date.now()-lastShot.asked<2000 ? blocks(lastShot.t) : null; }
+function armMoveCheck(before){
+  moveCheck = before ? {before, from:motorStopped+SETTLE_MS, until:motorStopped+10000} : null;
+}
 function frame(img, asked){
   lastFrameAt=Date.now();
   const t=orient(img);
+  lastShot={t, asked:asked||Date.now()};
+  if(moveCheck && !pressing){
+    // Expiry first: after a stall the first frame back is past `from` too, and
+    // a note long after the tap would not read as being about it.
+    if(lastShot.asked>moveCheck.until) moveCheck=null;
+    else if(lastShot.asked>=moveCheck.from){
+      let m=null; try{ m=blockChange(moveCheck.before, blocks(t)); }catch(e){}
+      moveCheck=null;
+      if(m!==null && m<STILL_LEVEL)
+        note('Ingenting rörde sig när du tryckte – motorn får kanske inte tag i ratten. Titta på bilden, och vrid för hand om det behövs.');
+    }
+  }
   ctx.setTransform(1,0,0,1,0,0);
   ctx.drawImage(t, CROP_X,CROP_Y,CROP_W,CROP_H, 0,0,CROP_W,CROP_H);
   // Once a second is plenty: the ball moves slowly and analysis costs
@@ -1038,6 +1093,9 @@ async function press(op,deg){
   pressing=true;
   allButtons().forEach(b=>b.disabled=true);
   note('');
+  let before=null; try{ before=shotBefore(); }catch(e){}
+  moveCheck=null;
+  let turned=false;
   // 6 s, like pressFlow: a unit that goes dark mid-request must not keep every
   // button on her page disabled (2026-08-15: never locked). It covers the
   // nonce, a possible retry and the move itself.
@@ -1047,12 +1105,14 @@ async function press(op,deg){
     const j = await res.json();
     if(res.status===403) note(refusedText(res));
     else if(!j.ok) note('Motorn är upptagen – vänta');
+    else turned=true;
   }catch(e){ note(e.name==='AbortError' ? UNSURE : 'Ingen kontakt'); }
   finally{ clearTimeout(tm); }
   // The reply comes when the motor has STOPPED. From here the next flow step
   // needs a reading of the settled ball, taken after that moment — compared
   // with another from after it, never with one from before the press.
   pending=null; motorStopped=Date.now(); prevNum=null;
+  if(turned) armMoveCheck(before);
   pressing=false;
   allButtons().forEach(b=>b.disabled=false);
   setMode();
@@ -1175,6 +1235,8 @@ async function pressFlow(delta){
   // One press turns at most 180°: split evenly, rounding down.
   const n=Math.ceil(p.deg/180), each=Math.floor(p.deg/n);
   note('');
+  let before=null; try{ before=shotBefore(); }catch(e){}
+  moveCheck=null;
   let done=0;
   try{
     for(let i=0;i<n;i++){
@@ -1198,6 +1260,7 @@ async function pressFlow(delta){
   motorStopped=Date.now(); prevNum=null;
   if(done===n) pending={target:p.target, until:Date.now()+6000};
   else pending=null;
+  if(done===n) armMoveCheck(before);
   release();
   setMode();
 }
