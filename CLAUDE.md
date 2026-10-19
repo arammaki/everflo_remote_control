@@ -772,7 +772,7 @@ refused in full like the other old poses.
   page v1.14.4 bullet); screwed down tighter, it sat near the 10-05 pose (dx ~1,
   dy 6-10, growing toward the top: the camera still creeps as the motor turns
   the knob). The old references read the new sweeps right where they read but
-  with rivals: light 1.6-7.2x (four frames refused from 3.5 up), dark 1.5-5.8x.
+  with rivals: light 1.6-7.2x (five refused: four on ambiguity from 3.5 up, past-the-line on contrast), dark 1.5-10.8x.
   `test/everflo-sweep-2026-10-19-ljus/` and `-natt/` (two minutes apart, ticks
   agree within 0.2 px), references 'ljus3' and 'natt3'. ljus3: aligned against
   'ljus', then its own first pass — 0.024 mean, 5.5-88x. natt3: the same
