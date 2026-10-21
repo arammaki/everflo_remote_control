@@ -54,11 +54,12 @@ reference. Not fitted to either: mean 0.024, worst 0.049, `over_max` says Max.
 ## `everflo-sweep-2026-10-18-ljus/` and `-natt/` — the camera's next pose
 
 Taken by someone on site after the camera had moved ~11 px: the 'ljus' and
-'natt2' references, aligned into the 10-05 coordinates. Not fitted to. The
+'natt2' references, aligned into the 10-05 coordinates ('ljus' dropped in
+1.14.6; the light sweeps now read through ljus3). Not fitted to. The
 bottom and top labels were corrected with the operator ("0" is 0.5, "0.5" is
 0.75, "Övre max" a second max) — see each `LABELS.md`. No resting ball and no
-ball past the top line in either. ljus mean 0.026 worst 0.046; natt mean 0.027
-worst 0.062.
+ball past the top line in either. ljus mean 0.020 worst 0.046 (0.026 with 'ljus'); natt mean
+0.025 worst 0.062.
 
 ## `negative-everflo-2026-08-22/` — the kitchen calibration, refused since 1.14.1
 

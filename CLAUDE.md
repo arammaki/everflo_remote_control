@@ -760,9 +760,9 @@ refused in full like the other old poses.
   swings back to the 10-05 pose, expect "osäker" at night more often than
   before — refusals, not wrong values. Two pose-bound references for one
   lighting, aligned into one coordinate system, are not told apart by tick
-  registration; drop 'natt' once the 10-18 pose has held for a while.
+  registration. (The 10-18 pose did not hold: see 2026-10-19.)
   **Coverage in this pose**: a second light sweep taken after 1.14.3 landed
-  (`-10-18-ljus2/`, labels right this time) reads within 0.054 at 9.7-29x
+  (`-10-18-ljus2/`, labels right this time) reads within 0.054 at 9.7-29x (4.4-14.9x through ljus3 since 'ljus' was dropped in 1.14.6)
   without being used for anything, and its resting ball says "Under 0,3"; two
   dark frames sent separately (rest and 0.5) joined `-natt/`, the rest at
   3.5x. Still missing: a ball past the top line (Max untested here; 9396
@@ -798,12 +798,20 @@ refused in full like the other old poses.
   from uploads (the 1.13.0 recipe; details at REF_PNG_EVERFLO_KVALL3): held
   out 21/21 read at 4.0-8.6x, all 440 uploads 46 "Osäker" -> 0 with none
   refused, readings 0.03-0.06 lower than natt2's (natt2 reads high: 1.5 px off
-  on the ticks), one dawn frame 0.09 high. Sweeps and negatives unchanged.
+  on the ticks), one dawn frame 0.09 high. Verdicts unchanged on every sweep
+  and negative set; the 10-18 light sweeps now read through ljus3, and no
+  checked-in sweep is answered by kväll3 — its evidence is the uploads.
   **The normalisation bug is still there** — fixed (normalise by the shifted
-  window), it cuts these "Osäker" only 24 -> 20 (natt takes over) and refuses
+  window), it cuts the 162 evening frames' "Osäker" only 24 -> 20 (natt takes over) and refuses
   the Platinum kitchen set's 4.5 L/min at 2.6x, because it also moves the tilt
   choice. Its own change, validated on its own. Expect it again whenever the
-  camera sits several px off a pose that a reference was built in.
+  camera sits several px off a pose that a reference was built in. **It also
+  loosens the registration gate**, not only the ranking (review of 1.14.6): on
+  `negative-everflo-2026-08-22` (a wrong pose) registration reads 0.70-0.78
+  where the fixed normalisation gives 0.62-0.68, and frame `1.25` passes
+  registration (0.77), ambiguity (8.2x), contrast and spread and is refused
+  ONLY by dy, 20.5 against 20 — half a pixel. Not caused by 1.14.6 (the parent
+  behaves identically), but it is why the fix should come soon.
   **Headroom is the constraint**: the sketch is 3.21 MB of the 3.34 MB OTA
   slot (96%), motor.js 1.88 MB, because the engine carries BOTH presets'
   references while a build uses one preset's. 'ljus' was dropped to fit
