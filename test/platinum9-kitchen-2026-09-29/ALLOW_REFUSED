@@ -1,6 +1,8 @@
 # Since 1.14.7 (align() normalised by the correlated window): the 14:41 frame at
 # 4.5 read 4.47 only at a tilt 1 degree off the calibrated one, which the old,
-# inflated registration score preferred by just the TILT_MARGIN. At the
-# calibrated tilt it is "Osäker" (2.6x) — a refusal, not a wrong number. The
-# 15:49 frame at 4.5 still reads 4.47. This pose (the kitchen) is gone.
-4.5
+# inflated registration score preferred by just the TILT_MARGIN (0.034 against
+# 0.026 now). At the calibrated tilt it is "Osäker" (2.6x) — a refusal, not a
+# wrong number. This pose (the kitchen) is gone. Listed by FILE, not by label:
+# the 15:49 frame at 4.5 (dx 26.1) is part of the evidence for SHIFT_X 30 and
+# must still read (4.47).
+bild_4.5L_2026-09-29T14-41-52.jpg

@@ -810,15 +810,20 @@ refused in full like the other old poses.
   tilt (TILT_MARGIN compares these scores): the Platinum kitchen set's 14:41
   frame at 4.5 L/min read 4.47 only at a tilt the inflated score preferred by
   just the margin, and is "Osäker" (2.6x) at the calibrated one — allowed in
-  that set's ALLOW_REFUSED; that pose is gone. **It had loosened the
+  that set's ALLOW_REFUSED BY FILE NAME (validate_engine.mjs takes one since
+  1.14.7), so the 15:49 frame at 4.5, part of the SHIFT_X evidence, must still
+  read; that pose is gone. **It had loosened the
   registration gate**, not only the ranking (review of 1.14.6): on
-  `negative-everflo-2026-08-22` (a wrong pose) registration reads 0.70-0.78
-  where the fixed normalisation gives 0.62-0.68, and frame `1.25` passes
+  `negative-everflo-2026-08-22` (a wrong pose) registration read 0.67-0.78
+  where the fixed normalisation gives 0.62-0.69, and frame `1.25` passes
   registration (0.77), ambiguity (8.2x), contrast and spread and is refused
   ONLY by dy, 20.5 against 20 — half a pixel. Fixed, that set peaks at 0.68,
   under the gate again; the other negative sets stay refused (old poses peak
-  at 0.64, the Platinum ones at 0.86 and 0.80, refused by other gates as
-  before).
+  at 0.64 — up from 0.59: the fix is not one-directional — and the Platinum
+  sets at 0.52, 0.86 and 0.80, the last two refused by ambiguity and dy as
+  before). Five checked-in frames changed tilt, reference or fallback path;
+  none moved its reading by more than 0.01. Registration stored under older
+  engines (some above 1) is not comparable with the new values.
   **Headroom is the constraint**: the sketch is 3.21 MB of the 3.34 MB OTA
   slot (96%), motor.js 1.88 MB, because the engine carries BOTH presets'
   references while a build uses one preset's. 'ljus' was dropped to fit

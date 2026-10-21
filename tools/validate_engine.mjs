@@ -105,7 +105,9 @@ try {
    and some sweeps have frames the engine is right to refuse (the Platinum's
    night sweep at the bottom of the scale, 2026-09-30). Only a refusal is
    allowed: a listed frame that READS is still held to its label. Listed and
-   printed, never implied. */
+   printed, never implied. A line may instead be a file name, which allows
+   that one frame only — for a set with two frames of one label where only
+   one may be refused (the Platinum kitchen set's 4.5, 1.14.7). */
 const allowRefused = new Set();
 try {
   for (const line of readFileSync(join(imageDir, 'ALLOW_REFUSED'), 'utf8').split('\n')) {
@@ -289,10 +291,10 @@ for (const f of files) {
   } else if (p.expect === 'max') {
     // Refusing the past-the-scale frame is allowed when listed; a NUMBER never
     // is — that would mean the y<Y_MAX_STATE guard has stopped guarding.
-    if (verdict === 'REJECTED' && allowRefused.has(label)) allowedRefusals++;
+    if (verdict === 'REJECTED' && (allowRefused.has(label) || allowRefused.has(f))) allowedRefusals++;
     else if (verdict !== 'Max') failures++;
   } else if (!read) {
-    if (verdict === 'REJECTED' && allowRefused.has(label)) allowedRefusals++; else failures++;
+    if (verdict === 'REJECTED' && (allowRefused.has(label) || allowRefused.has(f))) allowedRefusals++; else failures++;
   } else if (p.expect === 'approx') {
     /* A label read at an angle reads HIGH (parallax), so the truth is at or
        under it; one below the calibrated range is about the bottom. Either way

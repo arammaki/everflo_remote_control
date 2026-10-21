@@ -155,7 +155,9 @@ move and 8 px of dy, and the curve still holds on the whole marks. The half
 marks (1.5 → 1.75, 2.5 → 2.76) are judged by eye, 8.5 and 9 from the side.
 Six read through the 1.13.0 reference 'hall2' (1 → 0.86, 7.5, 8, 8.5, 9, max)
 and one 8.5 through 'natt'. The largest |dx| that reads is 27.8, which is why
-`SHIFT_X` is 30 and not more. Mean 0.088, worst 0.26.
+`SHIFT_X` is 30 and not more. Mean 0.088, worst 0.26. Since 1.14.7 one frame
+is refused, the 14:41 one at 4.5 (dx 16.7, not part of the SHIFT_X evidence),
+listed by file name in `ALLOW_REFUSED`; mean 0.092 over the 15 that read.
 
 `negative-…` (17 frames) stays `--expect-rejected`: all 17 are refused by
 ambiguity (1.1–2.97x), registration 0.78–0.86 above its gate; eight of them
