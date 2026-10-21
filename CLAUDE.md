@@ -786,12 +786,30 @@ refused in full like the other old poses.
   refused, the 92 uploads of 10-18/19 read the same, and the knocked frames
   stay refused. Both sweeps also cover the top: `max` (the ball touching the
   line from below) reads 5.84/5.88 extrapolated, `over_max` says Max.
-  **Headroom is now the constraint**: the sketch is 3.18 MB of the 3.34 MB OTA
-  slot (95%), motor.js 1.84 MB, because the engine carries BOTH presets' twelve
-  references while a build uses one preset's. No further reference fits:
+- **2026-10-21 (1.14.6): an evening/night reference, 'ljus' dropped.** In the
+  10-19 pose the evening and the night (the room as it is lit then, which no
+  sweep covers) went to 'natt2'/'natt' with a rival near the top: 46 of 440
+  uploads said "Osäker", the larger candidate always the ball by the
+  operator's check. Cause: those references won on a registration OVER 1
+  (1.06-1.10 against natt3's ~1.0) — `align()` normalises by the energy of the
+  UNSHIFTED window while correlating the shifted one, so a frame sitting 6-10
+  px off scores above 1 by an amount that differs per reference, and
+  FALLBACK_REG_GAP then never asks the reference that fits. 'kväll3' built
+  from uploads (the 1.13.0 recipe; details at REF_PNG_EVERFLO_KVALL3): held
+  out 21/21 read at 4.0-8.6x, all 440 uploads 46 "Osäker" -> 0 with none
+  refused, readings 0.03-0.06 lower than natt2's (natt2 reads high: 1.5 px off
+  on the ticks), one dawn frame 0.09 high. Sweeps and negatives unchanged.
+  **The normalisation bug is still there** — fixed (normalise by the shifted
+  window), it cuts these "Osäker" only 24 -> 20 (natt takes over) and refuses
+  the Platinum kitchen set's 4.5 L/min at 2.6x, because it also moves the tilt
+  choice. Its own change, validated on its own. Expect it again whenever the
+  camera sits several px off a pose that a reference was built in.
+  **Headroom is the constraint**: the sketch is 3.21 MB of the 3.34 MB OTA
+  slot (96%), motor.js 1.88 MB, because the engine carries BOTH presets'
+  references while a build uses one preset's. 'ljus' was dropped to fit
+  kväll3 (its 10-18 sweeps still read, 3.0-15x). No further reference fits:
   before adding one, emit only the built preset's references into
-  balldetector_js.h (or gzip /motor.js), or drop 'natt'/'natt2'/'ljus' once
-  this pose has held.
+  balldetector_js.h (or gzip /motor.js).
 
 ### The Platinum 9 calibration (v1.12.10, 2026-09-30 afternoon, the care home)
 Everything is in the `platinum9` preset with a comment per number. The unit is
