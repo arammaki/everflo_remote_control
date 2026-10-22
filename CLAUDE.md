@@ -567,7 +567,16 @@ Edit the detection engine **only** in `balldetector.js`, then run
 `node build_webui.mjs`. The script inlines it verbatim into both HTML
 pages between the `ENGINE:BEGIN`/`ENGINE:END` markers, generates
 `balldetector_js.h` for the sketch to serve at `/motor.js`, and verifies
-the two page copies came out byte-identical. The header is generated too,
+the two page copies came out byte-identical. Since 1.14.8 the header holds
+one variant of the engine per machine, picked by `CONCENTRATOR` (so the sketch
+includes it after that block): the whole source with the OTHER machine's
+`REF_PNG_*` constants set to null. A build only ever drives one machine and
+the references are the bulk of the engine — the Platinum's five were 783 kB of
+an EverFlo build at 96% of the OTA slot. `ENGINE_VERSION` stays the hash of the
+full source, so the admin page (which, like the pages, keeps every reference)
+still recognises the device's readings as its own engine's. A reference
+constant must be named `REF_PNG_<MACHINE>_…` with the machine in the script's
+`VARIANTS`, or the build stops. The header is generated too,
 so an engine change reaches the device page only after a reflash. `node build_webui.mjs --check` exits
 non-zero when a page is out of date — run it before committing.
 
@@ -824,12 +833,16 @@ refused in full like the other old poses.
   before). Five checked-in frames changed tilt, reference or fallback path;
   none moved its reading by more than 0.01. Registration stored under older
   engines (some above 1) is not comparable with the new values.
-  **Headroom is the constraint**: the sketch is 3.21 MB of the 3.34 MB OTA
-  slot (96%), motor.js 1.88 MB, because the engine carries BOTH presets'
-  references while a build uses one preset's. 'ljus' was dropped to fit
-  kväll3 (its 10-18 sweeps still read, 3.0-15x). No further reference fits:
-  before adding one, emit only the built preset's references into
-  balldetector_js.h (or gzip /motor.js).
+  **Headroom** was the constraint: the sketch reached 3.21 MB of the 3.34 MB
+  OTA slot (96%), because the engine carried BOTH presets' references while a
+  build uses one preset's; 'ljus' was dropped to fit kväll3 (its 10-18 sweeps
+  still read, 3.0-15x). Since 1.14.8 the device gets only its own machine's
+  references (see "The engine has one source"): the EverFlo build is 2.41 MB
+  (72%, motor.js 1.05 MB), a Platinum build 2.19 MB (65%) — room for four or
+  five more references. Measured: on the 440 uploads of 2026-10-19..21 and on
+  every sweep and negative set, each machine's variant gives output identical
+  to the full engine. The old 'hall', 'natt' and 'natt2' won none of those 440
+  frames but are what the 10-05 and 10-18 sweeps read with — kept.
 
 ### The Platinum 9 calibration (v1.12.10, 2026-09-30 afternoon, the care home)
 Everything is in the `platinum9` preset with a comment per number. The unit is
