@@ -60,6 +60,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { presetOf } from './preset_of.mjs';
+import { orient } from './orient.mjs';   // shared with the reader Worker
 
 const BOB = 0.05;          // how much the ball floats on its own, L/min
 const here = dirname(fileURLToPath(import.meta.url));
@@ -93,20 +94,6 @@ function readBmp(path) {
     }
   }
   return { data, width: w, height: h };
-}
-
-/* Uploads are the raw landscape frame; the calibration is bound to the canvas
-   the pages analyse, which is mirrored and rotated 270. Same transform as the
-   admin page's orient(): canvas(xc,yc) = image(w-1-yc, h-1-xc). Feeding the
-   raw frame straight in gives dx=40, dy=-40, reg 0.07 and looks exactly like a
-   camera that has fallen off the wall. */
-function orient(im) {
-  const W = im.height, H = im.width, out = new Uint8ClampedArray(W * H * 4);
-  for (let yc = 0; yc < H; yc++) for (let xc = 0; xc < W; xc++) {
-    const s = ((im.height - 1 - xc) * im.width + (im.width - 1 - yc)) * 4, t = (yc * W + xc) * 4;
-    out[t] = im.data[s]; out[t + 1] = im.data[s + 1]; out[t + 2] = im.data[s + 2]; out[t + 3] = 255;
-  }
-  return { data: out, width: W, height: H };
 }
 
 /* Rewrites one SHARED constant in the engine source (SEARCH, TILTS, BOXW —
