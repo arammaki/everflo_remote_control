@@ -1,0 +1,36 @@
+{
+  // Reads uploaded frames on the server, once an hour. See src/index.js.
+  //
+  //   npm ci && npx wrangler deploy
+  //
+  // Its own Worker on purpose: it runs over the free plan's CPU limit per
+  // invocation, and the ingest Worker (uploads, firmware) must never share
+  // that risk. Redeploy it whenever build_webui.mjs changes the engine, or it
+  // keeps writing readings under the engine it was deployed with.
+  //
+  // No public URL: workers_dev false, no routes. Only the cron calls it.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "everflo-reader",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-15",
+  "account_id": "86c73d2432665552e5dcab672f0644b3",
+  "workers_dev": false,
+  "observability": { "enabled": true },
+  "triggers": { "crons": ["17 * * * *"] },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "everflo",
+      "database_id": "5597a503-8219-4d30-906e-22bc7534d735"
+    }
+  ],
+
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "everflo-images",
+      "jurisdiction": "eu"
+    }
+  ]
+}

@@ -103,6 +103,25 @@ CREATE TABLE IF NOT EXISTS firmware (
 CREATE UNIQUE INDEX IF NOT EXISTS firmware_one_armed
   ON firmware ((1)) WHERE armed_at IS NOT NULL;
 
+-- The reader Worker's place in the queue (cloud/reader, 2026-10-22). One row.
+-- It reads every frame with id > last_id, in id order, a few per hourly run.
+-- trying_id/tries are written BEFORE a frame is read: the Worker runs over the
+-- free plan's CPU limit, and a run Cloudflare cuts off leaves no other trace —
+-- after three, the frame is skipped and counted in given_up (at once when the
+-- decoder or engine throws: that is not transient). The admin page
+-- reads this row to warn when the reader has stopped or fallen behind.
+CREATE TABLE IF NOT EXISTS reader_state (
+  id           INTEGER PRIMARY KEY CHECK (id = 1),
+  last_id      INTEGER NOT NULL,   -- highest readings.id handled (read or skipped)
+  trying_id    INTEGER,            -- the frame a run started on and did not finish
+  tries        INTEGER NOT NULL DEFAULT 0,
+  given_up     INTEGER NOT NULL DEFAULT 0,
+  last_run_at  TEXT,               -- ISO8601, the end of the last run that completed
+  last_read_at TEXT,               -- ISO8601, the last reading it stored
+  last_error   TEXT,               -- the latest failure, cleared by the next run without one
+  engine       TEXT                -- ENGINE_VERSION the reader was deployed with
+);
+
 -- Added 2026-09-26 for existing databases. Run it BEFORE deploying the
 -- ingest Worker that writes the column: the INSERT names it, so a Worker
 -- deployed first fails every upload until the column exists.

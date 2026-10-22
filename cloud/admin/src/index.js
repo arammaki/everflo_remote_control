@@ -33,10 +33,14 @@
 
    The reading is computed IN THE BROWSER (added 2026-08-16), by the same
    engine the phone runs, served at /motor.js. That is the one place the
-   calibration is valid: it was fitted on browser-decoded pixels. Running
-   it server-side would need a second JPEG decoder proven to agree, which
-   is why the ingest Worker still stores `flow` as NULL and the image
-   stays the record.
+   calibration is valid: it was fitted on browser-decoded pixels. Since
+   2026-10-22 the reader Worker (cloud/reader) also reads new frames on the
+   server, hourly, with a second decoder measured against this page's
+   readings (within 0.0032 L/min on 150 frames, same verdict on all) — its
+   rows land in the same column under the same engine hash, marked
+   "src":"server" in `quality`. Clicking a row, or "Analysera om alla",
+   replaces such a row with this page's own reading (the upsert below);
+   "Analysera N rader" counts it as done. The image stays the record.
 
    Every stored reading carries the content hash of the engine that made
    it, so recomputing an old frame with a newer engine is visible rather
@@ -53,6 +57,7 @@
 
 import { ENGINE, ENGINE_VERSION } from './engine.js';
 import { presetOf } from '../../../tools/preset_of.mjs';
+import { verdict, quality, storableFlow, cleanQuality } from '../../../tools/verdict.mjs';
 
 const PAGE_SIZE = 200;
 const STATES = new Set(['ok', 'max', 'below', 'uncertain', 'no-reading']);
@@ -110,7 +115,43 @@ function navHtml(nav) {
   ${link(page + 1, 'Äldre →')}
 </div>`;
 }
-function renderPage(rows, now, latest, nav) {
+/* The reader Worker (cloud/reader) reads new frames on the server once an hour,
+   over the free plan's CPU limit — so it may be stopped by Cloudflare at any
+   time, and the one way to notice is here. It reads PER_RUN (12) frames an
+   hour, so a burst of presses leaves a queue for some hours: that is shown,
+   not warned about — a run that completes always moves the queue on. Red is
+   for what a working reader cannot look like: no COMPLETED run for three
+   hours (the reader writes last_run_at only when a run ends, so runs that
+   Cloudflare cuts off count as missing), or a reader on another engine than
+   this page's (one of the two was not redeployed after the engine changed).
+   rd: null when the table does not exist (never deployed); {failed} when the
+   query itself failed, which is said as such, not as "not running". */
+function readerHtml(rd, now) {
+  if (!rd) return '<p class="liten">Serveravläsningen är inte igång — bilderna läses bara här i webbläsaren.</p>';
+  if (rd.failed) return '<p class="warn">Serveravläsningens status kunde inte läsas från databasen.</p>';
+  const ago = (t) => t ? humanGap(now - Date.parse(t)) : 'aldrig';
+  const late = !rd.last_run_at || now - Date.parse(rd.last_run_at) > 3 * 3600 * 1000;
+  const parts = [`Servern läser av nya bilder varje timme. Senaste avslutade körning ${ago(rd.last_run_at)},
+    senaste avläsning ${ago(rd.last_read_at)}.`];
+  if (rd.queued) parts.push(`${rd.queued >= 1000 ? 'Minst 1000' : rd.queued} bilder väntar på nästa körning.`);
+  if (rd.given_up) parts.push(`${rd.given_up} bilder har den gett upp om.`);
+  // The reader's own log text, in English like /log: labelled as such.
+  if (rd.last_error) parts.push(`Senaste fel (tekniskt, från serverns logg): ${rd.last_error}`);
+  if (rd.engine && rd.engine !== ENGINE_VERSION) {
+    return `<p class="warn">Serveravläsningen kör motor ${escapeHtml(rd.engine)} och sidan
+      ${escapeHtml(ENGINE_VERSION)} — den av dem som inte driftsattes efter motorbytet behöver
+      driftsättas igen. ${escapeHtml(parts.join(' '))}</p>`;
+  }
+  if (late) {
+    return `<p class="warn">Serveravläsningen har inte gjort klart någon körning på tre timmar.
+      Cloudflare kan ha stoppat den för att den drar mer processortid än gratisplanen
+      tillåter. Bilderna går fortfarande att läsa av här med Analysera.
+      ${escapeHtml(parts.join(' '))}</p>`;
+  }
+  return `<p class="liten">${escapeHtml(parts.join(' '))}</p>`;
+}
+
+function renderPage(rows, now, latest, nav, reader) {
   const age = latest ? now - Date.parse(latest.received_at) : null;
   // Uploads are every 15 min; nothing for 40 means something is wrong.
   const stale = age === null || age > 40 * 60 * 1000;
@@ -242,6 +283,7 @@ function renderPage(rows, now, latest, nav) {
 </style></head><body>
 <h1>EverFlo — logg</h1>
 ${banner}
+${readerHtml(reader, now)}
 
 <div id="sticky">
 <div class="top">
@@ -426,18 +468,12 @@ class UnknownPreset extends Error {}
 class Superseded extends Error {}
 class LoadFailed extends Error {}
 const blank=()=>{ ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,480,640); };
-/* One shape for both the table cell and the row written to the database.
-   state:null means "nothing to store": a machine without a calibration yet can
-   only refuse, and a table full of those refusals would say nothing about the
-   frames that the next engine, calibrated, will read. */
-function verdict(r,b){
-  if(r.uncalibrated) return {state:null, flow:null, txt:'okal.', cls:'bad'};
-  if(!b.ok) return {state:b.title==='Osäker avläsning'?'uncertain':'no-reading',
-                    flow:null, txt:b.title==='Osäker avläsning'?'osäker':'nej', cls:'bad'};
-  if(b.maxState)    return {state:'max',   flow:null, txt:b.label, cls:'good'};
-  if(b.bottomState) return {state:'below', flow:null, txt:b.label, cls:'good'};
-  return {state:'ok', flow:r.flow, txt:r.flow.toFixed(2), cls:'good'};
-}
+/* One shape for both the table cell and the row written to the database, and
+   the same code the reader Worker stores its readings with: tools/verdict.mjs,
+   inlined here — as values of a const, so the page does not depend on the name
+   the bundler gives the function. */
+const verdict=${verdict};
+const quality=${quality};
 /* Each frame is read with the preset of the machine it was taken of, as the
    device reported it. NULL in the table means a frame from before presets, and
    every one of those is an EverFlo frame — the row markup already maps it. An
@@ -496,14 +532,7 @@ async function flush(){
 }
 function remember(tr,r,v){
   queue.push({id:Number(tr.dataset.id), flow:v.flow, state:v.state, engine:MOTOR,
-    quality:{reg:+r.reg.toFixed(3), peak:+r.peak.toFixed(3), margin:+r.margin.toFixed(1),
-             dx:+r.dx.toFixed(1), dy:+r.dy.toFixed(1), spread:r.spread,
-             /* Only what this engine actually said. A page running a cached
-                pre-v1.10.12 /motor.js has no fallback concept, and writing
-                false there would be indistinguishable from "the
-                best-registering reference answered". */
-             ...(r.ref?{ref:r.ref}:{}),
-             ...(typeof r.fallback==='boolean'?{fallback:r.fallback}:{})}});
+    quality:quality(r)});
   if(queue.length>=25) flush();
 }
 /* Brings a row into view WITHOUT scrollIntoView, which scrolls every
@@ -774,37 +803,13 @@ if(rows.length){
 </body></html>`;
 }
 
-/* Rebuilt field by field rather than stored as the client sent it. Truncating
-   a JSON string to a length limit can cut it mid-value, and this column exists
-   to be read back during an investigation months later — corrupt JSON there
-   fails exactly when it is needed. Six known numbers are bounded by
-   construction and always parse. */
-const QUALITY = { reg: 3, peak: 3, margin: 1, dx: 1, dy: 1, spread: 0 };
-/* Which lighting answered. Not a number, so it is whitelisted by value rather
-   than bounded by construction — a free string here would be the one field in
-   this row that could carry anything. `fallback` says the best-registering
-   reference REFUSED and this came from the next one (v1.10.12), which is what
-   explains a reading sitting a few hundredths off its span months later. */
-const REFS = new Set(['natt', 'dag', 'kväll', 'natt2', 'hall2', 'dag2', 'hall', 'rum', 'ljus', 'ljus3', 'natt3', 'kväll3']);
-function cleanQuality(q) {
-  if (!q || typeof q !== 'object') return null;
-  const out = {};
-  for (const [k, dp] of Object.entries(QUALITY)) {
-    const v = q[k];
-    if (Number.isFinite(v) && Math.abs(v) < 1e6) out[k] = Number(v.toFixed(dp));
-  }
-  if (REFS.has(q.ref)) out.ref = q.ref;
-  if (typeof q.fallback === 'boolean') out.fallback = q.fallback;
-  return Object.keys(out).length ? JSON.stringify(out) : null;
-}
 
 /** Validates one client-supplied reading. Anything odd is dropped, not stored. */
 function clean(x) {
   if (!x || !Number.isInteger(x.id) || x.id <= 0) return null;
   if (!STATES.has(x.state)) return null;
-  const flow = x.flow == null ? null
-    : (Number.isFinite(x.flow) && x.flow >= -1 && x.flow <= 20 ? x.flow : null);
-  if (x.state === 'ok' && flow == null) return null;
+  const flow = storableFlow({ state: 'other', flow: x.flow }) ? (x.flow ?? null) : null;
+  if (!storableFlow({ state: x.state, flow })) return null;
   // The build hash, nothing else: `engine` is the dimension the whole
   // then-versus-now comparison is indexed by, and a junk value there is a
   // phantom engine that never existed.
@@ -1017,13 +1022,32 @@ export default {
         ORDER BY r.received_at DESC, r.id DESC LIMIT ?2 OFFSET ?3`
     ).bind(ENGINE_VERSION, limit, (page - 1) * limit));
 
-    /* When each firmware version was first and last seen. This is the table
-       that lets a human pick a boundary they can reason about: the LED went in
-       with one version, the camera moved with another, and those events are
-       what actually invalidate an older engine's calibration. Ordered newest
-       first because the boundary you want is nearly always a recent one. */
+    /* The reader Worker's state, for readerHtml(). The queue is a range over
+       the primary key from last_id, less what this engine has already read
+       (in the browser): the reader skips those. Capped — at most 2000 ids
+       scanned, 1000 counted — so a reader stopped for weeks does not make
+       every page load count the archive; a stopped reader is red anyway. */
+    let reader = null;
+    try {
+      reader = await db.first(env.DB.prepare(
+        `SELECT s.last_run_at, s.last_read_at, s.given_up, s.last_error, s.engine,
+                (SELECT COUNT(*) FROM (SELECT 1 FROM readings r WHERE r.id > s.last_id
+                    AND r.id <= s.last_id + 2000 AND r.image_key IS NOT NULL
+                    AND NOT EXISTS (SELECT 1 FROM analyses a
+                                     WHERE a.reading_id = r.id AND a.engine = ?1)
+                    LIMIT 1000)) AS queued
+           FROM reader_state s WHERE s.id = 1`)
+        .bind(ENGINE_VERSION));
+    } catch (e) {
+      // Only a missing table means "never deployed"; anything else is a failure.
+      if (!/no such table/i.test(String(e?.message ?? e))) {
+        console.log(`reader_state query failed: ${e?.message ?? e}`);
+        reader = { failed: true };
+      }
+    }
+
     db.log(`page ${page} limit ${limit}${goTo ? ' id ' + goTo : ''}`);
-    return new Response(renderPage(results, Date.now(), latest, { page, limit, total, pages, goTo }), {
+    return new Response(renderPage(results, Date.now(), latest, { page, limit, total, pages, goTo }, reader), {
       headers: { 'content-type': 'text/html; charset=utf-8' },
     });
   },
