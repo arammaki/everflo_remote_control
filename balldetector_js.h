@@ -3,8 +3,8 @@
    One variant per machine, chosen by CONCENTRATOR: include this AFTER it. */
 #pragma once
 #define ENGINE_VERSION "5007a485"
-#if !defined(CONCENTRATOR)
-  #error "balldetector_js.h: define CONCENTRATOR before including it"
+#if !defined(CONCENTRATOR) || !defined(CONC_EVERFLO) || !defined(CONC_PLATINUM9)
+  #error "balldetector_js.h: define CONCENTRATOR and the CONC_* machine ids before including it"
 #elif CONCENTRATOR == CONC_EVERFLO
 static const char BALLDETECTOR_JS[] = R"JS(
 /* ============================================================

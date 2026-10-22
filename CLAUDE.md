@@ -571,7 +571,7 @@ the two page copies came out byte-identical. Since 1.14.8 the header holds
 one variant of the engine per machine, picked by `CONCENTRATOR` (so the sketch
 includes it after that block): the whole source with the OTHER machine's
 `REF_PNG_*` constants set to null. A build only ever drives one machine and
-the references are the bulk of the engine — the Platinum's five were 783 kB of
+the references are the bulk of the engine — the Platinum's five were 0.80 MB of
 an EverFlo build at 96% of the OTA slot. `ENGINE_VERSION` stays the hash of the
 full source, so the admin page (which, like the pages, keeps every reference)
 still recognises the device's readings as its own engine's. A reference
@@ -838,7 +838,7 @@ refused in full like the other old poses.
   build uses one preset's; 'ljus' was dropped to fit kväll3 (its 10-18 sweeps
   still read, 3.0-15x). Since 1.14.8 the device gets only its own machine's
   references (see "The engine has one source"): the EverFlo build is 2.41 MB
-  (72%, motor.js 1.05 MB), a Platinum build 2.19 MB (65%) — room for four or
+  (72%, motor.js 1.08 MB), a Platinum build 2.19 MB (65%) — room for four or
   five more references. Measured: on the 440 uploads of 2026-10-19..21 and on
   every sweep and negative set, each machine's variant gives output identical
   to the full engine. The old 'hall', 'natt' and 'natt2' won none of those 440
