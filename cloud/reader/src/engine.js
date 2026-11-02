@@ -153,6 +153,9 @@ const PRESETS={
     LOW_FLOW:0.3, LOW_LABEL:'Under 0,3',
     LOW_REASON:"Bollen ligger vid eller nära botten — flödet är under 0,3 L/min eller avstängt.",
     MAX_REASON:"Bollen står vid eller ovanför det övre tjocka strecket — flödet är över skalans sista siffra.",
+    /* What her page shows in the Max state, and under it (1.15.0: per preset,
+       because the VisionAire's top is the knob's end, not past the scale). */
+    MAX_LABEL:'Max', MAX_UNIT:'över skalans slut',
     /* What the device page SHOWS: the tube and its digits, x 205..375,
        y 90..510 — the LED (left, x 100..190) and the knob (top) left out.
        Display only: the analysis always gets the whole 480x640 frame. */
@@ -240,6 +243,7 @@ const PRESETS={
     LOW_FLOW:0.8, LOW_LABEL:'Under 1',
     LOW_REASON:"Flödet är under 1 L/min — maskinen larmar för lågt flöde, eller så är den avstängd.",
     MAX_REASON:"Bollen står ovanför den röda linjen — maskinen ska inte ställas högre, syrehalten sjunker.",
+    MAX_LABEL:'Max', MAX_UNIT:'över skalans slut',
     /* Her page shows the meter alone: x 240..380, y 100..520. */
     VIEW_X:240, VIEW_W:140, VIEW_Y:100, VIEW_H:420,
     /* Degrees of knob per flow, measured by "Kalibrera ratten" on the control
@@ -293,8 +297,85 @@ const PRESETS={
               [REF_PNG_PLATINUM9_NATT2,'natt2'], [REF_PNG_PLATINUM9_HALL2,'hall2'],
               [REF_PNG_PLATINUM9_DAG2,'dag2']],
   },
+  /* AirSep VisionAire 5 (from 2026-11-02). A ball in a narrow tube with the
+     scale printed beside it, 1..5 L/min, and a knob that does not take the ball
+     much past 4.75 — so the top of this preset is the KNOB'S end, not a line
+     past the scale: "4,75 (max)", and her page does not turn + while it shows.
+
+     Calibrated 2026-11-02 21:09-21:18 UTC on two sweeps taken minutes apart in
+     one pose: test/visionaire5-sweep-2026-11-02-ljus (the room lit) and
+     -morker (dark, the WS2812 alone). The camera moves with the knob, as on
+     the Platinum: against each sweep's own median dx -2.0 .. +4.9 px and dy
+     +2.0 .. -4.0 from 1 L/min to the top (the light sweep's resting frame,
+     taken last, sits at dx +7). So both references are aligned —
+     tools/align_reference.mjs twice against the sweep's own plain median, with
+     the geometry below — and the rest absorbs it per frame.
+
+     The geometry was chosen on a grid over both sweeps (ball band centre
+     164..184, width 10..20, lean 0.07..0.14, six anchor bands): one plateau
+     around the values below where neither sweep refuses a frame, and every
+     neighbour within 2 px and 0.01 of lean reads the same to a few hundredths.
+     Margins, light / dark: contrast 0.276 / 0.185 (gate 0.10), ambiguity
+     11.2x / 4.7x (3.0; the dark 2 L/min is the thin one), registration
+     0.950 / 0.951 (0.75), spread 43 / 44 (75). In the dark the ball shows as
+     little more than a glint below 2.5 L/min and is found anyway. */
+  visionaire5:{
+    name:'AirSep VisionAire 5',
+    /* The ball's path, 10 px wide at y=320 and leaning 0.115 (6.6 degrees,
+       the ball moves from x ~191 at 1 L/min to ~171 at the top). XL 170..174
+       and a lean of 0.105..0.125 read the same. */
+    XL:172, XR:182,
+    /* The printed digits and the left ends of the ticks, x 120..150 — left of
+       the ball, away from the LED, whose glare sits right of the tube at
+       y 340..370 (the ticks at 205..230 register as well, but next to it). */
+    AX1:120, AX2:150,
+    /* The ball lives in y ~293 (4.75, the knob's top) .. 560 (its resting
+       stop). */
+    YTOP:270, YBOT:580,
+    RY1:200, RY2:560,
+    BASE_TILT:0.115,
+    /* Fitted to the light sweep's labels 1..4.75 against 'ljus': mean 0.024,
+       worst 0.069 (3.5). The dark sweep is never fitted to and checks it
+       independently through 'natt': mean 0.066, worst 0.176 — high at 3.5 and
+       4 (+0.13, +0.18), where the dark frames show the ball ~10 px higher
+       than the light frames of the same label: the knob set a little
+       differently in the dark, judged from the pictures, not a reading error.
+       A vertical shift of 'natt' cannot remove that (the low end reads -0.06),
+       so 'natt' is left in its own sweep's coordinates. */
+    CAL:[-4.96996437e-06, -0.0135614994, 9.20398834],
+    Y_CAL_MIN:297, Y_CAL_MAX:509,   // y of 4.75 and 1 L/min in the light sweep
+    /* The knob's top: the 4.75 frames sit at y 297.5 (light) and 293.5
+       (dark), the 4.5 frames at 311.4 and 307.3 — so the boundary is 303
+       (4.64 on the curve), 4-6 px from each. Above it is the Max state, shown
+       as "4,75 (max)" (the operator's call, 2026-11-02): the knob does not go
+       much higher, and her page does not turn + while the camera sees it. */
+    Y_MAX_STATE:303,
+    /* The resting ball reads 0.19 (light) and 0.05 (dark); 1 L/min reads
+       0.93-1.03. Nothing under the 1 mark is in the sweep, so below 0.5 is one
+       state rather than an extrapolated number. */
+    LOW_FLOW:0.5, LOW_LABEL:'Under 0,5',
+    LOW_REASON:"Bollen ligger vid eller nära botten — flödet är under 0,5 L/min eller avstängt.",
+    MAX_REASON:"Bollen står högst upp — ratten går inte högre (cirka 4,75 L/min).",
+    MAX_LABEL:'4,75 (max)', MAX_UNIT:'L/min — högsta läget',
+    /* Her page shows the tube and its digits, x 84..260, y 180..600 — the LED
+       (right) and the knob (top) left out; 6 px spare on the left, where
+       "LPM" reached the edge at dx -3 (frame 12025). */
+    VIEW_X:84, VIEW_W:176, VIEW_Y:180, VIEW_H:420,
+    KNOB:null, BACKLASH:null,   // never measured: her page keeps the degree buttons
+    /* 'ljus' (the room lit) and 'natt' (dark), both aligned medians of their
+       own sweep — see REF_PNG_VISIONAIRE5_LJUS. */
+    refs:()=>[[REF_PNG_VISIONAIRE5_LJUS,'ljus'], [REF_PNG_VISIONAIRE5_NATT,'natt']],
+  },
 };
 
+/* AirSep VisionAire 5, 2026-11-02: 'ljus' (the room lit) and 'natt' (dark),
+   per-pixel medians of test/visionaire5-sweep-2026-11-02-ljus and -morker,
+   each frame first shifted back by its own dx/dy — tools/align_reference.mjs
+   against the sweep's plain median (calibrate.mjs --out), then again against
+   that first pass, with the preset's geometry. Not shifted onto each other:
+   see CAL in the preset. 8-bit grayscale. */
+const REF_PNG_VISIONAIRE5_LJUS=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
+const REF_PNG_VISIONAIRE5_NATT=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 /* EverFlo, 2026-10-05, the hall lamp on: per-pixel median of the 13 frames
    of test/everflo-sweep-2026-10-05-hall (calibrate.mjs, plain median — the
    camera did not creep during this sweep: dx -0.9..+2.8 px, dy -0.5..+2.4). */
@@ -423,12 +504,12 @@ const REF_PNG_PLATINUM9_DAG2=null;   // the reader uses tools/reader_profiles.mj
    move. Assigned only by usePreset(). */
 const PRESET_KEYS=['XL','XR','AX1','AX2','YTOP','YBOT','RY1','RY2','BASE_TILT',
   'CAL','Y_CAL_MIN','Y_CAL_MAX','Y_MAX_STATE','LOW_FLOW','LOW_LABEL','LOW_REASON','MAX_REASON',
-  'VIEW_X','VIEW_W','VIEW_Y','VIEW_H','KNOB','BACKLASH'];
+  'MAX_LABEL','MAX_UNIT','VIEW_X','VIEW_W','VIEW_Y','VIEW_H','KNOB','BACKLASH'];
 let PRESET=null;
 let KNOB_ERROR=null;   // why the live preset's knob table was set aside, if it was
 let XL, XR, AX1, AX2, YTOP, YBOT, RY1, RY2, BASE_TILT,
     CAL, Y_CAL_MIN, Y_CAL_MAX, Y_MAX_STATE, LOW_FLOW, LOW_LABEL, LOW_REASON, MAX_REASON,
-    VIEW_X, VIEW_W, VIEW_Y, VIEW_H, KNOB, BACKLASH;
+    MAX_LABEL, MAX_UNIT, VIEW_X, VIEW_W, VIEW_Y, VIEW_H, KNOB, BACKLASH;
 /* References are built per preset and kept, so the admin page can move between
    frames from two machines without rebuilding them each time. */
 const REF_CACHE={};
@@ -473,7 +554,7 @@ function usePreset(id){
   }
   ({XL, XR, AX1, AX2, YTOP, YBOT, RY1, RY2, BASE_TILT,
     CAL, Y_CAL_MIN, Y_CAL_MAX, Y_MAX_STATE, LOW_FLOW, LOW_LABEL, LOW_REASON, MAX_REASON,
-    VIEW_X, VIEW_W, VIEW_Y, VIEW_H, KNOB, BACKLASH}=p);
+    MAX_LABEL, MAX_UNIT, VIEW_X, VIEW_W, VIEW_Y, VIEW_H, KNOB, BACKLASH}=p);
   if(KNOB_ERROR){ KNOB=null; BACKLASH=null; if(typeof console!=='undefined') console.warn(KNOB_ERROR); }
   PRESET=id;
   REFS=REF_CACHE[id]||[];
@@ -905,7 +986,7 @@ function analyzeWith(R, ff, forceTilt, forceDx){
 /* What a candidate row would say, through the same states judge() uses. */
 function candidate(y){
   if(!(y>=0)) return null;
-  if(y < Y_MAX_STATE) return {label:"Max"};
+  if(y < Y_MAX_STATE) return {label:MAX_LABEL};
   const flow=CAL[0]*y*y + CAL[1]*y + CAL[2];
   if(flow < LOW_FLOW) return {label:LOW_LABEL};
   return {label:flow.toFixed(1), flow};
@@ -942,7 +1023,7 @@ function judge(r){
     return {ok:false, title:"Osäker avläsning",
             reason:"Störningen i röret är för utbredd för att vara bollen. Kontrollera att inget hänger framför röret."};
   if(r.y < Y_MAX_STATE)
-    return {ok:true, maxState:true, title:null, label:"Max",
+    return {ok:true, maxState:true, title:null, label:MAX_LABEL, unit:MAX_UNIT,
             reason:MAX_REASON};
   /* Test what the label claims. This was a threshold on y (Y_CAL_MAX+12 = 439)
      until 2026-08-17, and the bottom of the tube is exactly where the ball
@@ -968,4 +1049,4 @@ function judge(r){
           reason:"Inom kalibrerat område."};
 }
 export {toGray,flatfield,buildRef,analyze,judge,usePreset,setRefs,isCalibrated,PRESETS,W,H};
-export const ENGINE_VERSION = "1c86dd1";
+export const ENGINE_VERSION = "a7554cb5";

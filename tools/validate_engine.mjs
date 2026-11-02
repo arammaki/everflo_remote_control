@@ -218,12 +218,17 @@ if (expectRejected && !E.isCalibrated(presetId)) {
      bild_over_maxL_...  'max'      deliberately past the end of the printed
                                     scale: the Max state, NOT a number. A
                                     number here means the y<Y_MAX_STATE guard
-                                    has stopped guarding. */
+                                    has stopped guarding.
+     bild_4.75_topL_...  'max'      the knob at its END, on a machine whose
+                                    top is a state rather than a number (the
+                                    VisionAire's "4,75 (max)", 2026-11-02): the
+                                    Max state is required, as for over_max. */
 function parseName(file) {
   const m = file.match(/^bild_(.+?)L_.*\.jpe?g$/i);
   if (!m) return null;
   const s = m[1];
   if (/^over_max$/i.test(s)) return { name: s, expect: 'max', value: null };
+  if (/^\d+(\.\d+)?_top$/i.test(s)) return { name: s, expect: 'max', value: null };
   if (/^(\d+(\.\d+)?_)?min$/i.test(s)) return { name: s, expect: 'reading', value: null };
   if (/^max$/i.test(s)) return { name: s, expect: 'reading', value: null };
   // Read by eye at an angle, or below the calibrated range: the number is

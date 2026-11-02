@@ -583,7 +583,7 @@ async function select(i,{scroll}={}){
     chips(r);
     document.getElementById('reason').textContent=b.reason||'';
     if(!b.ok) show(b.title,'','none');
-    else if(b.maxState) show(b.label,'över skalans slut','warn');
+    else if(b.maxState) show(b.label,b.unit,'warn');
     else if(b.bottomState) show(b.label,'L/min','warn');
     else show(r.flow.toFixed(2),'L/min'+(b.extrapolated?' (osäkert)':''));
     // Last, and on its own: a display aid must never replace a verdict.

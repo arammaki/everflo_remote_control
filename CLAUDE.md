@@ -12,7 +12,9 @@ From late September 2026 she moves to an **Invacare Platinum 9** (1–9 L/min,
 a higher maximum than the EverFlo's 5). Same principle — a ball in a tube,
 the knob on top — and the same cup fits. Everything tuned for one machine is a
 **preset**, chosen when the firmware is built; see "Concentrator presets".
-The EverFlo's is kept intact so the unit can go back to it.
+The EverFlo's is kept intact so the unit can go back to it. (It went back to
+the EverFlo in October, and on 2026-11-02 to an **AirSep VisionAire 5** — see
+"The AirSep VisionAire 5 calibration".)
 
 This is assistive/medical-adjacent equipment intended for real daily use —
 not yet deployed (as of Aug 2026). Correctness and predictability beat
@@ -166,6 +168,17 @@ Single sketch `everflo_remote_control.ino`. Key pieces:
   120 s portal timeout, restart on failure. `wifiWatchdog()` in `loop()`
   heals runtime drops (3 × 15 s reconnects → `ESP.restart()`).
 - **mDNS**: `syrgas.local`.
+- **Device page** (v1.15.0): + does not turn while the screen shows the Max
+  state — `press()` and `pressFlow()` say "Flödet är redan på max – ratten
+  vrids inte högre" instead. The operator's call for the VisionAire, whose knob
+  takes the ball only a little past 4.75, so pressing on only loads the cup and
+  the motor; every machine's Max is the top of what it may be set to, so it
+  applies to all of them. It blocks only while the screen shows Max: a
+  refused, unsure or stale frame, one asked for before the motor stopped, or a
+  turn that went through clears it, so an unknown never locks anything, and minus always turns. It
+  trusts that + raises the flow — check DIRECTION on a new machine before she
+  relies on it. The firmware does not know the reading, so
+  this is the page's rule; the control panel does not have it.
 - **Device page** (v1.14.4): after a press that the device accepted, the page
   compares the frame from just before it with the first one requested 2.5 s
   after the motor stopped, and if nothing moved it says "Ingenting rörde sig
@@ -640,6 +653,12 @@ How each consumer learns the preset — and none of them has a default:
   machine's build is not. `publish` refuses a second machine under one version
   (the R2 key has no machine in it). `ota_flash.sh` shows both and warns.
 
+**What the Max state says is the preset's** (1.15.0): `MAX_LABEL` and
+`MAX_UNIT` — "Max" / "över skalans slut" on the EverFlo and the Platinum,
+whose Max is past the printed scale, "4,75 (max)" / "L/min — högsta läget" on
+the VisionAire, whose Max is the knob's end. `judge()` returns them as `label`
+and `unit`, and every page shows those.
+
 **NOT in a preset**: the algorithm and the quality gates — `T`, `TILTS`,
 `SEARCH`, the flatfield. A gate per machine would be a place to lower a
 threshold until a new calibration "works".
@@ -690,6 +709,8 @@ each number is what it is. In order:
 5. **Fill in the preset**, including what the Platinum's own label implies: it
    alarms below 1.0 L/min and loses concentration above the red line at 9, so
    `LOW_*` and `MAX_REASON` should say that rather than copy EverFlo's texts.
+   `MAX_LABEL`/`MAX_UNIT` are what her page shows in the Max state — "Max" past
+   a printed scale, "4,75 (max)" where the knob's end is the top (VisionAire).
 6. **Validate**: `node tools/validate_engine.mjs test/<dir>`, and the old
    suites still green. (`--expect-rejected` refuses to run against an
    uncalibrated preset: it would pass without a single gate running.)
@@ -857,6 +878,56 @@ refused in full like the other old poses.
   within 0.03). **Push the camera back towards the middle at the next visit
   and fasten it better** — a wider gate buys days, not a fix, and the
   evidence past 30 px is one afternoon's frames.
+
+### The AirSep VisionAire 5 calibration (v1.15.0, 2026-11-02)
+Preset `visionaire5`, `CONC_VISIONAIRE5`; every number is commented in the
+preset. A narrow tube with the scale printed beside it, 1..5 L/min, and a knob
+that takes the ball only a little past 4.75. The unit went onto it on
+2026-11-02 around 20:20 UTC: frames 12019-12023 were taken while mounting
+(refused by any preset), and every frame from 12019 until 1.15.0 lands carries
+`preset` everflo although it shows the VisionAire — read them as visionaire5
+(12024-12026 read 1.81, 1.43, 1.99, matching the pictures).
+
+- **Two sweeps, one pose, minutes apart** (21:09-21:18 UTC):
+  `test/visionaire5-sweep-2026-11-02-ljus/` (the room lit) and `-morker/`
+  (dark), 1..4.75 in halves plus the resting ball, references 'ljus' and
+  'natt'. The two renames in `LABELS.md`: `0_min`, and `4.75_top` — a new label
+  form in `validate_engine.mjs` that requires the Max state.
+- **The camera moves with the knob** (dx -2 .. +5 px, dy +2 .. -4 from 1 L/min
+  to the top), so both references are aligned medians:
+  `calibrate.mjs <sweep> --geometry g.json --out <dir>` for the plain median,
+  then `align_reference.mjs <sweep> <out> --base <dir>/ref.png --geometry g.json`
+  and again with `--base` the first pass. `align_reference.mjs` needs a whole
+  preset, so while the preset had no curve the geometry file carried dummy
+  CAL/Y_*/LOW_*/MAX_* values and `refs()` a dummy entry; with the preset
+  calibrated its own geometry is enough.
+- **Geometry from a grid over both sweeps** (band centre 164..184, width
+  10..20, lean 0.07..0.14, six anchor bands, each scored by its worst
+  contrast, ambiguity, registration, spread and its fit): one plateau around
+  band 172..182, lean 0.115, anchor on the digits at 120..150. Neighbours
+  within 2 px and 0.01 read the same to a few hundredths; the ticks at
+  205..230 register as well but sit beside the LED's glare.
+- **Curve fitted to the light labels** (mean 0.024, worst 0.069). The dark
+  sweep checks it independently: mean 0.066, worst 0.18 at 4 L/min, where its
+  ball stands ~10 px higher than the light sweep's 4 — the knob set
+  differently in the dark, judged from the pictures. 'natt' is not shifted
+  onto 'ljus': a vertical shift cannot fix a pattern that is low at the bottom
+  and high at 3.5-4. Margins, light / dark: contrast 0.28 / 0.19, ambiguity
+  11x / 4.7x (the dark 2 L/min is the thin one), registration 0.95 / 0.95.
+- **Max is the knob's end**: `Y_MAX_STATE` 303 (4.64 on the curve) splits the
+  4.75 frames (y 297.5 light, 293.5 dark) from 4.5 (311.4, 307.3), shown as
+  "4,75 (max)", and her page does not turn + there (the device page bullet).
+  Below the 1 mark nothing was swept, so under 0.5 is one state, "Under 0,5"
+  (the resting ball reads 0.19 / 0.05).
+- **Cross-checked**: every frame of every other machine's and pose's set (348)
+  is refused when read as a VisionAire, and the VisionAire sweeps are refused
+  as EverFlo and as Platinum. Every older set reads identically.
+- **Not measured yet**: the knob. The build block carries the EverFlo's
+  39/90/160 and direction -1 — what the unit ran when the sweep was taken — so
+  check that + turns the flow up, and size the steps against the ball. Daylight
+  is untested: the sweeps are a lit room and a dark one at night; expect
+  refusals by day until a day reference is built from uploads (the recipe
+  under "The Platinum 9 calibration", 1.13.0).
 
 ### The Platinum 9 calibration (v1.12.10, 2026-09-30 afternoon, the care home)
 Everything is in the `platinum9` preset with a comment per number. The unit is

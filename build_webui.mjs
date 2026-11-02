@@ -91,7 +91,7 @@ const engineVersion = (h >>> 0).toString(16);
    ENGINE_VERSION stays the hash of the FULL source: for the machine a build
    drives the variant is the same engine, and the admin page, which runs the
    full one, must keep recognising the device's readings as its own. */
-const VARIANTS = [['CONC_EVERFLO', 'EVERFLO'], ['CONC_PLATINUM9', 'PLATINUM9']];
+const VARIANTS = [['CONC_EVERFLO', 'EVERFLO'], ['CONC_PLATINUM9', 'PLATINUM9'], ['CONC_VISIONAIRE5', 'VISIONAIRE5']];
 const refNames = [...engine.matchAll(/^const (REF_PNG_[A-Z0-9_]+)="data:image\/png;base64,/gm)].map((m) => m[1]);
 for (const n of refNames) {
   if (!VARIANTS.some(([, p]) => n.startsWith(`REF_PNG_${p}_`))) {

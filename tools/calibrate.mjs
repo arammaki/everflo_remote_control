@@ -131,6 +131,11 @@ function parseName(file) {
   if (!m) return null;
   const s = m[1];
   if (/^over_max$/i.test(s)) return { name: s, expect: 'max', value: null };
+  // The knob's end on a machine whose top is a state (the VisionAire's 4.75,
+  // 2026-11-02): validate_engine.mjs requires the Max state there, but the
+  // label is a reading taken straight on, so the curve is fitted to it.
+  const tp = s.match(/^(\d+(?:\.\d+)?)_top$/i);
+  if (tp) return { name: s, expect: 'value', value: Number(tp[1]) };
   if (/^(\d+(\.\d+)?_)?min$/i.test(s)) return { name: s, expect: 'rest', value: null };
   if (/^max$/i.test(s)) return { name: s, expect: 'reading', value: null };
   // Read by eye at an angle, or below the calibrated range: the number is
@@ -215,6 +220,7 @@ E.PRESETS.__measure = {
   name: "measurement", ...Object.fromEntries(GEOMETRY_KEYS.map((k) => [k, preset[k]])),
   CAL: [0, 1, 0], Y_CAL_MIN: 0, Y_CAL_MAX: H, Y_MAX_STATE: -1,
   LOW_FLOW: -Infinity, LOW_LABEL: "-", LOW_REASON: "-", MAX_REASON: "-",
+  MAX_LABEL: "-", MAX_UNIT: "-",
   // Every display-crop key the engine knows, null: derived, so a new one
   // cannot break the measurement the way VIEW_Y/VIEW_H once did.
   ...Object.fromEntries(E.PRESET_KEYS.filter((k) => k.startsWith("VIEW_")).map((k) => [k, null])),
