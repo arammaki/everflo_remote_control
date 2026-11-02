@@ -155,7 +155,8 @@ move and 8 px of dy, and the curve still holds on the whole marks. The half
 marks (1.5 → 1.75, 2.5 → 2.76) are judged by eye, 8.5 and 9 from the side.
 Six read through the 1.13.0 reference 'hall2' (1 → 0.86, 7.5, 8, 8.5, 9, max)
 and one 8.5 through 'natt'. The largest |dx| that reads is 27.8, which is why
-`SHIFT_X` is 30 and not more. Mean 0.088, worst 0.26. Since 1.14.7 one frame
+`SHIFT_X` was 30 and not more (38 since 1.14.9, the operator's call after an
+EverFlo frame at 35.6 px — see `SHIFT_X` in `balldetector.js`). Mean 0.088, worst 0.26. Since 1.14.7 one frame
 is refused, the 14:41 one at 4.5 (dx 16.7, not part of the SHIFT_X evidence),
 listed by file name in `ALLOW_REFUSED`; mean 0.092 over the 15 that read.
 
@@ -164,7 +165,8 @@ ambiguity (1.1–2.97x), registration 0.78–0.86 above its gate; eight of them
 (dx 25–30) were also refused by dx before 1.13.0. These are a pose that reads
 RIGHT where it reads, so the set guards the ambiguity gate conservatively
 rather than proving the refusals necessary. Nothing in the suite constrains
-a sideways move between 30 px and the 40 px search edge:
+a sideways move between 30 px and the 40 px search edge — and since 1.14.9 a
+slide of 30-38 px passes the dx gate, which then refuses only 38-40:
 `negative-old-poses/` saturates at 40, and the EverFlo slide of 34 px that
 read 1.73 for 2.0 (2026-08-16) is not in it.
 

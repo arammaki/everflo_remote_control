@@ -70,8 +70,19 @@ const T={contrast:0.10, margin:3.0, reg:0.75, spread:75};
    thing standing in front of it. Every negative set was re-run with the gate
    at 40 and stays refused. Vertical stays 20: dy moves the reading itself, and
    nothing has measured how far that can go. One gate for both machines, as
-   for every other gate (see PRESETS). */
-const SHIFT_X=30, SHIFT_Y=20;
+   for every other gate (see PRESETS).
+   38 since 1.14.9, the operator's call with the 34 px case above in mind: on
+   2026-11-02 the EverFlo's camera, which had crept to 22-30 px over ten days,
+   jumped to 35.6 in one press (frame 12000, -39 degrees) with every other gate
+   green (registration 0.975, ambiguity 13.6x, dy 5.3). At 38 it reads 3.69
+   after 3.85, where a -39 press took 0.13-0.15 earlier that day. Over the 676
+   uploads of 2026-10-19..11-02 at 24 px or more, 7 change: that one, and six
+   at 30.4-30.8 that the gate at 30 had handed from 'natt3' to 'rum' (back to
+   natt3, within 0.03 L/min). Every checked-in set gives identical output at
+   30 and 38. So the evidence past 30 px is still a handful of frames from one
+   day; the cure is the mount, not a wider gate, and 38 keeps 2 px under the
+   search edge so a frame that saturates the search is still refused. */
+const SHIFT_X=38, SHIFT_Y=20;
 /* How much worse a reference may register than the best one and still answer
    when the best refuses — see the fallback in analyze(). An algorithm
    constant, shared by every preset like T. */

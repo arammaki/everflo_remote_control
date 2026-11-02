@@ -87,7 +87,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.14.8"
+#define FW_VERSION "1.14.9"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -972,8 +972,9 @@ function nextFrame(){ const i=new Image(), asked=Date.now(); i.onload=()=>{ fram
    The ANALYSIS still gets the whole 480x640 frame — the crop is display only,
    so no band, no registration and no calibration constant is touched. Cutting
    this close leaves little margin if the camera slides sideways, and that is
-   the right trade: past 30 px (SHIFT_X) the engine refuses the reading anyway, and
-   the control panel still shows the full frame for working out why. */
+   the right trade: past 38 px (SHIFT_X) the engine refuses the reading anyway, and
+   the control panel still shows the full frame for working out why. At 35.6 px
+   (2026-11-02, frame 12000) the scale's digits sit at the crop's right edge. */
 // No ?? here: this page must parse on older Safari (before 13.4) too.
 const CROP_X=(typeof VIEW_X!=='undefined' && VIEW_X!=null) ? VIEW_X : 0;
 const CROP_W=(typeof VIEW_W!=='undefined' && VIEW_W!=null) ? VIEW_W : 480;

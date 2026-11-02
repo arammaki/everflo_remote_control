@@ -843,6 +843,20 @@ refused in full like the other old poses.
   every sweep and negative set, each machine's variant gives output identical
   to the full engine. The old 'hall', 'natt' and 'natt2' won none of those 440
   frames but are what the 10-05 and 10-18 sweeps read with — kept.
+- **2026-11-02 (1.14.9): the camera slid, the sideways gate went 30 -> 38.**
+  From the 10-19 pose (dx ~1) the camera crept sideways as the motor turned
+  the knob — daily mean dx 1.5 on 10-22, 14 on 10-24, 24.5 on 10-28, 25-27 on
+  10-29..31 — and nothing was refused until frame 12000 (16:20 UTC), when one
+  -39 press JUMPED it from 28.9 to 35.6 px (the operator spotted the jump in
+  the pictures). Every other gate stayed green, so the gate alone refused:
+  her page said "Kameran har flyttat sig". The operator chose a wider gate
+  over a new calibration, knowing the 34 px kitchen slide of 2026-08-16 read
+  1.73 for 2.0; the measurements are at `SHIFT_X` in `balldetector.js`. In
+  short: every checked-in set identical at 30 and 38, and of 676 uploads at
+  24 px or more only 7 change (12000 reads, six go back from 'rum' to 'natt3'
+  within 0.03). **Push the camera back towards the middle at the next visit
+  and fasten it better** — a wider gate buys days, not a fix, and the
+  evidence past 30 px is one afternoon's frames.
 
 ### The Platinum 9 calibration (v1.12.10, 2026-09-30 afternoon, the care home)
 Everything is in the `platinum9` preset with a comment per number. The unit is
@@ -864,7 +878,7 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
 - **The camera moves when the motor turns the knob** — the operator confirms
   it is how the unit is fastened: dx −5.8 -> +7 px from 0 to max in this
   sweep, the same shape in every sweep at the care home. Registration absorbs
-  it; the dx gate is 30 px since 1.13.0 (20 before — see below).
+  it; the dx gate is 30 px since 1.13.0 (20 before — see below), 38 since 1.14.9.
 - **Build references aligned** — `tools/align_reference.mjs --base`, twice
   against the median, then for a second lighting `--shift` by its median's
   offset against the first. Exact commands below. In the morning pose the
@@ -893,7 +907,8 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
   to read: they are the evidence for `SHIFT_X` (below). The 17 are ambiguity
   and registration refusals of a pose that reads right where it reads, so they
   guard the ambiguity gate conservatively; nothing in the suite constrains a
-  sideways move between 30 px and the 40 px search edge — and the EverFlo's
+  sideways move between 30 px and the 40 px search edge (the gate is 38 since
+  1.14.9) — and the EverFlo's
   34 px slide that read 1.73 for 2.0 is not in any set.
 - **Rebuilding the references**: plain medians with `calibrate.mjs --out`
   (any geometry — the median does not depend on it), then 'dag' =
@@ -950,6 +965,8 @@ causes, two fixes:
   the EverFlo case sits under it and is in no test set. The gate is shared by
   both machines, like every gate. Current frames sit at 22-27, so the
   headroom is small: a further creep of a few px refuses again, and says so.
+  (38 since 1.14.9, knowingly above that 34 px case: see 2026-11-02 under
+  "The EverFlo again".)
 - **The references no longer matched** — reflections in the glass and the
   fitting at the foot look different from the new angle, and read as rivals
   at y 385/415 (the "rival under the 0 tick"). Three new references,
@@ -1026,7 +1043,7 @@ against scale ticks (anchor band x 296-320, sampled at the shifted x) -> clipped
 difference vs reference in ball band (x 252-292) -> smoothed profile ->
 peak + centroid -> quadratic calibration. Never remove the quality
 gates (registration >=0.75, contrast >=0.10, ambiguity >=3.0x,
-|dx| <=30 and |dy| <=20 px since 1.13.0, extent <=75 rows): the engine must say "no reading"
+|dx| <=38 since 1.14.9 (30 from 1.13.0) and |dy| <=20 px, extent <=75 rows): the engine must say "no reading"
 rather than output a plausible wrong number — it reads oxygen flow for
 a patient. Two states besides a number, and both are measured against the
 checked-in sweep rather than asserted (2026-09-05):
@@ -1120,7 +1137,7 @@ with it in a way no gate can see. Confidence is not accuracy.
 **Order matters**: dx is computed first, because the camera slides sideways
 and every band below is at a fixed x — measured 34 px on 2026-08-16. Sample
 the anchor band at its old x after a sideways slip and dy is meaningless.
-The search runs to +/-40 px while the gate rejects beyond 30 (20 for dy): a big shift
+The search runs to +/-40 px while the gate rejects beyond 38 (20 for dy): a big shift
 should be measured and named in the Swedish reason, not silently saturate
 at the edge of the search and look like noise.
 
