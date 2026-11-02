@@ -884,9 +884,10 @@ Preset `visionaire5`, `CONC_VISIONAIRE5`; every number is commented in the
 preset. A narrow tube with the scale printed beside it, 1..5 L/min, and a knob
 that takes the ball only a little past 4.75. The unit went onto it on
 2026-11-02 around 20:20 UTC: frames 12019-12023 were taken while mounting
-(refused by any preset), and every frame from 12019 until 1.15.0 lands carries
-`preset` everflo although it shows the VisionAire — read them as visionaire5
-(12024-12026 read 1.81, 1.43, 1.99, matching the pictures).
+(refused by any preset), and 12019-12028 carry `preset` everflo although they
+show the VisionAire — read them as visionaire5 (12024-12026 read 1.81, 1.43,
+1.99, matching the pictures). 1.15.0 landed at 21:52 UTC (12029, boot),
+fetched at once with a signed /api/fw-check from the same wifi.
 
 - **Two sweeps, one pose, minutes apart** (21:09-21:18 UTC):
   `test/visionaire5-sweep-2026-11-02-ljus/` (the room lit) and `-morker/`
