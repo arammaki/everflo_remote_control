@@ -168,6 +168,10 @@ Single sketch `everflo_remote_control.ino`. Key pieces:
   120 s portal timeout, restart on failure. `wifiWatchdog()` in `loop()`
   heals runtime drops (3 × 15 s reconnects → `ESP.restart()`).
 - **mDNS**: `syrgas.local`.
+- **Device page** (v1.15.2): the reading sits in a box of fixed height,
+  centred, so the buttons do not move when it turns into a two-line state —
+  "4,75 (max)" over "L/min — högsta läget" jumped them a line under her
+  finger. Only "Osäker" (three lines) is taller.
 - **Device page** (v1.15.0): + does not turn while the screen shows the Max
   state — `press()` and `pressFlow()` say "Flödet är redan på max – ratten
   vrids inte högre" instead. The operator's call for the VisionAire, whose knob

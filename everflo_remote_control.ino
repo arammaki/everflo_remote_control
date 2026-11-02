@@ -87,7 +87,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.15.1"
+#define FW_VERSION "1.15.2"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -667,9 +667,17 @@ static const char PAGE[] = R"HTML(
  body{font-family:-apple-system,Helvetica,Arial,sans-serif;margin:0;background:#f4f4f2;
       display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px}
  h1{font-size:1.1rem;margin:4px 0 0;color:#777;font-weight:600}
- #flow{font-size:3.4rem;font-weight:800;color:#1c8a4c;line-height:1;text-align:center}
+ /* A fixed height, centred, so the buttons under it do not move when the
+    reading turns into a state (1.15.2): "4,75 (max)" with "L/min — högsta
+    läget" under it is two lines where a number is one, and the buttons jumped
+    by a line under her finger. The height fits the two-line states; only
+    "Osäker" (three lines) is taller. */
+ #flow{font-size:3.4rem;font-weight:800;color:#1c8a4c;line-height:1;text-align:center;
+       min-height:4.5rem;display:flex;align-items:center;justify-content:center}
+ #flow>span{display:block}
  #flow small{font-size:1.1rem;color:#666;font-weight:400}
- #flow.warn{color:#b8860b}
+ #flow.warn{color:#b8860b;font-size:3rem}
+ #flow.warn small{display:block;margin-top:2px}
  #flow.unsure{color:#b8860b}
  #flow .tag{display:block;font-size:1.2rem;font-weight:700;color:#a33;margin-bottom:4px}
  #flow .alt{display:block;font-size:1.4rem;font-weight:700;color:#666;margin-top:6px}
@@ -728,7 +736,7 @@ static const char PAGE[] = R"HTML(
 <h1>Syrgas</h1>
 <div id="camwrap"><canvas id="cv" width="225" height="640"></canvas>
 <div id="stale">Bilden uppdateras inte<small id="staleAge"></small></div></div>
-<div id="flow">–<small> L/min</small></div>
+<div id="flow"><span>–<small> L/min</small></span></div>
 <div id="mode"></div>
 <div class="buttons flow">
 <div class="row">
@@ -965,14 +973,14 @@ function orient(img){
 function show(text,unit,cls){
   const el=document.getElementById('flow');
   el.className=cls||'';
-  el.innerHTML=text+(unit?'<small> '+unit+'</small>':'');
+  el.innerHTML='<span>'+text+(unit?'<small> '+unit+'</small>':'')+'</span>';
 }
 function showUnsure(main,other){
   const el=document.getElementById('flow');
   el.className='unsure';
   const unit=(s)=>/^[0-9.]+$/.test(s)?'<small> L/min</small>':'';
-  el.innerHTML='<span class="tag">Osäker</span>'+main+unit(main)+
-               '<span class="alt">eller '+other+(/^[0-9.]+$/.test(other)?' L/min':'')+'</span>';
+  el.innerHTML='<span><span class="tag">Osäker</span>'+main+unit(main)+
+               '<span class="alt">eller '+other+(/^[0-9.]+$/.test(other)?' L/min':'')+'</span></span>';
 }
 // Stamped with the REQUEST time: on 2.4 GHz a picture can take seconds to
 // arrive, and one taken while the ball still moved must not count as settled.
