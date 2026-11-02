@@ -883,7 +883,32 @@ refused in full like the other old poses.
   and fasten it better** — a wider gate buys days, not a fix, and the
   evidence past 30 px is one afternoon's frames.
 
-### The AirSep VisionAire 5 calibration (v1.15.0, 2026-11-02)
+### The AirSep VisionAire 5 calibration (v1.15.0, 2026-11-02; recalibrated in v1.16.0)
+
+**In force since 1.16.0** (the night of 2026-11-02): the first calibration's
+LED sat right of the tube at 3.5-4, so 1-2.5 was dark at night (the operator
+could not read the digits) and its glare put rivals beside the ball. The
+operator moved the LED to the left of the tube, aimed along it, and set it to
+40 (`LED_LEVEL`); the camera moved ~33 px with it. Three new sweeps, 23:03-23:09
+UTC: `test/visionaire5-sweep-2026-11-02b-hall/` (the hall lamp), `-morker/`
+and `-hallrum/` (hall and room lamps), references 'hall', 'natt', 'rum'. The
+whole preset was redone the same way as below — grid (one plateau at band
+220..236, lean 0.12, anchor on the ticks right of the ball, 250..275, nothing
+refused), aligned medians, 'rum' shifted (+4.8, -0.45) onto 'hall' (its camera
+slid ~6 px mid-sweep), curve fitted to -hall with 4.75 included. Means
+0.033 / 0.043 / 0.024 over the nine labels with 4.75's hidden reading
+(validate_engine.mjs, which counts it as Max, prints 0.030 / 0.047 / 0.026),
+worst 0.063 / 0.096 / 0.035; contrast at least 0.37
+and ambiguity 11x everywhere — the ball is clear at every height in the dark
+too. Max 300, crop x 140..320. The first calibration's three sweeps stay,
+every frame allowed to refuse (`ALLOW_REFUSED`) but a reading held to its
+label: its 'rum' sweep still reads 2, 2.5, 3 within 0.09 from 33 px away;
+the rest refuse. Still open, as for the first calibration: the knob's
+steps are the EverFlo's (39/90/160, direction -1; direction confirmed on
+site, steps kept by the operator's choice), and daylight is untested — expect
+refusals by day until a day reference is built from uploads. Everything below
+is the FIRST calibration (1.15.x) — the method holds, the numbers are
+history.
 Preset `visionaire5`, `CONC_VISIONAIRE5`; every number is commented in the
 preset. A narrow tube with the scale printed beside it, 1..5 L/min, and a knob
 that takes the ball only a little past 4.75. The unit went onto it on

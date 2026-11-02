@@ -87,7 +87,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.15.2"
+#define FW_VERSION "1.16.0"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -148,9 +148,11 @@
   #define STEP_MEDIUM     90
   #define STEP_LARGE      160
   #define DIRECTION       -1
-  /* The level the 2026-11-02 sweeps and their references were taken at (the
-     compiled default the unit ran then). Change it and it needs a new sweep. */
-  #define LED_LEVEL       50
+  /* The level the references were built under: 40 since 1.16.0, when the
+     operator moved the LED to the left of the tube and set it on the panel's
+     slider (the first calibration, 1.15.x, was at 50 with the LED on the
+     right). Change it and it needs new sweeps. */
+  #define LED_LEVEL       40
 #else
   #error "CONCENTRATOR must be CONC_EVERFLO, CONC_PLATINUM9 or CONC_VISIONAIRE5"
 #endif

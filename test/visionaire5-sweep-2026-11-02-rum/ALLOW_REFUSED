@@ -1,0 +1,15 @@
+# The first VisionAire calibration's light (1.15.x: the LED right of the tube, at 50) is gone
+# since 1.16.0 — the LED moved and the camera with it (~33 px). Every frame may refuse;
+# any frame that reads is still held to its label.
+0_min
+1.5
+1
+2.5
+2
+3.25
+3.5
+3.75
+3
+4.5
+4.75_top
+4

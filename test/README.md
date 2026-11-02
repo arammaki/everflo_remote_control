@@ -61,7 +61,19 @@ bottom and top labels were corrected with the operator ("0" is 0.5, "0.5" is
 ball past the top line in either. ljus mean 0.020 worst 0.046 (0.026 with 'ljus'); natt mean
 0.025 worst 0.062.
 
-## `visionaire5-sweep-2026-11-02-ljus/`, `-morker/` and `-rum/` — the AirSep VisionAire 5
+## `visionaire5-sweep-2026-11-02b-hall/`, `-morker/` and `-hallrum/` — the VisionAire in force
+
+The VisionAire's second calibration (1.16.0): the LED moved to the left of the
+tube at 40, the camera moved with it. The curve is fitted to `-hall`;
+validate_engine.mjs prints means 0.030 / 0.047 / 0.026 for `-hall`, `-morker`
+and `-hallrum` (worst 0.063 / 0.096 / 0.035). Nothing refused. `LABELS.md` in each has the rest.
+
+## `visionaire5-sweep-2026-11-02-ljus/`, `-morker/` and `-rum/` — the VisionAire's first light
+
+Since 1.16.0 every frame here may be refused (`ALLOW_REFUSED`): that LED
+position is gone. A frame that reads is still held to its label — the `-rum`
+sweep reads 2, 2.5 and 3 within 0.09 from 33 px away. What follows is how they
+were the calibration in force (1.15.x).
 
 The VisionAire's calibration (1.15.0): a lit and a dark sweep minutes apart in
 one pose, 1..4.75 in halves plus the resting ball. The curve is fitted to

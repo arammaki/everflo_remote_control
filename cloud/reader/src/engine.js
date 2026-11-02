@@ -302,111 +302,89 @@ const PRESETS={
      much past 4.75 — so the top of this preset is the KNOB'S end, not a line
      past the scale: "4,75 (max)", and her page does not turn + while it shows.
 
-     Calibrated 2026-11-02 21:09-21:18 UTC on two sweeps taken minutes apart in
-     one pose: test/visionaire5-sweep-2026-11-02-ljus (the room lit) and
-     -morker (dark, the WS2812 alone). The camera moves with the knob, as on
-     the Platinum: against each sweep's own median dx -2.0 .. +4.9 px and dy
-     +2.0 .. -4.0 from 1 L/min to the top (the light sweep's resting frame,
-     taken last, sits at dx +7). So both references are aligned —
-     tools/align_reference.mjs twice against the sweep's own plain median, with
-     the geometry below — and the rest absorbs it per frame.
+     SECOND calibration, 1.16.0: on the night of 2026-11-02 the operator moved
+     the LED (now left of the tube, aimed along it — the first position, right
+     of the tube at 3.5-4, left 1-2.5 dark and put a glare streak beside the
+     ball), set it to 40, and the camera moved ~33 px with it. Three sweeps
+     minutes apart, 23:03-23:09 UTC: test/visionaire5-sweep-2026-11-02b-hall
+     (the hall lamp on), -morker (dark) and -hallrum (hall and room lamps).
+     The first calibration (1.15.0-1.15.2: references 'ljus', 'natt', 'rum'
+     under the old LED) is in git; its sweeps stay in test/ with every frame
+     allowed to refuse — that light is gone — but any reading held to its
+     label (its 'rum' sweep still reads 2, 2.5 and 3 within 0.09, 33 px off).
 
-     The geometry was chosen on a grid over both sweeps (ball band centre
-     164..184, width 10..20, lean 0.07..0.14, six anchor bands): one plateau
-     around the values below where neither sweep refuses a frame, and every
-     neighbour within 2 px and 0.01 of lean reads the same to a few hundredths.
-     Margins, light / dark: contrast 0.276 / 0.185 (gate 0.10), ambiguity
-     11.2x / 4.7x (3.0; the dark 2 L/min is the thin one), registration
-     0.950 / 0.951 (0.75), spread 43 / 44 (75). In the dark the ball shows as
-     little more than a glint below 2.5 L/min and is found anyway. */
+     The camera moves with the knob, as before: against each sweep's own
+     median dx -1 .. +3.5 px from rest to the top, and in -hallrum it slid
+     ~6 px sideways mid-sweep (from 2 to 3 L/min). So the references are
+     aligned medians (tools/align_reference.mjs twice against the sweep's plain
+     median, with this geometry), and 'rum' is shifted into 'hall''s
+     coordinates (below). Margins over the three sweeps: contrast 0.37
+     (gate 0.10), ambiguity 11x (3.0), registration 0.96 (0.75), spread 37
+     (75) — the new light shows the ball clearly at every height, in the dark
+     too. */
   visionaire5:{
     name:'AirSep VisionAire 5',
-    /* The ball's path, 10 px wide at y=320 and leaning 0.115 (6.6 degrees,
-       the ball moves from x ~191 at 1 L/min to ~171 at the top). XL 170..174
-       and a lean of 0.105..0.125 read the same. */
-    XL:172, XR:182,
-    /* The printed digits and the left ends of the ticks, x 120..150 — left of
-       the ball, away from the LED, whose glare sits right of the tube at
-       y 340..370 (the ticks at 205..230 register as well, but next to it). */
-    AX1:120, AX2:150,
-    /* The ball lives in y ~293 (4.75, the knob's top) .. 560 (its resting
+    /* Chosen on a grid over all three sweeps (centre 218..232, width 10..18,
+       lean 0.09..0.13; anchor bands every 10 px from 120 to 320): one plateau
+       at centre 228..230, width 14..18, lean 0.11..0.13, nothing refused
+       anywhere. This sits inside it (centre 228, its lower edge, width and
+       lean in the middle); every neighbour within 2 px and 0.01 of lean reads
+       the three sweeps within 0.01 L/min of it. */
+    XL:220, XR:236,
+    /* The ticks right of the ball's path. The sweeps register 0.96-1.00; bands on the digits (left) register as well by day but give
+       away ambiguity margin (3.3-6.5x). */
+    AX1:250, AX2:275,
+    /* The ball lives in y ~292 (4.75, the knob's top) .. 545 (its resting
        stop). */
-    YTOP:270, YBOT:580,
+    YTOP:265, YBOT:570,
     RY1:200, RY2:560,
-    BASE_TILT:0.115,
-    /* Fitted to the light sweep's labels 1..4.75 against 'ljus': mean 0.024,
-       worst 0.069 (3.5). The dark sweep is never fitted to and checks it
-       independently through 'natt': mean 0.066, worst 0.176 — high at 3.5 and
-       4 (+0.13, +0.18), where the dark frames show the ball ~10 px higher
-       than the light frames of the same label: the knob set a little
-       differently in the dark, judged from the pictures, not a reading error.
-       A vertical shift of 'natt' cannot remove that (the low end reads -0.06),
-       so 'natt' is left in its own sweep's coordinates. */
-    CAL:[-4.96996437e-06, -0.0135614994, 9.20398834],
-    Y_CAL_MIN:297, Y_CAL_MAX:509,   // y of 4.75 and 1 L/min in the light sweep
-    /* The knob's top: the 4.75 frames sit at y 297.5 (light) and 293.5
-       (dark), the 4.5 frames at 311.4 and 307.3 — so the boundary is 303
-       (4.64 on the curve), 4-6 px from each. Above it is the Max state, shown
-       as "4,75 (max)" (the operator's call, 2026-11-02): the knob does not go
-       much higher, and her page does not turn + while the camera sees it. */
-    Y_MAX_STATE:303,
-    /* The resting ball reads 0.19 (light) and 0.05 (dark); 1 L/min reads
-       0.93-1.03. Nothing under the 1 mark is in the sweep, so below 0.5 is one
-       state rather than an extrapolated number. */
+    BASE_TILT:0.12,
+    /* Fitted to -hall's labels 1..4.75 through 'hall': mean 0.033, worst
+       0.063, over the nine labels with 4.75's hidden reading included
+       (validate_engine.mjs counts that frame as Max and prints the mean of
+       the other eight: 0.030 / 0.047 / 0.026). The other two are never
+       fitted to and check it: -morker through 'natt' mean 0.043, worst
+       0.096; -hallrum through 'rum' mean 0.024, worst 0.035. */
+    CAL:[-4.55466720e-06, -0.0144022832, 9.33562551],
+    Y_CAL_MIN:292, Y_CAL_MAX:503,   // y of 4.75 and of 1 L/min over the three sweeps
+    /* The knob's top: the 4.75 frames sit at y 291.9-294.6, the 4.5 frames at
+       305.5-307.4, so the boundary is 300 (4.61 on the curve), 5.4 px from
+       each. Above it is the Max state, "4,75 (max)" (the operator's call,
+       2026-11-02), and her page does not turn + while it shows. */
+    Y_MAX_STATE:300,
+    /* The resting ball reads 0.13-0.19; 1 L/min reads 0.94-1.02. Nothing
+       under the 1 mark is in the sweeps, so below 0.5 is one state. */
     LOW_FLOW:0.5, LOW_LABEL:'Under 0,5',
     LOW_REASON:"Bollen ligger vid eller nära botten — flödet är under 0,5 L/min eller avstängt.",
     MAX_REASON:"Bollen står högst upp — ratten går inte högre (cirka 4,75 L/min).",
     MAX_LABEL:'4,75 (max)', MAX_UNIT:'L/min — högsta läget',
-    /* Her page shows the tube and its digits, x 84..260, y 180..600 — the LED
-       (right) and the knob (top) left out; 6 px spare on the left, where
-       "LPM" reached the edge at dx -3 (frame 12025). */
-    VIEW_X:84, VIEW_W:176, VIEW_Y:180, VIEW_H:420,
+    /* Her page shows the tube and its digits, x 140..320, y 180..600: "LPM"
+       at x ~160, the tube's right edge at ~300, the LED (left) left out. */
+    VIEW_X:140, VIEW_W:180, VIEW_Y:180, VIEW_H:420,
     KNOB:null, BACKLASH:null,   // never measured: her page keeps the degree buttons
-    /* 'ljus' (the room lit) and 'natt' (dark), both aligned medians of their
-       own sweep — see REF_PNG_VISIONAIRE5_LJUS — and since 1.15.1 'rum' (the
-       same, with a second lamp lit), shifted into their coordinates — see
-       REF_PNG_VISIONAIRE5_RUM. */
-    refs:()=>[[REF_PNG_VISIONAIRE5_LJUS,'ljus'], [REF_PNG_VISIONAIRE5_NATT,'natt'],
+    /* 'hall' (the hall lamp on), 'natt' (dark) and 'rum' (the hall and room
+       lamps), each the aligned median of its own sweep — see
+       REF_PNG_VISIONAIRE5_HALL. */
+    refs:()=>[[REF_PNG_VISIONAIRE5_HALL,'hall'], [REF_PNG_VISIONAIRE5_NATT,'natt'],
               [REF_PNG_VISIONAIRE5_RUM,'rum']],
   },
 };
 
-/* AirSep VisionAire 5, 2026-11-02: 'ljus' (the room lit) and 'natt' (dark),
-   per-pixel medians of test/visionaire5-sweep-2026-11-02-ljus and -morker,
-   each frame first shifted back by its own dx/dy — tools/align_reference.mjs
+/* AirSep VisionAire 5, the second calibration (1.16.0), 2026-11-02
+   23:03-23:09 UTC, the LED moved and at 40: per-pixel medians of
+   test/visionaire5-sweep-2026-11-02b-hall ('hall', the hall lamp on),
+   -morker ('natt', dark) and -hallrum ('rum', the hall and room lamps), each
+   frame first shifted back by its own dx/dy — tools/align_reference.mjs
    against the sweep's plain median (calibrate.mjs --out), then again against
-   that first pass, with the preset's geometry. Not shifted onto each other:
-   see CAL in the preset. 8-bit grayscale. */
-const REF_PNG_VISIONAIRE5_LJUS=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
+   that first pass, with the preset's geometry. 'natt' needs no shift: its
+   ticks right of the ball's path sit +0.4 rows and its edges -0.1..-0.3
+   columns off 'hall''s. 'rum' is shifted (+4.8, -0.45) onto 'hall' (its
+   edges +4.8 columns, correlation 0.99; its ticks -0.4..-0.6 rows, 0.96) —
+   the camera slid ~6 px mid-sweep, so that median sits elsewhere. Measured on
+   the references, not by registration across lightings (the 2026-10 and
+   2026-11-02 lessons). 8-bit grayscale. */
+const REF_PNG_VISIONAIRE5_HALL=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_VISIONAIRE5_NATT=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-/* AirSep VisionAire 5, 2026-11-02 21:58-22:03 UTC, 'rum': the room lit as for
-   'ljus' plus a second lamp, test/visionaire5-sweep-2026-11-02-rum. With
-   only 'ljus' and 'natt' every frame from 3.25 up was "Osäker" (ambiguity
-   1.1-1.5x): the lamp puts a bright streak on the tube right beside the
-   ball's path around 3-4 L/min. The camera had also moved between the sweeps
-   — 16 px sideways and 4-5 px up (scale, LED and bolts all moved together,
-   frames 2 L/min side by side) — which the engine absorbs per frame as dx/dy.
-   Not a pure slide: the offset grows down the picture (dy -4.8 at the top of
-   the scale, -8 at the bottom; dx 16.5 on the tube, 17.5-18 on the digits),
-   a scale change of about 2%. The shift below is the upper scale's; at the
-   low end that leaves up to ~+0.06 L/min (the sweep's 1 reads +0.04). The
-   'ljus' and 'natt' lightings have no sweep in this pose.
-   Aligned twice against the sweep's own median (as 'ljus'), then SHIFTED by
-   (+16.4, -4.4) into 'ljus''s coordinates, so the preset's bands and curve
-   apply: the offset is measured on the references themselves, not by
-   registration (across lightings that said dx 16, dy -6 here, and dy 11.7 for
-   'natt', whose ticks agree with 'ljus' within 0.6 px) — the ticks right of
-   the ball's path, x 195..235 (-4.1..-4.7 rows, correlation 0.77-0.88), and
-   vertical edges below the glare (+16.2..+16.4 columns, 0.98). Unshifted, the
-   ball band sat 16 px beside the ball (contrast 0.09-0.29, two refused);
-   shifted, the sweep reads at contrast 0.36-0.61 and 7.4-106x, mean 0.034,
-   worst 0.15 — its 3.25 frame, whose ball stands where its 3.5 frame's does
-   (reads 3.40). Shifts within 1 px either way read the same to 0.02. The
-   other two sweeps read as before; 'rum' answers one of their frames, the
-   light sweep's 4.75, which stays Max (23.7x where 'ljus' gave 11.2x). Live
-   frames from the unit at 2.5 L/min with the lamp on, 22:11-22:14 UTC: 1.15.0 said
-   "Osäker" on 8 of 9 (1.4x) and 2.49 on one; with 'rum' all 9 read 2.52-2.54
-   at 23-27x. */
 const REF_PNG_VISIONAIRE5_RUM=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 /* EverFlo, 2026-10-05, the hall lamp on: per-pixel median of the 13 frames
    of test/everflo-sweep-2026-10-05-hall (calibrate.mjs, plain median — the
@@ -1081,4 +1059,4 @@ function judge(r){
           reason:"Inom kalibrerat område."};
 }
 export {toGray,flatfield,buildRef,analyze,judge,usePreset,setRefs,isCalibrated,PRESETS,W,H};
-export const ENGINE_VERSION = "d1767c58";
+export const ENGINE_VERSION = "d998a632";
