@@ -892,7 +892,7 @@ fetched at once with a signed /api/fw-check from the same wifi.
 - **Two sweeps, one pose, minutes apart** (21:09-21:18 UTC):
   `test/visionaire5-sweep-2026-11-02-ljus/` (the room lit) and `-morker/`
   (dark), 1..4.75 in halves plus the resting ball, references 'ljus' and
-  'natt'. The two renames in `LABELS.md`: `0_min`, and `4.75_top` — a new label
+  'natt' (and 'rum' since 1.15.1, below). The two renames in `LABELS.md`: `0_min`, and `4.75_top` — a new label
   form in `validate_engine.mjs` that requires the Max state.
 - **The camera moves with the knob** (dx -2 .. +5 px, dy +2 .. -4 from 1 L/min
   to the top), so both references are aligned medians:
@@ -923,6 +923,28 @@ fetched at once with a signed /api/fw-check from the same wifi.
 - **Cross-checked**: every frame of every other machine's and pose's set (348)
   is refused when read as a VisionAire, and the VisionAire sweeps are refused
   as EverFlo and as Platinum. Every older set reads identically.
+- **A second lamp (1.15.1)**: `-rum/`, taken after 1.15.0 landed (21:58-22:03
+  UTC), the room lit plus another lamp, labels 1..4.75 including 3.25 and
+  3.75. The lamp puts a bright streak beside the ball's path at 3-4 L/min, and
+  every frame from 3.25 up was "Osäker" against 'ljus'/'natt'. Reference 'rum'.
+  The camera had moved between the sweeps, 16 px sideways and 4-5 px up (the
+  operator thought not; scale, LED and bolts all moved together) — absorbed
+  per frame as dx/dy, but it meant 'rum' had to be SHIFTED into 'ljus''s
+  coordinates. It is not a pure slide: the offset grows down the picture
+  (dy -4.8 at the top of the scale, about -8 at the bottom), a scale change of
+  ~2% that a shift cannot remove; the shift is the upper scale's, which leaves
+  up to ~+0.06 L/min at the low end. 'ljus' and 'natt' have no sweep in this
+  pose. The shift: `align_reference.mjs ... --base <first pass> --shift 16.4,-4.4`,
+  the offset measured on the references (ticks right of the ball's path,
+  vertical edges below the glare), not by registration, which across these
+  lightings said dx 16 / dy -6 for 'rum' and dy 11.7 for 'natt'. Unshifted,
+  the ball band sat beside the ball. Shifted: mean 0.034, worst 0.15 (its
+  3.25 frame, whose ball stands where the 3.5 frame's does), nothing refused;
+  the other sweeps read as before ('rum' answers only the light sweep's 4.75,
+  still Max). Live at 2.5 L/min with the lamp on (22:11-22:14 UTC), the
+  operator saw the panel
+  flip between 2.5 and "Osäker": 1.15.0 refused 8 of 9 live frames (1.4x),
+  'rum' reads all 9 at 2.52-2.54, 23-27x.
 - **Not measured yet**: the knob. The build block carries the EverFlo's
   39/90/160 and direction -1 — what the unit ran when the sweep was taken — so
   check that + turns the flow up, and size the steps against the ball. Daylight

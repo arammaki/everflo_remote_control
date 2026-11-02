@@ -363,8 +363,11 @@ const PRESETS={
     VIEW_X:84, VIEW_W:176, VIEW_Y:180, VIEW_H:420,
     KNOB:null, BACKLASH:null,   // never measured: her page keeps the degree buttons
     /* 'ljus' (the room lit) and 'natt' (dark), both aligned medians of their
-       own sweep — see REF_PNG_VISIONAIRE5_LJUS. */
-    refs:()=>[[REF_PNG_VISIONAIRE5_LJUS,'ljus'], [REF_PNG_VISIONAIRE5_NATT,'natt']],
+       own sweep — see REF_PNG_VISIONAIRE5_LJUS — and since 1.15.1 'rum' (the
+       same, with a second lamp lit), shifted into their coordinates — see
+       REF_PNG_VISIONAIRE5_RUM. */
+    refs:()=>[[REF_PNG_VISIONAIRE5_LJUS,'ljus'], [REF_PNG_VISIONAIRE5_NATT,'natt'],
+              [REF_PNG_VISIONAIRE5_RUM,'rum']],
   },
 };
 
@@ -376,6 +379,35 @@ const PRESETS={
    see CAL in the preset. 8-bit grayscale. */
 const REF_PNG_VISIONAIRE5_LJUS=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_VISIONAIRE5_NATT=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
+/* AirSep VisionAire 5, 2026-11-02 21:58-22:03 UTC, 'rum': the room lit as for
+   'ljus' plus a second lamp, test/visionaire5-sweep-2026-11-02-rum. With
+   only 'ljus' and 'natt' every frame from 3.25 up was "Osäker" (ambiguity
+   1.1-1.5x): the lamp puts a bright streak on the tube right beside the
+   ball's path around 3-4 L/min. The camera had also moved between the sweeps
+   — 16 px sideways and 4-5 px up (scale, LED and bolts all moved together,
+   frames 2 L/min side by side) — which the engine absorbs per frame as dx/dy.
+   Not a pure slide: the offset grows down the picture (dy -4.8 at the top of
+   the scale, -8 at the bottom; dx 16.5 on the tube, 17.5-18 on the digits),
+   a scale change of about 2%. The shift below is the upper scale's; at the
+   low end that leaves up to ~+0.06 L/min (the sweep's 1 reads +0.04). The
+   'ljus' and 'natt' lightings have no sweep in this pose.
+   Aligned twice against the sweep's own median (as 'ljus'), then SHIFTED by
+   (+16.4, -4.4) into 'ljus''s coordinates, so the preset's bands and curve
+   apply: the offset is measured on the references themselves, not by
+   registration (across lightings that said dx 16, dy -6 here, and dy 11.7 for
+   'natt', whose ticks agree with 'ljus' within 0.6 px) — the ticks right of
+   the ball's path, x 195..235 (-4.1..-4.7 rows, correlation 0.77-0.88), and
+   vertical edges below the glare (+16.2..+16.4 columns, 0.98). Unshifted, the
+   ball band sat 16 px beside the ball (contrast 0.09-0.29, two refused);
+   shifted, the sweep reads at contrast 0.36-0.61 and 7.4-106x, mean 0.034,
+   worst 0.15 — its 3.25 frame, whose ball stands where its 3.5 frame's does
+   (reads 3.40). Shifts within 1 px either way read the same to 0.02. The
+   other two sweeps read as before; 'rum' answers one of their frames, the
+   light sweep's 4.75, which stays Max (23.7x where 'ljus' gave 11.2x). Live
+   frames from the unit at 2.5 L/min with the lamp on, 22:11-22:14 UTC: 1.15.0 said
+   "Osäker" on 8 of 9 (1.4x) and 2.49 on one; with 'rum' all 9 read 2.52-2.54
+   at 23-27x. */
+const REF_PNG_VISIONAIRE5_RUM=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 /* EverFlo, 2026-10-05, the hall lamp on: per-pixel median of the 13 frames
    of test/everflo-sweep-2026-10-05-hall (calibrate.mjs, plain median — the
    camera did not creep during this sweep: dx -0.9..+2.8 px, dy -0.5..+2.4). */
@@ -1049,4 +1081,4 @@ function judge(r){
           reason:"Inom kalibrerat område."};
 }
 export {toGray,flatfield,buildRef,analyze,judge,usePreset,setRefs,isCalibrated,PRESETS,W,H};
-export const ENGINE_VERSION = "a7554cb5";
+export const ENGINE_VERSION = "d1767c58";

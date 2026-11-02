@@ -61,14 +61,16 @@ bottom and top labels were corrected with the operator ("0" is 0.5, "0.5" is
 ball past the top line in either. ljus mean 0.020 worst 0.046 (0.026 with 'ljus'); natt mean
 0.025 worst 0.062.
 
-## `visionaire5-sweep-2026-11-02-ljus/` and `-morker/` — the AirSep VisionAire 5
+## `visionaire5-sweep-2026-11-02-ljus/`, `-morker/` and `-rum/` — the AirSep VisionAire 5
 
 The VisionAire's calibration (1.15.0): a lit and a dark sweep minutes apart in
 one pose, 1..4.75 in halves plus the resting ball. The curve is fitted to
 `-ljus` (mean 0.024, worst 0.069); `-morker` is never fitted to and reads
 within 0.18 (mean 0.066). `4.75_top` is the knob's end and must give the Max
-state ("4,75 (max)"), not a number. Each directory's `LABELS.md` has the rest.
-Every other set here is refused when read as a VisionAire, and these two are
+state ("4,75 (max)"), not a number. `-rum/` (a second lamp lit, 1.15.1) reads
+through its own shifted reference, mean 0.034, worst 0.15. Each directory's
+`LABELS.md` has the rest.
+Every other set here is refused when read as a VisionAire, and these three are
 refused as EverFlo and as Platinum.
 
 ## `negative-everflo-2026-08-22/` — the kitchen calibration, refused since 1.14.1
