@@ -726,6 +726,37 @@ each number is what it is. In order:
 8. **Day and evening references** come afterwards from a day or two of
    uploads, ball positions spread (see "Daylight is a second lighting regime").
 
+### The EverFlo at Norrgården (v1.18.0, 2026-11-04) — in force
+The EverFlo went back on the unit on 2026-11-04 at a new place, Norrgården
+(1.17.0 over USB, see the WiFi4EU note under Access control). Every earlier
+EverFlo reference refused it (registration 0.55); the camera sits much as at
+the care home, the LED left of the tube at 2-2.5 L/min, level 50. Recalibrated
+in 1.18.0 from `test/everflo-sweep-2026-11-04-tak/` (the ceiling lamp on):
+grid over the sweep (band 291..305, lean 0.035, anchor on the digits right of
+the ball 310..330, registration 0.985), one aligned reference 'tak', curve
+fitted to 0.5..5.5 with 1 L/min weighted 4x because the bottom is compressed
+(rest, 0.5 and 1 at y 449/430/410; unweighted, 1 reads 0.90) — mean 0.039,
+worst 0.137 (0.5 reads 0.64). The bottom state is "Under 0,5" now (the rest
+reads 0.36), Max at y 175 (~6.0; `max` reads 5.82, `over_max` says Max or
+refuses at contrast 0.10, allowed). The LED's streak runs down the tube
+through the ball's path: contrast is the thin margin. All seven older
+references are gone (the build fell to 1.53 MB); the older sweeps stay with
+every frame allowed to refuse and any reading held to its label — all refuse.
+Other machines' frames refuse as EverFlo, and these sweeps refuse as the
+other two. **Three lightings**: `-tak/` (the ceiling lamp, the curve), `-dag/`
+(the lamp off, afternoon; reference 'dag' shifted (+2.8, -1.5) onto 'tak' by
+its edges and ticks, which the labels confirm: mean 0.035, against 0.049 and
++0.04 high unshifted — with 'tak' alone those frames registered 0.59-0.64 and
+refused, as did the live ones), and `-natt/` (curtains drawn), which builds
+nothing and reads through the other two at 0.98-0.99, mean 0.047: an
+independent check. A 'natt' reference was tried and did not help.
+**The vertical gate went 20 -> 15** (`SHIFT_Y`): with 'dag' in, two frames of
+the care home's 2026-10-19 dark sweep — an old pose, dy -18 — passed every
+other gate and one read 2.29 for 2.5. None of the 2498 readings stored since
+2026-09-15 (all machines) had |dy| over 10.3.
+Everything below in this section and in "The EverFlo again" is the care home's
+calibration — history.
+
 ### The EverFlo again (v1.14.0-1.14.1, 2026-10-05)
 The EverFlo went back on the unit "for now" on 2026-10-05: 1.14.0 is the
 Platinum build with `CONCENTRATOR` switched (armed with `--switch-machine`),
@@ -831,7 +862,7 @@ refused in full like the other old poses.
   UNSHIFTED window while correlating the shifted one, so a frame sitting 6-10
   px off scores above 1 by an amount that differs per reference, and
   FALLBACK_REG_GAP then never asks the reference that fits. 'kväll3' built
-  from uploads (the 1.13.0 recipe; details at REF_PNG_EVERFLO_KVALL3): held
+  from uploads (the 1.13.0 recipe; details in git, at REF_PNG_EVERFLO_KVALL3 before 1.18.0): held
   out 21/21 read at 4.0-8.6x, all 440 uploads 46 "Osäker" -> 0 with none
   refused, readings 0.03-0.06 lower than natt2's (natt2 reads high: 1.5 px off
   on the ticks), one dawn frame 0.09 high. Verdicts unchanged on every sweep
@@ -1168,7 +1199,7 @@ against scale ticks (anchor band x 296-320, sampled at the shifted x) -> clipped
 difference vs reference in ball band (x 252-292) -> smoothed profile ->
 peak + centroid -> quadratic calibration. Never remove the quality
 gates (registration >=0.75, contrast >=0.10, ambiguity >=3.0x,
-|dx| <=38 since 1.14.9 (30 from 1.13.0) and |dy| <=20 px, extent <=75 rows): the engine must say "no reading"
+|dx| <=38 since 1.14.9 (30 from 1.13.0) and |dy| <=15 px since 1.18.0 (20 before), extent <=75 rows): the engine must say "no reading"
 rather than output a plausible wrong number — it reads oxygen flow for
 a patient. Two states besides a number, and both are measured against the
 checked-in sweep rather than asserted (2026-09-05):
@@ -1262,7 +1293,7 @@ with it in a way no gate can see. Confidence is not accuracy.
 **Order matters**: dx is computed first, because the camera slides sideways
 and every band below is at a fixed x — measured 34 px on 2026-08-16. Sample
 the anchor band at its old x after a sideways slip and dy is meaningless.
-The search runs to +/-40 px while the gate rejects beyond 38 (20 for dy): a big shift
+The search runs to +/-40 px while the gate rejects beyond 38 (15 for dy): a big shift
 should be measured and named in the Swedish reason, not silently saturate
 at the edge of the search and look like noise.
 

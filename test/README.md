@@ -28,7 +28,7 @@ run without one: a sweep scored against the wrong machine's calibration is
 refused wholesale, which looks exactly like an engine that has broken. A new
 machine's sweep goes in its own directory with its own `PRESET`.
 
-## `everflo-sweep-2026-10-05-hall/` — the EverFlo calibration in force
+## `everflo-sweep-2026-10-05-hall/` — the care home's EverFlo calibration (history since 1.18.0)
 
 13 frames, 2026-10-05 15:51–15:53 UTC, the EverFlo back on the unit with the
 camera much closer to the tube than in the kitchen, the hall lamp on: the
@@ -60,6 +60,16 @@ bottom and top labels were corrected with the operator ("0" is 0.5, "0.5" is
 0.75, "Övre max" a second max) — see each `LABELS.md`. No resting ball and no
 ball past the top line in either. ljus mean 0.020 worst 0.046 (0.026 with 'ljus'); natt mean
 0.025 worst 0.062.
+
+## `everflo-sweep-2026-11-04-tak/`, `-dag/` and `-natt/` — the EverFlo in force (Norrgården)
+
+The EverFlo's calibration since 1.18.0. `-tak` (the ceiling lamp) carries the
+curve: mean 0.039, worst 0.137 (0.5 L/min, the compressed bottom). `-dag` (the
+lamp off, afternoon) has its own reference: mean 0.035. `-natt` (curtains
+drawn) builds nothing and reads through the other two: mean 0.047 — the
+independent check. `over_max` may refuse in all three (contrast on the
+gate). Every older `everflo-sweep-2026-10-*` set (described above, as the care home's calibration) is a pose that is gone:
+since 1.18.0 each frame may refuse (`ALLOW_REFUSED`), and all do.
 
 ## `visionaire5-sweep-2026-11-02b-hall/`, `-morker/` and `-hallrum/` — the VisionAire in force
 

@@ -82,8 +82,19 @@ const T={contrast:0.10, margin:3.0, reg:0.75, spread:75};
    natt3, within 0.03 L/min). Every checked-in set gives identical output at
    30 and 38. So the evidence past 30 px is still a handful of frames from one
    day; the cure is the mount, not a wider gate, and 38 keeps 2 px under the
-   search edge so a frame that saturates the search is still refused. */
-const SHIFT_X=38, SHIFT_Y=20;
+   search edge so a frame that saturates the search is still refused.
+   SHIFT_Y 20 -> 15 in 1.18.0, the first measurement of the vertical gate:
+   with the EverFlo's Norrgården references, two frames of the care home's
+   2026-10-19 dark sweep (an old pose, dy -17.8/-18.2) passed every other gate
+   through 'dag' at registration 0.79-0.81, and its 2.5 read 2.29. Of the 2498
+   readings stored under every machine since 2026-09-15 none had |dy| over
+   10.3, so 15 refuses nothing real; every checked-in set reads the same.
+   It is now LOAD-BEARING for the EverFlo: against 'tak'/'dag' the old care
+   home poses register 0.79-0.88, above the 0.75 gate, and at SHIFT_Y 30 a
+   10-18 frame at 1 L/min reads 2.04 with every other gate green (review of
+   1.18.0). They sit at dy -23..-25 (the 10-19 pose at -18). Do not loosen it
+   without re-running the everflo-sweep-2026-10-* sets at the new value. */
+const SHIFT_X=38, SHIFT_Y=15;
 /* How much worse a reference may register than the best one and still answer
    when the best refuses — see the fallback in analyze(). An algorithm
    constant, shared by every preset like T. */
@@ -112,67 +123,63 @@ const TILT_MARGIN=0.03;
    analyses until usePreset() has been called — a default would be a way to
    read a Platinum frame with the EverFlo curve and never notice. */
 const PRESETS={
+  /* Philips EverFlo at Norrgården (from 2026-11-04), calibrated in 1.18.0 on
+     test/everflo-sweep-2026-11-04-tak (the ceiling lamp on), 14:46-14:48 UTC:
+     rest, 0.5..5.5 in halves, the top line ('max') and past it ('over_max').
+     The camera sits much as it did at the care home in October, the LED left
+     of the tube at 2-2.5 L/min, at 50. Every earlier EverFlo calibration (the
+     kitchen, and the care home's 2026-10-05..11-02 with seven references) is
+     in git; its sweeps stay in test/ with every frame allowed to refuse and any
+     reading held to its label. The camera moves with the knob as before (dx
+     -1.9 .. +3.3 px from rest to the top), so the reference is an aligned
+     median. The LED throws a bright streak down the tube through the ball's
+     path; contrast is the thin margin: 0.10 at over_max (so past the top
+     line Max and a refusal alternate), 0.17-0.20 at the top (5.5, max) and
+     at the bottom marks (0.5, 1) in the darker sweeps, 0.21-0.52 between.
+     1 L/min also has the thinnest ambiguity, 4.5-5.3x in -natt/-dag; from
+     1.5 up it is 13x or more. */
   everflo:{
     name:'Philips EverFlo',
-    /* Calibrated 2026-10-05 (1.14.1) on the sweep test/everflo-sweep-2026-10-05-hall:
-       the EverFlo back on the unit, the camera much closer to the tube than in
-       the kitchen (~48 rows per L/min against ~53 there), the hall lamp on.
-       The kitchen calibration of 2026-08-22 refused every frame of this pose
-       (registration 0.13-0.54) and is in git before 1.14.1, with the long notes
-       on why each of its numbers was what it was (CLAUDE.md keeps the lessons).
-       The geometry below was chosen on a grid over the sweep, by margins:
-       XL 284..286, XR 303..305, tilt 0.03..0.04 is one plateau — ambiguity
-       4.4-4.8x, registration 0.98, worst label 0.037 — and this is its middle. */
-    XL:285, XR:304,      // the ball's travel band; the ball's blob is ~17 px wide
-    AX1:245, AX2:265,    // anchor: the left part of the ticks, clear of the ball
-                         // (250..270 registers 0.969, 255..275 0.955)
-    /* Peak window. The ball's range in the sweep is y 145 (past the top line)
-       .. 424 (resting); the top line itself is at ~140 and the knob above it.
-       YTOP 120..140 and YBOT 445..455 change nothing on the sweep. */
-    YTOP:130, YBOT:445,
-    RY1:90, RY2:480,     // row band whose column profile gives the sideways shift
-    /* The ball's own path leans tan ~0.047 (calibrate.mjs, 9 frames); the
-       per-frame search reports zero deviation everywhere over 0.025..0.047, and
-       0.035 has the best ambiguity there. In mirrored-analysis coordinates, as
-       always — measured on the saved frames, never typed off a screen. */
+    /* Chosen on a grid over the sweep (centre 288..304, width 14..20, lean
+       0..0.07, six anchor bands): centre 298, width 14-16, lean 0.035 is the
+       plateau with registration 0.985 and nothing refused; centre 288 at lean
+       0 has more ambiguity margin but registers 0.955 and fits worse. */
+    XL:291, XR:305,
+    /* The digits right of the ball's path. */
+    AX1:310, AX2:330,
+    /* The ball lives in y ~182 (the top line) .. 449 (its resting stop);
+       YBOT 455 and 465 read the sweep identically. */
+    YTOP:130, YBOT:460,
+    RY1:90, RY2:480,
     BASE_TILT:0.035,
-
-    CAL:[1.20838017e-05, -0.0278513084, 9.81159420],   // flow = a*y^2 + b*y + c
-    /* Fitted to the labels (read straight on, 0.5..5): mean 0.012, worst 0.029
-       (4 L/min). Not leave-one-out — the reference is built from the same
-       frames — but the halves sit on the curve as well as the whole marks. */
-    Y_CAL_MIN:187, Y_CAL_MAX:406,   // y of 5 and 0.5 L/min
-    /* The ball at the top thick line ('max') sits at y=153 and reads 5.83 as
-       a number (extrapolated); past it ('over_max') at 145, which must say Max.
-       The boundary splits them, as the kitchen calibration's did (150 between
-       147 and 154): 4 px each side, so a nudged camera moves one of those two
-       frames across it and validate_engine.mjs says so — the intended alarm.
-       Nothing her knob can reach is extrapolated beyond the line. */
-    Y_MAX_STATE:149,
-    /* The bottom state, tested on FLOW. The resting ball reads 0.18 (y 424). */
-    LOW_FLOW:0.3, LOW_LABEL:'Under 0,3',
-    LOW_REASON:"Bollen ligger vid eller nära botten — flödet är under 0,3 L/min eller avstängt.",
+    /* Fitted to the eleven labels 0.5..5.5 with the 1 L/min mark weighted 4x:
+       the bottom of this tube is compressed (rest, 0.5 and 1 sit at y 449,
+       430 and 410), and an unweighted fit reads 1 L/min as 0.90. Weighted:
+       1 reads 0.95, 0.5 reads 0.64 (+0.14), the rest 1.5..5.5 within 0.065
+       (mean 0.029 over 1..5.5). */
+    CAL:[2.42452871e-05, -0.0357280447, 11.5215477],
+    Y_CAL_MIN:196, Y_CAL_MAX:430,   // y of 5.5 and 0.5 L/min
+    /* 'max' (the ball against the top line from below) sits at y 182.0 and
+       reads 5.82 as a number, extrapolated; 'over_max' (on the line) at 169.5
+       must say Max. The boundary splits them: 175, about 6.0 on the curve. */
+    Y_MAX_STATE:175,
+    /* The resting ball reads 0.36 on this curve, so the bottom state is
+       "Under 0,5", not the old "Under 0,3": 0.14 of margin where 0.3 would
+       have left the rest flickering across it. Her flows are 1.5 and up. */
+    LOW_FLOW:0.5, LOW_LABEL:'Under 0,5',
+    LOW_REASON:"Bollen ligger vid eller nära botten — flödet är under 0,5 L/min eller avstängt.",
     MAX_REASON:"Bollen står vid eller ovanför det övre tjocka strecket — flödet är över skalans sista siffra.",
     /* What her page shows in the Max state, and under it (1.15.0: per preset,
        because the VisionAire's top is the knob's end, not past the scale). */
     MAX_LABEL:'Max', MAX_UNIT:'över skalans slut',
-    /* What the device page SHOWS: the tube and its digits, x 205..375,
-       y 90..510 — the LED (left, x 100..190) and the knob (top) left out.
-       Display only: the analysis always gets the whole 480x640 frame. */
-    VIEW_X:205, VIEW_W:170, VIEW_Y:90, VIEW_H:420,
+    /* Her page shows the tube, its digits and the top line, x 228..378,
+       y 110..530 — the LED (left) and the knob (top) left out. */
+    VIEW_X:228, VIEW_W:150, VIEW_Y:110, VIEW_H:420,
     KNOB:null, BACKLASH:null,   // never measured on the EverFlo: her page keeps the degree buttons
-    /* Lighting references in selection order; the REF_PNG_* constants are
-       below the table (each ~100 kB of base64). 'hall' (the hall lamp on),
-       'natt' (lamps off, curtains drawn) and 'rum' (the room lamp on, the hall
-       lamp off) from sweeps of 2026-10-05; 'ljus' and 'natt2' from 2026-10-18,
-       after the camera moved ~11 px, aligned into the same coordinates;
-       'ljus3', 'natt3' and 'kväll3' from 2026-10-19/21, after it was knocked
-       and screwed down again. 'ljus' (2026-10-18) was dropped in 1.14.6 to make
-       room: that pose is gone, and its sweeps still read through the others. */
-    refs:()=>[[REF_PNG_EVERFLO_HALL,'hall'], [REF_PNG_EVERFLO_NATT,'natt'],
-              [REF_PNG_EVERFLO_RUM,'rum'], [REF_PNG_EVERFLO_NATT2,'natt2'],
-              [REF_PNG_EVERFLO_LJUS3,'ljus3'], [REF_PNG_EVERFLO_NATT3,'natt3'],
-              [REF_PNG_EVERFLO_KVALL3,'kväll3']],
+    /* 'tak' (the ceiling lamp on) and 'dag' (the lamp off, afternoon
+       daylight); see REF_PNG_EVERFLO_TAK. Darker lightings follow as their
+       sweeps arrive. */
+    refs:()=>[[REF_PNG_EVERFLO_TAK,'tak'], [REF_PNG_EVERFLO_DAG,'dag']],
   },
   /* Invacare Platinum 9 (from 2026-09). 1-9 L/min with a red line above the
      9 mark; by its own front label the machine alarms below 1.0 and loses O2
@@ -386,96 +393,20 @@ const PRESETS={
 const REF_PNG_VISIONAIRE5_HALL=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_VISIONAIRE5_NATT=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_VISIONAIRE5_RUM=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-/* EverFlo, 2026-10-05, the hall lamp on: per-pixel median of the 13 frames
-   of test/everflo-sweep-2026-10-05-hall (calibrate.mjs, plain median — the
-   camera did not creep during this sweep: dx -0.9..+2.8 px, dy -0.5..+2.4). */
-const REF_PNG_EVERFLO_HALL=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-/* EverFlo, 2026-10-05, lamps off and curtains drawn (the WS2812 alone): plain
-   median of the 13 frames of test/everflo-sweep-2026-10-05-natt, 15:56-15:58
-   UTC, five minutes after the hall sweep and in the same pose — so no shift:
-   the curve this median gives on its own sweep differs from the hall curve
-   (CAL) by at most 0.020 L/min over y 187..428, which is the check that the
-   two references share coordinates. */
-const REF_PNG_EVERFLO_NATT=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-/* EverFlo, 2026-10-05, the room lamp on and the hall lamp off: plain median of
-   the 13 frames of test/everflo-sweep-2026-10-05-rum, 16:01-16:03 UTC, same
-   pose, no shift — its own curve is within 0.049 L/min of CAL over y 187..428.
-   The lamp puts a glare streak in the tube around 3-4 L/min. Without this
-   reference 'hall'/'natt' already read the sweep within 0.07 (ambiguity
-   4.9-12.1x, registration 0.88-0.92, past-the-scale refused at 2.5x); with
-   it, 9.5-53x on the scale, and past-the-scale says Max at 3.2x — the
-   thinnest margin of the three sweeps: a nudge may turn it into a refusal,
-   which fails this sweep (no ALLOW_REFUSED) as the intended alarm. */
-const REF_PNG_EVERFLO_RUM=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-/* EverFlo, 2026-10-18: the camera had moved ~11 px sideways since 10-05 (and
-   spent 13:10-16:10 local crooked, refused throughout). Two sweeps in the new
-   pose — 'ljus' (test/everflo-sweep-2026-10-18-ljus, lights on) and 'natt2'
-   (-natt, dark) — aligned INTO the 10-05 coordinates so CAL and the bands
-   still apply: each frame resampled by its dx/dy against the old reference of
-   the nearest lighting, again against that median (align_reference.mjs
-   --base, twice). 'natt2' is left there, in 'natt''s coordinates (the engine
-   registers it against 'natt' at dy -0.03, reg 0.995); 'ljus' has no old
-   reference of its own lighting, so it was shifted onto the printed scale of
-   'hall' by the median's tick offset (--shift 0,-0.56). A first natt2 shifted
-   the same way, against 'hall', read 0.02-0.04 low — a tick offset measured
-   across two lightings (registration 0.43) is not to be trusted. The curve is
-   kept, not refitted: it reads both sweeps within 0.062 (labels corrected with
-   the operator: their "0" is 0.5 and their "0.5" is 0.75 — see LABELS.md).
-   'ljus' was dropped in 1.14.6 for flash space (the sketch was at 95% of the
-   OTA slot): the 10-18 pose did not survive the next morning's knock, and its
-   two light sweeps read within 0.05 through ljus3 alone (3.0-14.9x where
-   'ljus' gave 5.5-39x). 'ljus3' was aligned against it: a rebuild of ljus3
-   takes 'ljus' from git history (1.14.5 or earlier). */
-const REF_PNG_EVERFLO_NATT2=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-/* 'ljus3' (2026-10-19): the camera was knocked that morning and screwed down
-   tighter; the 10-18 references read the light sweep in the new pose within
-   0.075 but refused five (ambiguity 2.2-2.8x from 3.5 up, contrast past the line). A plain
-   median aligned twice — against 'ljus' (same lighting), then against its own
-   first pass — so it sits in the 10-05 coordinates; frames register against it
-   at dx 0.8-4.9, dy 5.9-10.4 (more at the top: the camera still creeps as the
-   motor turns the knob). Curve kept: the sweep reads within 0.051, ambiguity
-   5.5-88x, and every other EverFlo sweep and the 92 uploads of 10-18/19 read
-   the same values at the same margins (with natt3 in the list too). */
-const REF_PNG_EVERFLO_LJUS3=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-/* 'natt3' (2026-10-19): the dark sweep two minutes after ljus3's, the camera
-   unmoved between them (the printed ticks of each pair of frames agree within
-   0.2 px). Aligned twice like ljus3 but against 'natt2', it read the sweep
-   +0.04 high on average: natt2 itself sits 1.5 px off 'natt' on the ticks in
-   the ball band (hall, rum and ljus agree within 0.2), and natt3 inherited it.
-   So it was shifted onto ljus3 by the tick offset in the ball band (-1.7 px,
-   --shift 0,-1.7) — the same pose, so the ticks, not registration across two
-   lightings, say where it is; the labels only checked it: mean signed error
-   +0.04 -> 0.00, mean 0.036, worst 0.087 (0.5 and 1 read 0.07-0.09 low, 4-5 a
-   little high: the pose's own stretch), ambiguity 4.4-182x where the 10-18
-   references gave 1.5-10.8x. natt2 is left as it is: it reads its own sweep
-   within 0.062, and the 10-18 pose is gone. */
-const REF_PNG_EVERFLO_NATT3=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-/* 'kväll3' (2026-10-21): the evening and the night in the 10-19 pose, room
-   lit by the WS2812 and whatever lamp is on, which none of the sweeps cover.
-   Without it the frame went to 'natt2' (or 'natt'), registering 1.06-1.10
-   against natt3's ~1.0 — a score over 1, which align()'s normalisation
-   allowed until 1.14.7 (it divided by the UNSHIFTED window's energy) —
-   with a rival near the top: 24 of 162 evening frames and 22 of 278 others
-   (00-06 local, and three at 08:42) said "Osäker" on her page 2026-10-19..21, the larger candidate
-   always the ball by the operator's check in the admin page. Built from
-   UPLOADS, the 1.13.0 recipe: the 41 frames of those three days that the old
-   dark references won, even ids into the median (20, ball over y 217-346),
-   odd ids held out. Aligned against natt3, again against that median, then
-   shifted -3.7 px onto ljus3 by the ticks in the ball band (the second pass
-   had drifted, the tick check said by how much; after it ljus3, natt3 and
-   kväll3 agree within 0.2 px). Held out: 21 of 21 read, 4.0-8.6x, 13 of them
-   "Osäker" before, each now the value that was the larger candidate. All 440
-   uploads since 1.14.5: 46 "Osäker" -> 0, none refused; readings that moved
-   went down 0.03-0.06 (natt2 sits 1.5 px off on the ticks and read high —
-   span 9589-9593: 'rum' 4.32/4.28, natt 4.35, kväll3 4.29-4.30), except 9657 at
-   dawn, 3.98 where its span reads 3.88-3.90, won at an inflated 1.057. Verdicts
-   unchanged on every sweep and negative set (the 10-18 light sweeps now read
-   through ljus3; in 1.14.6, 28 of the old-pose negatives registered best
-   against kväll3, at 0.27-0.41 — 16 at 0.28-0.32 since 1.14.7 — all refused). No checked-in sweep is answered by
-   kväll3: its evidence is the uploads. The normalisation itself was fixed in
-   1.14.7 (see align()); with kväll3 in place that moved five of the 440
-   uploads by at most 0.04, and none to "Osäker" or a refusal. */
-const REF_PNG_EVERFLO_KVALL3=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
+/* EverFlo at Norrgården, 2026-11-04 14:46-14:48 UTC, the ceiling lamp on
+   ('tak'): per-pixel median of test/everflo-sweep-2026-11-04-tak, each frame
+   first shifted back by its own dx/dy — tools/align_reference.mjs against the
+   sweep's plain median (calibrate.mjs --out), then again against that first
+   pass, with the preset's geometry. 8-bit grayscale.
+   'dag' (the ceiling lamp off, afternoon daylight, 14:54-14:58): the same
+   from test/everflo-sweep-2026-11-04-dag, then SHIFTED (+2.8, -1.5) onto
+   'tak' — its edges sit +2.3..+3.5 columns and its ticks -1.0..-2.0 rows off
+   'tak''s (the camera moved a little with the knob between the sweeps); the
+   labels agree: unshifted, the sweep read +0.04 high over 1.5..5 (mean
+   0.049), shifted 0.035 with the mean signed error 0.01. Against 'tak'
+   alone those frames registered 0.59-0.64 and were refused. */
+const REF_PNG_EVERFLO_DAG=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
+const REF_PNG_EVERFLO_TAK=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 /* Platinum 9 at the care home (fourth pose), the hall lamp on: median of the
    21-frame sweep of 2026-09-30 14:21-14:26 local, each frame shifted back by
    its own dx/dy, twice (tools/align_reference.mjs --base, --geometry
@@ -720,7 +651,7 @@ function colProfile(ff,y1,y2){
    Until 1.14.7 it used the unshifted window, and a frame sitting several px
    off scored above 1 by an amount that differed per reference: in the
    EverFlo's 10-19 pose 'natt2' won the evening at 1.06-1.10 over natt3's ~1.0
-   and said "Osäker" (see REF_PNG_EVERFLO_KVALL3), and it loosened the 0.75
+   and said "Osäker" (see 'kväll3' under 2026-10-21 in CLAUDE.md), and it loosened the 0.75
    gate itself — a wrong-pose kitchen frame scored 0.77 where it is 0.62-0.68,
    refused only by dy, by half a pixel. It also decides the tilt (TILT_MARGIN
    compares these scores), which is why one Platinum kitchen frame, read only
@@ -1059,4 +990,4 @@ function judge(r){
           reason:"Inom kalibrerat område."};
 }
 export {toGray,flatfield,buildRef,analyze,judge,usePreset,setRefs,isCalibrated,PRESETS,W,H};
-export const ENGINE_VERSION = "d998a632";
+export const ENGINE_VERSION = "764e0de4";
