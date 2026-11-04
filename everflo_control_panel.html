@@ -80,6 +80,7 @@
   <input id="ctlkey" type="password" autocomplete="off" placeholder="nyckel (om enheten kräver en)">
   <button onclick="showPairing()">Kopplingslänk</button>
   <button onclick="fwCheckNow()">Kolla firmware nu</button>
+  <button onclick="forgetWifi()">Glöm wifi</button>
 </div>
 <p class="hint" id="pairing" style="word-break:break-all"></p>
 <div id="status">Ange adress och tryck Starta</div>
@@ -1408,6 +1409,20 @@ async function fwCheckNow(){
     el.textContent = res.status===403 ? refusedText(res)
       : res.ok ? 'Enheten kollar nu efter en armerad firmware. Installerar den, startar den om inom en minut.'
       : 'Enheten känner inte till anropet (firmware före 1.11.1).';
+  }catch(e){ el.textContent='Nådde inte enheten.'; }
+}
+/* Make the device forget its wifi and restart into "Syrgas-setup" (1.17.0).
+   Only on site: afterwards it is on no network until someone picks one in the
+   portal, so the confirm says that. Signed like any other change. */
+async function forgetWifi(){
+  const el=document.getElementById('pairing');
+  if(!host){ el.textContent='Tryck Starta först.'; return; }
+  if(!confirm('Glöm enhetens wifi och starta om den?\n\nDärefter är den inte uppkopplad förrän någon på plats ansluter till "Syrgas-setup" och väljer ett nät. Gör det bara när du är där.')) return;
+  try{
+    const res=await ctlFetch(host, '/api/forget-wifi', '');
+    el.textContent = res.status===403 ? refusedText(res)
+      : res.ok ? 'Enheten glömmer sitt wifi och startar om. Om ungefär en halv minut syns nätet "Syrgas-setup" – anslut till det och välj ett nät.'
+      : 'Enheten känner inte till anropet (firmware före 1.17.0).';
   }catch(e){ el.textContent='Nådde inte enheten.'; }
 }
 function start(){

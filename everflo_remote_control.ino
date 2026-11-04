@@ -87,7 +87,7 @@
    1.10.0 a step up from 1.9.7 rather than a step back. Nothing sorts them
    anyway: the firmware, the Worker and publish_firmware.mjs all compare for
    equality only. */
-#define FW_VERSION "1.16.0"
+#define FW_VERSION "1.17.0"
 
 /* ---------------- MOTOR ---------------- */
 #define USE_TMC_UART 0            // 1 = current control + true freewheel over UART
@@ -108,7 +108,7 @@
 #define CONC_EVERFLO    1
 #define CONC_PLATINUM9  2
 #define CONC_VISIONAIRE5 3
-#define CONCENTRATOR    CONC_VISIONAIRE5
+#define CONCENTRATOR    CONC_EVERFLO
 
 #if CONCENTRATOR == CONC_EVERFLO
   #define PRESET_ID       "everflo"
@@ -1503,6 +1503,38 @@ esp_err_t h_restart(httpd_req_t *req){
   ESP.restart();
   return ESP_OK;
 }
+/* Forget the saved wifi and restart into the "Syrgas-setup" portal (1.17.0).
+   Before this, leaving a network the unit still joins took a USB flash with
+   the flash erased — what 2026-11-04 needed: an open WiFi4EU at a new place
+   let the uploads through but isolated its clients, and the unit kept
+   rejoining it. This endpoint does NOT help on such a network, where the page
+   cannot be reached to sign the request; that needs the cloud path (see the
+   backlog in CLAUDE.md). It is for a network where the page is reachable.
+   Signed like a restart. Only for someone ON SITE: after it the unit is on no
+   network until a person picks one in the portal (which closes after 2 min
+   and reopens after the next round of attempts), so done from afar it takes
+   the remote control away until the next visit. The knob still turns by hand,
+   as always. */
+esp_err_t h_forgetwifi(httpd_req_t *req){
+  if(!authOK(req)) return authFail(req);
+  sendJson(req, true, stepDegrees);
+  logLine("Forget wifi via web link - restarting into the portal");
+  delay(300);
+  WiFiManager wm;
+  wm.resetSettings();
+  /* resetSettings() ignores the result of WiFi.disconnect(true,true), which in
+     core 3.x gives up after 100 ms if the link has not dropped yet and then
+     skips the erase — the unit would reboot onto the same network while the
+     panel says the portal is coming. Check, and erase again with time to. */
+  if (wm.getWiFiIsSaved()) {
+    WiFi.disconnect(true, true, 2000);
+    logLine(wm.getWiFiIsSaved() ? "Forget wifi: FAILED, the network is still saved"
+                                : "Forget wifi: erased on the second try");
+  }
+  delay(200);
+  ESP.restart();
+  return ESP_OK;
+}
 /* Step size (degrees/press), RAM only. Same CORS as /bild. */
 esp_err_t sendStepJson(httpd_req_t *req) {
   char b[96];
@@ -1713,7 +1745,7 @@ esp_err_t h_stream(httpd_req_t *req) {
 void startWebServer() {
   httpd_config_t cfg = HTTPD_DEFAULT_CONFIG();
   cfg.server_port = 80;
-  cfg.max_uri_handlers = 18;   // 15 registered; registration fails silently
+  cfg.max_uri_handlers = 18;   // 16 registered; registration fails silently
                                // above this, so keep headroom over the count
   // Several people may watch at once — /bild is a plain one-shot request
   // with no viewer kickout, so they all get frames. The default is to
@@ -1740,6 +1772,7 @@ void startWebServer() {
     u = {.uri="/api/ui-pulse",   .method=HTTP_GET, .handler=h_uipulse, .user_ctx=NULL}; httpd_register_uri_handler(ctrl_httpd,&u);
     u = {.uri="/api/led-test",  .method=HTTP_GET, .handler=h_ledtest, .user_ctx=NULL}; httpd_register_uri_handler(ctrl_httpd,&u);
     u = {.uri="/api/fw-check",  .method=HTTP_GET, .handler=h_fwcheck, .user_ctx=NULL}; httpd_register_uri_handler(ctrl_httpd,&u);
+    u = {.uri="/api/forget-wifi",.method=HTTP_GET, .handler=h_forgetwifi, .user_ctx=NULL}; httpd_register_uri_handler(ctrl_httpd,&u);
     u = {.uri="/api/light",     .method=HTTP_GET, .handler=h_light,   .user_ctx=NULL}; httpd_register_uri_handler(ctrl_httpd,&u);
     u = {.uri="/api/nonce",     .method=HTTP_GET, .handler=h_nonce,   .user_ctx=NULL}; httpd_register_uri_handler(ctrl_httpd,&u);
   }

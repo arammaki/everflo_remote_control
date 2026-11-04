@@ -13,8 +13,10 @@ a higher maximum than the EverFlo's 5). Same principle — a ball in a tube,
 the knob on top — and the same cup fits. Everything tuned for one machine is a
 **preset**, chosen when the firmware is built; see "Concentrator presets".
 The EverFlo's is kept intact so the unit can go back to it. (It went back to
-the EverFlo in October, and on 2026-11-02 to an **AirSep VisionAire 5** — see
-"The AirSep VisionAire 5 calibration".)
+the EverFlo in October, on 2026-11-02 to an **AirSep VisionAire 5** — see
+"The AirSep VisionAire 5 calibration" — and on 2026-11-04 back to the EverFlo,
+at a new place: 1.17.0, flashed over USB. Its preset is the care home pose of
+October, so expect a new sweep there.)
 
 This is assistive/medical-adjacent equipment intended for real daily use —
 not yet deployed (as of Aug 2026). Correctness and predictability beat
@@ -238,7 +240,7 @@ Single sketch `everflo_remote_control.ino`. Key pieces:
   The page therefore no longer polls `/api/status` at all.
 - **Web server port 80**: `/` (UI), `/api/plus`, `/api/minus`,
   `/api/nollstall`, `/api/omstart`, `/api/status`, `/api/steg`,
-  `/api/ui-pulse`, `/api/led-test`, `/api/light`, `/log`,
+  `/api/ui-pulse`, `/api/led-test`, `/api/light`, `/api/forget-wifi`, `/log`,
   `/bild`. All JSON APIs and `/bild` send `Access-Control-Allow-Origin: *`
   (since v1.7.1) — the companion `everflo_control_panel.html` runs from a
   different origin and depends on it. See the Web UI section.
@@ -1644,8 +1646,8 @@ kontrast respond, and those numbers are already on this page.
 ### Access control (v1.12.0)
 For a shared or public wifi at the care home. `#define CONTROL_AUTH 1` (the
 default) means everything that turns the knob or changes the device —
-plus/minus, step size, light, colour test, restart, firmware check, counter
-reset — needs `CONTROL_KEY` from secrets.h; watching (picture, reading,
+plus/minus, step size, light, colour test, restart, firmware check, forgetting
+the wifi (1.17.0), counter reset — needs `CONTROL_KEY` from secrets.h; watching (picture, reading,
 /api/status, /log) stays open. 0 is the old behaviour. A build switch, not an
 app switch: a toggle that turns the lock off would itself need the lock. A
 build with 1 and no key of 16+ characters does not compile (the example
@@ -1695,7 +1697,10 @@ ny kopplingslänk" and "osäkert" before she could read them. No lockout on fail
 would let anyone on the network take her buttons away.
 
 **What it does not solve**: a guest network with client isolation (her phone
-cannot reach the unit at all — test on site before moving it), and one with a
+cannot reach the unit at all — test on site before moving it; on 2026-11-04 an
+open WiFi4EU did exactly this while letting the uploads through, and the unit
+kept rejoining it — `/api/forget-wifi` cannot be reached there either, so the
+way off it was a USB flash with "Erase All Flash"), and one with a
 login page in the browser (the unit cannot click through it). Both need the
 cloud path instead, which is a larger change. Whoever holds her unlocked phone
 can control the flow; that is how she uses it.
@@ -1890,5 +1895,10 @@ deleted afterwards.
   summer. Serve both names for a release, then drop the old ones once the
   copies in the wild have been replaced. The NVS key `"lage"` and the
   `localStorage` keys are NOT part of this: renaming those loses stored state.
-- `/api/glomwifi` (force portal without physical access)
+- ~~`/api/glomwifi`~~ done as `/api/forget-wifi` in 1.17.0 (signed; the
+  control panel's "Glöm wifi"). Still open: the same through the cloud — a
+  flag the ingest Worker hands the device at its 15-minute firmware question,
+  set with `publish_firmware.mjs` — for a network that uploads but isolates
+  its clients (WiFi4EU, 2026-11-04), where the page cannot be reached to sign
+  anything.
 - ArduinoOTA and cloud-pull OTA both done (v1.9.2, v1.9.3) — see above
