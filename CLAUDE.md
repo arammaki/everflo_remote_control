@@ -754,6 +754,29 @@ independent check. A 'natt' reference was tried and did not help.
 the care home's 2026-10-19 dark sweep — an old pose, dy -18 — passed every
 other gate and one read 2.29 for 2.5. None of the 2498 readings stored since
 2026-09-15 (all machines) had |dy| over 10.3.
+**Morning daylight (1.18.1)**: on 2026-11-05 from 09:02 UTC most frames were
+"Osäker" — registration against 'tak' 0.90-0.92, ambiguity 1.9-2.6x, the
+stronger candidate the ball by the operator's check; the camera had also
+crept to dy -7 (from -4.7 overnight). Reference 'morgon' built from the
+uploads 12457-12481 (the 1.13.0 recipe: oriented, aligned to 'tak', median,
+again against the median; its ticks and edges sit within 0.35 rows and 1.3
+columns of 'tak''s, so no shift) — **with the ball masked out of each frame**
+before the median: 17 of 25 uploads had the ball at y 255-295, and the plain
+median kept a ghost ball there that read the sweeps 0.1 off (review of
+1.18.1). The morning light itself stays — brighter than 'tak' at y 295-330,
+darker at 340-370: forced onto the non-morning sweeps 'morgon' reads 0.08-0.15
+off at 2-3.5, and where the ball is weak or elsewhere the bright band wins the
+peak at ~2.85, refused only by ambiguity and spread. So a non-morning frame
+that 'morgon' answers (best, or the fallback within 0.05) with the ball hidden
+could show ~2.85 — untested. The operator accepted the ~0.1 case; a short
+labelled morning sweep (2, 2.5, 3, 3.5) would show how the real mornings read. Held out first (even ids built, odd ids
+tested): 5 read / 8 "Osäker" -> 13 of 13 at 20-93x. Over all 52 uploads since
+1.18.0: 14 "Osäker" -> 0, three readings moved 0.05-0.07 (frames 'tak' had
+read at registration 0.92, now 'morgon' at 0.99, which agree with their spans);
+every sweep reads the same; the old care-home poses still refuse, some now by
+dy where registration used to — tightest 10-19-ljus's 2/2.5/3 at registration
+0.81-0.82 and dy -19.4..-19.6, 4.4 px from the gate (SHIFT_Y is what holds
+them out, as the 1.18.0 review warned).
 Everything below in this section and in "The EverFlo again" is the care home's
 calibration — history.
 

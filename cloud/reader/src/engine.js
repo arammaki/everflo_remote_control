@@ -92,8 +92,11 @@ const T={contrast:0.10, margin:3.0, reg:0.75, spread:75};
    It is now LOAD-BEARING for the EverFlo: against 'tak'/'dag' the old care
    home poses register 0.79-0.88, above the 0.75 gate, and at SHIFT_Y 30 a
    10-18 frame at 1 L/min reads 2.04 with every other gate green (review of
-   1.18.0). They sit at dy -23..-25 (the 10-19 pose at -18). Do not loosen it
-   without re-running the everflo-sweep-2026-10-* sets at the new value. */
+   1.18.0). They sit at dy -23..-25 (the 10-19 pose at -18). Since 'morgon'
+   (1.18.1) the tightest is 10-19-ljus: its 2, 2.5 and 3 register 0.81-0.82
+   against it and are refused by dy alone, at -19.4..-19.6 — 4.4 px from this
+   gate. Do not loosen it without re-running the everflo-sweep-2026-10-* sets
+   at the new value. */
 const SHIFT_X=38, SHIFT_Y=15;
 /* How much worse a reference may register than the best one and still answer
    when the best refuses — see the fallback in analyze(). An algorithm
@@ -177,9 +180,10 @@ const PRESETS={
     VIEW_X:228, VIEW_W:150, VIEW_Y:110, VIEW_H:420,
     KNOB:null, BACKLASH:null,   // never measured on the EverFlo: her page keeps the degree buttons
     /* 'tak' (the ceiling lamp on) and 'dag' (the lamp off, afternoon
-       daylight); see REF_PNG_EVERFLO_TAK. Darker lightings follow as their
-       sweeps arrive. */
-    refs:()=>[[REF_PNG_EVERFLO_TAK,'tak'], [REF_PNG_EVERFLO_DAG,'dag']],
+       daylight), see REF_PNG_EVERFLO_TAK; 'morgon' (morning daylight, 1.18.1)
+       built from uploads, see REF_PNG_EVERFLO_MORGON. */
+    refs:()=>[[REF_PNG_EVERFLO_TAK,'tak'], [REF_PNG_EVERFLO_DAG,'dag'],
+              [REF_PNG_EVERFLO_MORGON,'morgon']],
   },
   /* Invacare Platinum 9 (from 2026-09). 1-9 L/min with a red line above the
      9 mark; by its own front label the machine alarms below 1.0 and loses O2
@@ -405,6 +409,39 @@ const REF_PNG_VISIONAIRE5_RUM=null;   // the reader uses tools/reader_profiles.m
    labels agree: unshifted, the sweep read +0.04 high over 1.5..5 (mean
    0.049), shifted 0.035 with the mean signed error 0.01. Against 'tak'
    alone those frames registered 0.59-0.64 and were refused. */
+/* 'morgon' (1.18.1): morning daylight at Norrgården, which no sweep covers.
+   From 2026-11-05 09:02 UTC most frames were "Osäker" (registration 0.90-0.92
+   against 'tak', ambiguity 1.9-2.6x), with the stronger candidate the ball by
+   the operator's check. Built from the UPLOADED frames 12457-12481 (08:20-09:43
+   UTC), the 1.13.0 recipe: each frame oriented, shifted back by its dx/dy
+   against 'tak', the median taken, then again against that median. Not
+   shifted after: its ticks sit within 0.35 rows and its edges 1.3 columns of
+   'tak''s (correlation 0.90-0.97).
+   THE BALL IS MASKED OUT of each frame before the median (rows within 24 of
+   where the engine found it), because uploads are not a sweep: 17 of the 25
+   had the ball at y 255-295 (it stood at y 213-337 in all), and a plain median
+   kept a ghost ball there (0.07-0.11 darker than 'tak' at y 265-290) that the
+   1.18.1 review found reading the sweeps 0.1 off at 2 and 3 L/min. Masked, at
+   least 6 frames remain for every row and that dip is gone.
+   What remains is the morning light itself (both bands stay with the ball
+   masked 40 rows wide): 0.14-0.17 BRIGHTER than 'tak' at y 295-330 (2.6-3.0
+   L/min) and 0.13-0.18 darker at y 340-370 (the LED's glare, weaker in
+   daylight). Forced onto the non-morning sweeps it reads 2-2.5 +0.08..+0.13
+   and 3.5 -0.14..-0.15, and the bright band becomes a candidate of its own
+   near 2.85 with a real ball's contrast (0.20-0.24): where the ball is weak
+   or elsewhere (0.5-1.5, 5.5, over_max) the forced reading IS ~2.85, refused
+   only by ambiguity (1.0-1.5x) and spread. So the risk is a non-morning frame
+   that 'morgon' answers — best registration, or the fallback within 0.05 of a
+   best that refuses (on the 'tak' sweep the gap is 0.06-0.09) — with the ball
+   hidden or weak and no rival: then ~2.85 whatever the ball shows. Untested;
+   the operator accepted the ~0.1 case (2026-11-05). Not
+   verified on labelled morning frames: a short morning sweep (2, 2.5, 3, 3.5)
+   would settle it. On the uploads where the ratten did not move between a
+   frame 'tak' read well and one 'morgon' reads (12464 -> 12465/66; 12470/71)
+   the two agree within 0.08.
+   Held out first (built from the even ids, unmasked): the odd ids went from
+   5 read / 8 "Osäker" to 13 of 13 at 20-93x. */
+const REF_PNG_EVERFLO_MORGON=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_DAG=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_TAK=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 /* Platinum 9 at the care home (fourth pose), the hall lamp on: median of the
@@ -990,4 +1027,4 @@ function judge(r){
           reason:"Inom kalibrerat område."};
 }
 export {toGray,flatfield,buildRef,analyze,judge,usePreset,setRefs,isCalibrated,PRESETS,W,H};
-export const ENGINE_VERSION = "764e0de4";
+export const ENGINE_VERSION = "acd207a5";
