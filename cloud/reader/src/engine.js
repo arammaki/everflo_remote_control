@@ -164,7 +164,9 @@ const PRESETS={
     Y_CAL_MIN:196, Y_CAL_MAX:430,   // y of 5.5 and 0.5 L/min
     /* 'max' (the ball against the top line from below) sits at y 182.0 and
        reads 5.82 as a number, extrapolated; 'over_max' (on the line) at 169.5
-       must say Max. The boundary splits them: 175, about 6.0 on the curve. */
+       must say Max. The boundary splits them: 175, about 6.0 on the curve.
+       That holds for -tak; at Hagtorp in the dark `max` sits 0.2 px from it
+       (reads 6.01) — see REF_PNG_EVERFLO_HAGMORK. */
     Y_MAX_STATE:175,
     /* The resting ball reads 0.36 on this curve, so the bottom state is
        "Under 0,5", not the old "Under 0,3": 0.14 of margin where 0.3 would
@@ -183,7 +185,8 @@ const PRESETS={
        daylight), see REF_PNG_EVERFLO_TAK; 'morgon' (morning daylight, 1.18.1)
        built from uploads, see REF_PNG_EVERFLO_MORGON. */
     refs:()=>[[REF_PNG_EVERFLO_TAK,'tak'], [REF_PNG_EVERFLO_DAG,'dag'],
-              [REF_PNG_EVERFLO_MORGON,'morgon'], [REF_PNG_EVERFLO_HAGTORP,'hagtorp']],
+              [REF_PNG_EVERFLO_MORGON,'morgon'], [REF_PNG_EVERFLO_HAGTORP,'hagtorp'],
+              [REF_PNG_EVERFLO_HAGMORK,'hagmork']],
   },
   /* Invacare Platinum 9 (from 2026-09). 1-9 L/min with a red line above the
      9 mark; by its own front label the machine alarms below 1.0 and loses O2
@@ -460,6 +463,17 @@ const REF_PNG_VISIONAIRE5_RUM=null;   // the reader uses tools/reader_profiles.m
    (an artefact near y 130 that reads ~7) or this reference (a lamp band at
    y 413-454, 0.3-1.2 L/min) could take the peak, held today only by the
    ambiguity gate — a lamps-off sweep here would settle it. */
+/* 'hagmork' (1.18.3): Hagtorp as dark as the day allows (lamps off, blind
+   down), test/everflo-sweep-2026-11-06-hagtorp-mork, 12:05-12:06 UTC. With the
+   four references before it the sweep already read (mean 0.063, worst 0.134)
+   but thinly: registration 0.81-0.86, ambiguity down to 3.0x. Aligned twice
+   against its own median, then shifted (-3, +4) onto 'tak' — the SAME shift
+   as 'hagtorp': the two sweeps are one pose, minutes apart. Its own labels
+   would pick +5..+6 (signed error -0.03 at +4, 0.00 near +5.5; the ticks say
+   +5.2..+6.8 at correlation 0.70-0.82), a row or two and ~0.03 L/min away;
+   at +5 the sweep's `max` frame (the ball against the top line) crossed
+   Y_MAX_STATE and said Max. At +4: mean 0.056, worst 0.12. */
+const REF_PNG_EVERFLO_HAGMORK=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_HAGTORP=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_MORGON=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_DAG=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
@@ -1047,4 +1061,4 @@ function judge(r){
           reason:"Inom kalibrerat område."};
 }
 export {toGray,flatfield,buildRef,analyze,judge,usePreset,setRefs,isCalibrated,PRESETS,W,H};
-export const ENGINE_VERSION = "eed137a5";
+export const ENGINE_VERSION = "494c308d";

@@ -789,7 +789,21 @@ live frames, which agree with the pictures, are the check). Live frames
 afterwards read at registration 0.99 and 24-32x. Only daylight with the lamps
 on is covered: in the dark a 'dag' artefact (~7, i.e. "Max", which also
 blocks + on her page) or a lamp band of 'hagtorp' (0.3-1.2) could take the
-peak, held only by ambiguity — take a lamps-off sweep at Hagtorp. Every other set reads the same. The care home's (October) calibration
+peak, held only by ambiguity — take a lamps-off sweep at Hagtorp.
+**1.18.3: 'hagmork'**, from `-hagtorp-mork/` (lamps off, blind down, as dark as
+the day allows): the four references already read it (mean 0.063) but at
+registration 0.81-0.86 and down to 3.0x; with 'hagmork' 0.98-0.99. Shifted
+(-3, +4) like 'hagtorp' — one pose, minutes apart — though its own labels
+would pick +5..+6 (-0.03 at +4); at +5 its `max` frame crossed into Max.
+Mean 0.056, worst 0.12; `max` reads 6.01, right at Y_MAX_STATE, so the top
+line can flip between ~6.0 and Max. True night at Hagtorp is still untested.
+Forced alone onto the Norrgården dark frames 'hagmork' has a fixed rival low
+in the tube (0.5-0.7 L/min, contrast 0.11-0.14) that wins over a weak ball —
+the 'morgon' failure mode — but there it registers 0.13-0.50 below the best
+reference, so it is never asked; a Hagtorp dusk between the two sweeps is
+where it could be. On the care home's 10-19 sweeps it IS within the fallback
+gap of the best, and two frames (10-19-ljus 1.5, -natt 3) become refusals by
+dy alone (-20.6, -18.8) — SHIFT_Y again (review of 1.18.3). Every other set reads the same. The care home's (October) calibration
 refuses this place completely (dy 31) — "the usual place" is not that pose.
 Everything below in this section and in "The EverFlo again" is the care home's
 calibration — history.

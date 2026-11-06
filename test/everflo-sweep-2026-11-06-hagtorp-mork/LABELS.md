@@ -1,0 +1,1 @@
+The EverFlo at Hagtorp as dark as the day allows (lamps off, blind down), 2026-11-06 12:05-12:06 UTC (1.18.3). LED at 50. "0" renamed `0_min`. Reference 'hagmork' is the median of these frames, aligned twice against the sweep's own median and shifted (-3, +4) onto 'tak', the same shift as the daylight sweep (one pose, minutes apart). `over_max` may refuse (contrast 0.09).

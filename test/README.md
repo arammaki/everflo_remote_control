@@ -61,10 +61,11 @@ bottom and top labels were corrected with the operator ("0" is 0.5, "0.5" is
 ball past the top line in either. ljus mean 0.020 worst 0.046 (0.026 with 'ljus'); natt mean
 0.025 worst 0.062.
 
-## `everflo-sweep-2026-11-06-hagtorp-dag/` — the EverFlo at Hagtorp (1.18.2)
+## `everflo-sweep-2026-11-06-hagtorp-dag/` and `-mork/` — the EverFlo at Hagtorp (1.18.2-1.18.3)
 
-Daylight with the lamps on; builds the reference 'hagtorp' on the Norrgården
-curve (shifted -3, +4 onto 'tak'): mean 0.041, worst 0.10. `over_max` may refuse.
+Daylight with the lamps on, and lamps off with the blind down; they build
+'hagtorp' and 'hagmork' on the Norrgården curve, both shifted (-3, +4) onto
+'tak': means 0.041 and 0.056, worst 0.10 and 0.12. `over_max` may refuse.
 
 ## `everflo-sweep-2026-11-04-tak/`, `-dag/` and `-natt/` — the EverFlo in force (Norrgården)
 
