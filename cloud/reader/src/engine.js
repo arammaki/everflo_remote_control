@@ -183,7 +183,7 @@ const PRESETS={
        daylight), see REF_PNG_EVERFLO_TAK; 'morgon' (morning daylight, 1.18.1)
        built from uploads, see REF_PNG_EVERFLO_MORGON. */
     refs:()=>[[REF_PNG_EVERFLO_TAK,'tak'], [REF_PNG_EVERFLO_DAG,'dag'],
-              [REF_PNG_EVERFLO_MORGON,'morgon']],
+              [REF_PNG_EVERFLO_MORGON,'morgon'], [REF_PNG_EVERFLO_HAGTORP,'hagtorp']],
   },
   /* Invacare Platinum 9 (from 2026-09). 1-9 L/min with a red line above the
      9 mark; by its own front label the machine alarms below 1.0 and loses O2
@@ -441,6 +441,26 @@ const REF_PNG_VISIONAIRE5_RUM=null;   // the reader uses tools/reader_profiles.m
    the two agree within 0.08.
    Held out first (built from the even ids, unmasked): the odd ids went from
    5 read / 8 "Osäker" to 13 of 13 at 20-93x. */
+/* 'hagtorp' (1.18.2): the EverFlo moved back to Hagtorp on 2026-11-06 (~11:00
+   UTC). The unit is mounted on the machine, so the camera kept nearly the
+   Norrgården pose (frames registered against 'tak' at dx -3, dy +5.7), and
+   the curve and geometry are kept — but the light did not: the references
+   registered 0.77-0.79 and 12 of 14 frames of the day sweep were "Osäker".
+   From test/everflo-sweep-2026-11-06-hagtorp-dag (daylight with the lamps on,
+   11:28-11:30 UTC): aligned twice against its own median, then SHIFTED
+   (-3, +4) onto 'tak'. The shift is the labels', not the references': the
+   ticks said +5.7..+7.3 rows at correlation only 0.68-0.72 and the edges -3.8
+   or +0.8 columns depending on the height, while over the labels the signed
+   error crosses zero at +4 rows (0 rows: -0.07 and 3 refused; +4: mean 0.041,
+   worst 0.10, signed 0.00; +6: +0.04; dx -2..-4 the same) — so those numbers
+   are a fit, not a check; the independent evidence is the live frames, which
+   agree with the pictures (12623 4.32, 12624 2.76, live 2.46). Every frame
+   reads except over_max (contrast 0.08, allowed); `max` reads 5.90, a number.
+   Only daylight with the lamps on is covered at Hagtorp: in the dark 'dag'
+   (an artefact near y 130 that reads ~7) or this reference (a lamp band at
+   y 413-454, 0.3-1.2 L/min) could take the peak, held today only by the
+   ambiguity gate — a lamps-off sweep here would settle it. */
+const REF_PNG_EVERFLO_HAGTORP=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_MORGON=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_DAG=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_TAK=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
@@ -1027,4 +1047,4 @@ function judge(r){
           reason:"Inom kalibrerat område."};
 }
 export {toGray,flatfield,buildRef,analyze,judge,usePreset,setRefs,isCalibrated,PRESETS,W,H};
-export const ENGINE_VERSION = "acd207a5";
+export const ENGINE_VERSION = "eed137a5";

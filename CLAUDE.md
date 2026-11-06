@@ -777,6 +777,20 @@ every sweep reads the same; the old care-home poses still refuse, some now by
 dy where registration used to — tightest 10-19-ljus's 2/2.5/3 at registration
 0.81-0.82 and dy -19.4..-19.6, 4.4 px from the gate (SHIFT_Y is what holds
 them out, as the 1.18.0 review warned).
+**Back at Hagtorp (1.18.2, 2026-11-06)**: the unit is mounted on the machine,
+so moving rooms kept nearly the Norrgården pose (dx -3, dy +5.7 against
+'tak') and the curve and geometry are kept; the light did not — the three
+references registered 0.77-0.79 and 12 of 14 frames of a day sweep were
+"Osäker". Reference 'hagtorp' from `test/everflo-sweep-2026-11-06-hagtorp-dag/`
+(daylight, lamps on), aligned and shifted (-3, +4) onto 'tak' — chosen by the
+labels (signed error 0.00; the ticks said +6..+7 but at correlation 0.7):
+mean 0.041, worst 0.10 (a fit — the shift was chosen on these labels; the
+live frames, which agree with the pictures, are the check). Live frames
+afterwards read at registration 0.99 and 24-32x. Only daylight with the lamps
+on is covered: in the dark a 'dag' artefact (~7, i.e. "Max", which also
+blocks + on her page) or a lamp band of 'hagtorp' (0.3-1.2) could take the
+peak, held only by ambiguity — take a lamps-off sweep at Hagtorp. Every other set reads the same. The care home's (October) calibration
+refuses this place completely (dy 31) — "the usual place" is not that pose.
 Everything below in this section and in "The EverFlo again" is the care home's
 calibration — history.
 
