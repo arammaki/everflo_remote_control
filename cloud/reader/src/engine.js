@@ -183,10 +183,11 @@ const PRESETS={
     KNOB:null, BACKLASH:null,   // never measured on the EverFlo: her page keeps the degree buttons
     /* 'tak' (the ceiling lamp on) and 'dag' (the lamp off, afternoon
        daylight), see REF_PNG_EVERFLO_TAK; 'morgon' (morning daylight, 1.18.1)
-       built from uploads, see REF_PNG_EVERFLO_MORGON. */
+       built from uploads, see REF_PNG_EVERFLO_MORGON; Hagtorp: 'hagtorp' (day,
+       lamps on), 'hagmork' (day, dark) and 'hagnatt' (night, from uploads). */
     refs:()=>[[REF_PNG_EVERFLO_TAK,'tak'], [REF_PNG_EVERFLO_DAG,'dag'],
               [REF_PNG_EVERFLO_MORGON,'morgon'], [REF_PNG_EVERFLO_HAGTORP,'hagtorp'],
-              [REF_PNG_EVERFLO_HAGMORK,'hagmork']],
+              [REF_PNG_EVERFLO_HAGMORK,'hagmork'], [REF_PNG_EVERFLO_HAGNATT,'hagnatt']],
   },
   /* Invacare Platinum 9 (from 2026-09). 1-9 L/min with a red line above the
      9 mark; by its own front label the machine alarms below 1.0 and loses O2
@@ -473,6 +474,52 @@ const REF_PNG_VISIONAIRE5_RUM=null;   // the reader uses tools/reader_profiles.m
    +5.2..+6.8 at correlation 0.70-0.82), a row or two and ~0.03 L/min away;
    at +5 the sweep's `max` frame (the ball against the top line) crossed
    Y_MAX_STATE and said Max. At +4: mean 0.056, worst 0.12. */
+/* 'hagnatt' (1.18.4): Hagtorp at night, the room dark and the LED the main
+   light, which no sweep covers. Both nights (2026-11-06 21:55 to 11-07 06:24
+   UTC, and 11-07 from 20:56) went to 'dag' — Norrgården's afternoon — at
+   registration 0.91-0.94 and ambiguity 1.5-3x, so 47 frames were "Osäker";
+   the operator checked them and the stronger candidate was the ball every
+   time. Built from the 66 UPLOADED night frames 12701-12754 and 12873-12884,
+   the 'morgon' recipe: oriented, aligned against 'hagmork', the median taken,
+   then again against that median, the ball masked out of each frame (rows
+   within 24 of where it was found; 32 and 40 give the same profile, so no
+   ghost ball: the ball stood at y 230-423, 1.0-4.6 L/min, and at least 35
+   frames remain for every row). Not shifted: its ticks sit within 0.0-0.4
+   rows of 'hagmork''s (correlation 0.96) — one pose, and within one pose
+   ticks across lightings are trustworthy. (Its tube edges sit ~2.6 columns
+   from 'hagmork''s and on 'tak''s; a variant moved onto 'hagmork''s edges
+   read the same to 0.02 and was not taken.)
+   Held out first (built from the even ids): the odd ids went from 13 read /
+   20 "Osäker" to 33 of 33. All 66: 66 read at 8-335x, registration 0.99.
+   The checks it has, none of them labelled: 12873-12875 follow a press that
+   'hagtorp' read 4.56 and read 4.59-4.60; the night's 2 L/min span reads
+   1.98 where 'tak', 'hagtorp' and 'hagmork' forced say 1.99-2.00 and 'dag'
+   said 2.02 ('dag' reads its night frames 0.03-0.05 high); and at dawn
+   12755 (best 'hagmork', 2.6x) is answered by this one through the fallback,
+   4.41, where every reference forced says 4.34-4.47.
+   What it carries is the night light itself, not a ghost (it stays at every
+   mask width): 0.11 brighter than 'hagmork' at y 350-365 (~1.9 L/min), where
+   the LED lights the tube, and 0.14-0.17 darker at y 420-460. So forced onto
+   a daylight frame whose ball is weak or absent it finds ~1.9 L/min (the
+   Hagtorp day sweep's 5, 5.5 and max; registration there 0.31-0.38 below the
+   best, so it is never asked). Forced onto the dark sweeps it reads within
+   0.12 where it reads (gap 0.16-0.20 at Hagtorp, 0.05-0.09 on Norrgården's).
+   A dusk where it registers within FALLBACK_REG_GAP of a best that refuses,
+   with the ball weak, is where ~1.9 could appear. Measured on the 191 uploads
+   since 1.18.2 it does not win: it came within the gap of 'hagmork' on nine,
+   all at dusk on 11-06 (13:47-14:32 UTC), and read those within 0.04 of what
+   'hagmork' read; 12755 (dawn) is the one it answers. The near miss is 12654
+   (15:32, the machine just switched back on, the ball weak at ~5.1): 'hagmork'
+   refuses at 2.7x, and this reference's stronger candidate IS the band, 1.84
+   — refused by ambiguity (1.3x, the ball the rival) and 0.064 outside the gap.
+   A frame like it with the ball fainter still, and 0.015 closer, would show
+   ~1.9 for a real 5. Accepted as for 'morgon'; a dusk reference would end it.
+   It also registers the kitchen pose of 2026-08-22 (a night under an LED
+   too) better than anything did: 0.71-0.76 against the 0.75 gate, where the
+   set peaked at 0.72. Two frames reach the gate; both are still refused by
+   two gates each (2.5: registration 0.745 and dy -18.5; 2.75: ambiguity
+   2.4x and dy -18.5) — SHIFT_Y once more. */
+const REF_PNG_EVERFLO_HAGNATT=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_HAGMORK=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_HAGTORP=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_MORGON=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
@@ -1061,4 +1108,4 @@ function judge(r){
           reason:"Inom kalibrerat område."};
 }
 export {toGray,flatfield,buildRef,analyze,judge,usePreset,setRefs,isCalibrated,PRESETS,W,H};
-export const ENGINE_VERSION = "494c308d";
+export const ENGINE_VERSION = "967ad5a";

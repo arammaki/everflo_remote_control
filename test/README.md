@@ -66,6 +66,9 @@ ball past the top line in either. ljus mean 0.020 worst 0.046 (0.026 with 'ljus'
 Daylight with the lamps on, and lamps off with the blind down; they build
 'hagtorp' and 'hagmork' on the Norrgården curve, both shifted (-3, +4) onto
 'tak': means 0.041 and 0.056, worst 0.10 and 0.12. `over_max` may refuse.
+The night there ('hagnatt', 1.18.4) has no sweep: it was built from uploads,
+which stay out of the repo — see REF_PNG_EVERFLO_HAGNATT for the ids and the
+checks. Forced onto `-mork/` it reads within 0.12 where it reads.
 
 ## `everflo-sweep-2026-11-04-tak/`, `-dag/` and `-natt/` — the EverFlo in force (Norrgården)
 

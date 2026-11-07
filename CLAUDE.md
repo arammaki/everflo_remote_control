@@ -805,6 +805,19 @@ where it could be. On the care home's 10-19 sweeps it IS within the fallback
 gap of the best, and two frames (10-19-ljus 1.5, -natt 3) become refusals by
 dy alone (-20.6, -18.8) — SHIFT_Y again (review of 1.18.3). Every other set reads the same. The care home's (October) calibration
 refuses this place completely (dy 31) — "the usual place" is not that pose.
+**1.18.4: 'hagnatt'**, the night at Hagtorp: both nights went to 'dag' at
+registration 0.91-0.94 and 47 frames said "Osäker" (the stronger candidate
+the ball, by the operator's check). Built from the 66 night uploads
+12701-12754 and 12873-12884 (the 'morgon' recipe, aligned against 'hagmork',
+ball masked; no shift: ticks within 0.4 rows of 'hagmork''s). Held out: odd
+ids 13 read / 20 "Osäker" -> 33/33; all uploads since 1.18.2 47 "Osäker" -> 8
+(the evening's, under 'hagtorp'), the night's readings 0.03-0.04 lower than
+'dag' gave and level with what 'tak', 'hagtorp' and 'hagmork' say; no
+checked-in set changes a verdict. It carries the LED's night light (brighter
+at ~1.9 L/min), so a weak-ball dusk frame it answers could read ~1.9: 12654
+(the ball weak at ~5.1) came within 0.015 of that — its stronger candidate
+was the band, refused by ambiguity and just outside the fallback gap. It registers the 2026-08-22 kitchen pose up to 0.76: two frames are
+held by two gates each, one of them SHIFT_Y.
 Everything below in this section and in "The EverFlo again" is the care home's
 calibration — history.
 
