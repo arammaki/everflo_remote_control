@@ -184,10 +184,12 @@ const PRESETS={
     /* 'tak' (the ceiling lamp on) and 'dag' (the lamp off, afternoon
        daylight), see REF_PNG_EVERFLO_TAK; 'morgon' (morning daylight, 1.18.1)
        built from uploads, see REF_PNG_EVERFLO_MORGON; Hagtorp: 'hagtorp' (day,
-       lamps on), 'hagmork' (day, dark) and 'hagnatt' (night, from uploads). */
+       lamps on), 'hagmork' (day, dark), and from uploads 'hagnatt' (night) and
+       'hagkväll' (dusk onward, lamps on). */
     refs:()=>[[REF_PNG_EVERFLO_TAK,'tak'], [REF_PNG_EVERFLO_DAG,'dag'],
               [REF_PNG_EVERFLO_MORGON,'morgon'], [REF_PNG_EVERFLO_HAGTORP,'hagtorp'],
-              [REF_PNG_EVERFLO_HAGMORK,'hagmork'], [REF_PNG_EVERFLO_HAGNATT,'hagnatt']],
+              [REF_PNG_EVERFLO_HAGMORK,'hagmork'], [REF_PNG_EVERFLO_HAGNATT,'hagnatt'],
+              [REF_PNG_EVERFLO_HAGKVALL,'hagkväll']],
   },
   /* Invacare Platinum 9 (from 2026-09). 1-9 L/min with a red line above the
      9 mark; by its own front label the machine alarms below 1.0 and loses O2
@@ -519,6 +521,40 @@ const REF_PNG_VISIONAIRE5_RUM=null;   // the reader uses tools/reader_profiles.m
    set peaked at 0.72. Two frames reach the gate; both are still refused by
    two gates each (2.5: registration 0.745 and dy -18.5; 2.75: ambiguity
    2.4x and dy -18.5) — SHIFT_Y once more. */
+/* 'hagkväll' (1.18.5): Hagtorp in the evening, dusk onward with the lamps on,
+   which 'hagtorp' (a daylight sweep) answered at registration 0.92-0.95 and
+   ambiguity 1.4-3x: on 2026-11-08 from 14:43 UTC 27 frames said "Osäker", the
+   stronger candidate the ball by the operator's check, and 7 on the two
+   evenings before. Built from the 48 UPLOADED frames 12990-13037 (11-08,
+   14:34-19:17 UTC), the 'morgon' recipe: aligned against a first median of
+   all three evenings (itself aligned against 'hagtorp'), the median taken,
+   again against it, the ball masked out (rows within 24 of it; mask 40 gives
+   the same profile within 0.01, so no ghost: the ball stood at y 214-453,
+   and at least 27 frames remain for every row). Not shifted: its ticks sit
+   0.25-0.7 rows from 'hagtorp''s, 0.3-0.4 from 'hagnatt''s (correlation
+   0.96-0.98 in the ball band).
+   THE TWO EARLIER EVENINGS ARE ITS HELD-OUT SET, nothing from them went in:
+   11-06 and 11-07 read 78 of 78 (71 and 7 "Osäker" before) at 4.5x or better,
+   within 0.03 of what 'hagtorp' read where it read. All 408 uploads since
+   1.18.2: 35 "Osäker" -> 1 (12654, the machine just back on, ball weak), none
+   moved more than 0.03. Handovers across a still knob agree: 'hagmork' 4.78 ->
+   this 4.81 (12833/34), this 4.58 -> 'hagnatt' 4.60 (12872/73). It has one
+   labelled check, unlike 'hagnatt': forced onto -hagtorp-dag (a daylight sweep
+   it was not built from) it reads 1..4.5 within 0.11, mean 0.04.
+   One median of all three evenings (126 frames) was tried first and is worse:
+   it left 3 frames of 11-08 "Osäker" at 2.9x. From 16:24 UTC that evening the
+   lower tube is ~0.06 darker than that median (y 420-460), a lamp or the blind; built on
+   11-08 alone every evening stays at 4.3x or better.
+   It carries a milder version of 'hagnatt''s night light (0.08 brighter than
+   'hagtorp' at y 350-360, 0.11 darker at 420-450) but no false ball: forced
+   onto the day sweep's 5 and 5.5 its stronger candidate is still the ball,
+   and on the 14 uploads where it sits within FALLBACK_REG_GAP of the best
+   (13 by day on 11-06, 12917 at night) it reads within 0.04 of the best
+   or says "Osäker". Forced on the dark
+   sweep (2.34 for 2.5, 3.87 for 4) it is 0.13-0.16 low but 0.18-0.25 below
+   the best, so never asked. No checked-in set changes a verdict, and no
+   negative set's registration peak moves. */
+const REF_PNG_EVERFLO_HAGKVALL=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_HAGNATT=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_HAGMORK=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_HAGTORP=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
@@ -1108,4 +1144,4 @@ function judge(r){
           reason:"Inom kalibrerat område."};
 }
 export {toGray,flatfield,buildRef,analyze,judge,usePreset,setRefs,isCalibrated,PRESETS,W,H};
-export const ENGINE_VERSION = "967ad5a";
+export const ENGINE_VERSION = "ed0b8a90";

@@ -818,6 +818,15 @@ at ~1.9 L/min), so a weak-ball dusk frame it answers could read ~1.9: 12654
 (the ball weak at ~5.1) came within 0.015 of that — its stronger candidate
 was the band, refused by ambiguity and just outside the fallback gap. It registers the 2026-08-22 kitchen pose up to 0.76: two frames are
 held by two gates each, one of them SHIFT_Y.
+**1.18.5: 'hagkväll'**, the evening at Hagtorp (dusk onward, lamps on), where
+'hagtorp' gave 1.4-3x and on 2026-11-08 27 frames said "Osäker" (the ball by
+the operator's check). From the 48 uploads 12990-13037 of that evening, the
+same recipe, no shift; the two evenings before went unused and are its
+held-out set: 78 of 78 at 4.5x or better (7 "Osäker" before). All 408 uploads
+since 1.18.2: 35 "Osäker" -> 1, none moved over 0.03. Forced onto the labelled
+day sweep it reads 1..4.5 within 0.11. A median of all three evenings was
+worse (3 left at 2.9x): the lighting of 11-08 differs a little low in the
+tube. No false band like 'hagnatt''s, and no negative set moves.
 Everything below in this section and in "The EverFlo again" is the care home's
 calibration — history.
 
