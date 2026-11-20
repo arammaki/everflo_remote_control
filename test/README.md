@@ -80,6 +80,9 @@ Daylight and curtains drawn (at midday), 2026-11-20 11:46-11:50 UTC, with the ca
 ~14 px up from the 11-04 pose. 1.19.0 moved the whole EverFlo preset by (+30, -14) into this pose; these
 build 'norrdag' and 'norrnatt' on the 11-04 curve (re-expressed). Means 0.040 and 0.021, worst 0.132 and
 0.081, ambiguity 6.6x or more; `over_max` says Max in both. See `LABELS.md` in each.
+Since 1.19.1 the preset sits (+14, +4) further on (the camera moved that afternoon), so these
+frames register at dx -16..-10, dy -5..-3; the dark one reads mean 0.017, worst 0.059 ('förråd'
+answers some of it).
 
 ## `everflo-sweep-2026-11-04-tak/`, `-dag/` and `-natt/` — Norrgården's first pose (old pose since 1.19.0)
 

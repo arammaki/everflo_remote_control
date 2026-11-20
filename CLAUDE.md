@@ -853,6 +853,17 @@ an hour after the sweep (15066, dx 9.4). Checked on real frames: of 151
 Hagtorp uploads 84 read, all within 0.144 of 1.18.5, the rest refused.
 **The epoch of this calibration is 2026-11-20T11:37Z** (the boot at Norrgården,
 frame 15062); re-analysing older frames with it shows Hagtorp's as refusals.
+**1.19.1: the camera does not stay put, so the coordinates follow it.** Within
+three hours of the sweeps it moved with the presses (+6..+15 px, then at 13:15
+UTC a jump to dy +7 with ~2 degrees of turn, at 14:55 another ~9 px, where
+SHIFT_X 20 refused it), and the operator cannot fasten it better. The preset
+moved (+14, +4) more — (+44, -10) from 11-04 in all — so the sweep sits at
+dx -16..-10 and that afternoon at -7..+7, and the care home's poses at dx
+-38..-40, 18 px outside the gate. Reference 'förråd' from the 24 uploads
+15084-15107 (ball masked): held out 8 read / 4 not -> 12 of 12; forced alone
+onto the dark sweep, every label within 0.10. Expect it to move again: a
+camera that wanders with the knob needs this recentring whenever it settles
+somewhere new, and "Kameran har flyttat sig" on her page is the sign.
 Everything below in this section and in "The EverFlo again" is the care home's
 calibration — history.
 
