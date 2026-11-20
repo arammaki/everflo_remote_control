@@ -96,8 +96,23 @@ const T={contrast:0.10, margin:3.0, reg:0.75, spread:75};
    (1.18.1) the tightest is 10-19-ljus: its 2, 2.5 and 3 register 0.81-0.82
    against it and are refused by dy alone, at -19.4..-19.6 — 4.4 px from this
    gate. Do not loosen it without re-running the everflo-sweep-2026-10-* sets
-   at the new value. */
-const SHIFT_X=38, SHIFT_Y=15;
+   at the new value. (Those dy values are the 1.18 coordinates. Since 1.19.0
+   the preset sits 14 rows higher and the same frames come out at dy -4..-7,
+   so SHIFT_Y no longer holds them: SHIFT_X does, below.)
+   SHIFT_X 38 -> 20 in 1.19.0, because the EverFlo preset moved to the camera's
+   new Norrgården pose (+30, -14 from the old one, see PRESETS.everflo) and
+   that pose sits NEXT TO the care home's: the 10-05 and 10-19 sweeps register
+   0.83-0.91 against the new references at dy -4..-7 and dx -26..-32. With the
+   gate at 38 they read 2.0 for anything (wrong by up to 1.5 L/min, every gate
+   but this one green); the closest such frame is at dx -26.3 (10-05-natt
+   over_max, 2.03). At 20 that is 6.3 px of margin, about what SHIFT_Y had
+   over the 10-19 frames before (4.4). The cost: the evidence for 24-28 px
+   above was the Platinum kitchen pose, gone, so that set may refuse now
+   (ALLOW_REFUSED), and the camera may slide only ~16 px from the 11-20 pose
+   before it is refused — the 11-10 jump at Hagtorp was 16 px. A Platinum
+   build would refuse the care home's last Platinum pose (22-27 px), which
+   needs a sweep anyway. */
+const SHIFT_X=20, SHIFT_Y=15;
 /* How much worse a reference may register than the best one and still answer
    when the best refuses — see the fallback in analyze(). An algorithm
    constant, shared by every preset like T. */
@@ -143,32 +158,47 @@ const PRESETS={
      1.5 up it is 13x or more. */
   everflo:{
     name:'Philips EverFlo',
-    /* Chosen on a grid over the sweep (centre 288..304, width 14..20, lean
-       0..0.07, six anchor bands): centre 298, width 14-16, lean 0.035 is the
-       plateau with registration 0.985 and nothing refused; centre 288 at lean
-       0 has more ambiguity margin but registers 0.955 and fits worse. */
-    XL:291, XR:305,
+    /* SINCE 1.19.0 EVERY PIXEL NUMBER IN THIS PRESET IS THE 2026-11-04
+       CALIBRATION MOVED BY (+30, -14): on 2026-11-20 the unit came back to
+       Norrgården with the camera ~30 px to the side and ~14 px up from the pose
+       that calibration was measured in, 1 px inside SHIFT_Y. The new sweeps
+       (test/everflo-sweep-2026-11-20-norrgarden-*) read on the old curve once
+       registration removes that offset (mean signed error -0.005 on both), so
+       the pose slid and the camera did not turn or zoom: the bands, the window,
+       the curve and the crop are translated, BASE_TILT and the curve's shape are
+       kept, and the gates now measure from the new pose (its sweep frames sit at
+       dx -2.3..+3.9, dy -1.0..+0.7). The translation reproduces the old engine
+       but for the tilt's pivot (row H/2, half a pixel at most): the 11-04 tak
+       sweep read through the shifted 'tak' gives mean 0.037 against 0.039.
+       Band: chosen on a grid over the 11-04 sweep (centre 288..304 then,
+       width 14..20, lean 0..0.07, six anchor bands): centre 298 (328 now),
+       width 14-16, lean 0.035 is the plateau with registration 0.985 and
+       nothing refused; centre 288 at lean 0 has more ambiguity margin but
+       registers 0.955 and fits worse. */
+    XL:321, XR:335,
     /* The digits right of the ball's path. */
-    AX1:310, AX2:330,
-    /* The ball lives in y ~182 (the top line) .. 449 (its resting stop);
-       YBOT 455 and 465 read the sweep identically. */
-    YTOP:130, YBOT:460,
-    RY1:90, RY2:480,
+    AX1:340, AX2:360,
+    /* The ball lives in y ~168 (the top line) .. 435 (its resting stop);
+       YBOT 441 and 451 read the 11-04 sweep identically. */
+    YTOP:116, YBOT:446,
+    RY1:76, RY2:466,
     BASE_TILT:0.035,
-    /* Fitted to the eleven labels 0.5..5.5 with the 1 L/min mark weighted 4x:
-       the bottom of this tube is compressed (rest, 0.5 and 1 sit at y 449,
-       430 and 410), and an unweighted fit reads 1 L/min as 0.90. Weighted:
-       1 reads 0.95, 0.5 reads 0.64 (+0.14), the rest 1.5..5.5 within 0.065
-       (mean 0.029 over 1..5.5). */
-    CAL:[2.42452871e-05, -0.0357280447, 11.5215477],
-    Y_CAL_MIN:196, Y_CAL_MAX:430,   // y of 5.5 and 0.5 L/min
-    /* 'max' (the ball against the top line from below) sits at y 182.0 and
-       reads 5.82 as a number, extrapolated; 'over_max' (on the line) at 169.5
-       must say Max. The boundary splits them: 175, about 6.0 on the curve.
-       That holds for -tak; at Hagtorp in the dark `max` sits 0.2 px from it
-       (reads 6.01) — see REF_PNG_EVERFLO_HAGMORK. */
-    Y_MAX_STATE:175,
-    /* The resting ball reads 0.36 on this curve, so the bottom state is
+    /* Fitted to the eleven labels 0.5..5.5 of the 11-04 tak sweep with the
+       1 L/min mark weighted 4x: the bottom of this tube is compressed (rest,
+       0.5 and 1 sat at y 449, 430 and 410 then; 435, 416 and 396 now), and an
+       unweighted fit reads 1 L/min as 0.90. Weighted: 1 reads 0.95, 0.5 reads
+       0.64 (+0.14), the rest 1.5..5.5 within 0.065 (mean 0.029 over 1..5.5).
+       1.19.0 re-expresses it 14 rows up, CAL(y) = CAL_1.18(y + 14); the 1.18
+       constants were [2.42452871e-05, -0.0357280447, 11.5215477]. */
+    CAL:[2.42452871e-05, -0.0350491767, 11.0261071505],
+    Y_CAL_MIN:182, Y_CAL_MAX:416,   // y of 5.5 and 0.5 L/min
+    /* 'max' (the ball against the top line from below) and 'over_max' (on the
+       line): y 168.0 and 155.5 in the 11-04 tak sweep, 163.7 / 141.1 by day
+       and 163.2 / 140.9 in the dark on 11-20. The boundary splits them: 161,
+       about 6.0 on the curve; the 11-20 'max' frames read 5.94-5.95, 2.2-2.7
+       px under it. */
+    Y_MAX_STATE:161,
+    /* The resting ball reads 0.35-0.37 on this curve, so the bottom state is
        "Under 0,5", not the old "Under 0,3": 0.14 of margin where 0.3 would
        have left the rest flickering across it. Her flows are 1.5 and up. */
     LOW_FLOW:0.5, LOW_LABEL:'Under 0,5',
@@ -177,19 +207,19 @@ const PRESETS={
     /* What her page shows in the Max state, and under it (1.15.0: per preset,
        because the VisionAire's top is the knob's end, not past the scale). */
     MAX_LABEL:'Max', MAX_UNIT:'över skalans slut',
-    /* Her page shows the tube, its digits and the top line, x 228..378,
-       y 110..530 — the LED (left) and the knob (top) left out. */
-    VIEW_X:228, VIEW_W:150, VIEW_Y:110, VIEW_H:420,
+    /* Her page shows the tube, its digits and the top line, x 258..408,
+       y 96..516 — the LED (left) and the knob (top) left out. */
+    VIEW_X:258, VIEW_W:150, VIEW_Y:96, VIEW_H:420,
     KNOB:null, BACKLASH:null,   // never measured on the EverFlo: her page keeps the degree buttons
-    /* 'tak' (the ceiling lamp on) and 'dag' (the lamp off, afternoon
-       daylight), see REF_PNG_EVERFLO_TAK; 'morgon' (morning daylight, 1.18.1)
-       built from uploads, see REF_PNG_EVERFLO_MORGON; Hagtorp: 'hagtorp' (day,
-       lamps on), 'hagmork' (day, dark), and from uploads 'hagnatt' (night) and
-       'hagkväll' (dusk onward, lamps on). */
-    refs:()=>[[REF_PNG_EVERFLO_TAK,'tak'], [REF_PNG_EVERFLO_DAG,'dag'],
-              [REF_PNG_EVERFLO_MORGON,'morgon'], [REF_PNG_EVERFLO_HAGTORP,'hagtorp'],
-              [REF_PNG_EVERFLO_HAGMORK,'hagmork'], [REF_PNG_EVERFLO_HAGNATT,'hagnatt'],
-              [REF_PNG_EVERFLO_HAGKVALL,'hagkväll']],
+    /* 'norrdag' (daylight) and 'norrnatt' (curtains drawn), the 11-20 pose,
+       see REF_PNG_EVERFLO_NORRDAG; and the earlier Norrgården lightings moved
+       into it: 'tak' (the ceiling lamp on) and 'dag' (the lamp off, afternoon
+       daylight), see REF_PNG_EVERFLO_TAK, and 'morgon' (morning daylight,
+       1.18.1, from uploads), see REF_PNG_EVERFLO_MORGON. Hagtorp's four
+       ('hagtorp', 'hagmork', 'hagnatt', 'hagkväll') went in 1.19.0. */
+    refs:()=>[[REF_PNG_EVERFLO_NORRDAG,'norrdag'], [REF_PNG_EVERFLO_NORRNATT,'norrnatt'],
+              [REF_PNG_EVERFLO_TAK,'tak'], [REF_PNG_EVERFLO_DAG,'dag'],
+              [REF_PNG_EVERFLO_MORGON,'morgon']],
   },
   /* Invacare Platinum 9 (from 2026-09). 1-9 L/min with a red line above the
      9 mark; by its own front label the machine alarms below 1.0 and loses O2
@@ -414,7 +444,15 @@ const REF_PNG_VISIONAIRE5_RUM=null;   // the reader uses tools/reader_profiles.m
    'tak''s (the camera moved a little with the knob between the sweeps); the
    labels agree: unshifted, the sweep read +0.04 high over 1.5..5 (mean
    0.049), shifted 0.035 with the mean signed error 0.01. Against 'tak'
-   alone those frames registered 0.59-0.64 and were refused. */
+   alone those frames registered 0.59-0.64 and were refused.
+   MOVED (+30, -14) IN 1.19.0, like 'morgon', into the 11-20 pose's
+   coordinates (see PRESETS.everflo): resampled by whole pixels, the edge
+   rows and columns that come in repeated. Rows and columns quoted in this
+   comment and the next are the 1.18 coordinates — add 30 to x, subtract 14
+   from y. Moved, they still fit the new pose: forced alone onto the 11-20
+   sweeps, 'tak' reads the day sweep at mean 0.047 (registration 0.82) and
+   'dag' the dark one at 0.044 (0.95, three refused); 'morgon' refuses the day
+   sweep but one frame. */
 /* 'morgon' (1.18.1): morning daylight at Norrgården, which no sweep covers.
    From 2026-11-05 09:02 UTC most frames were "Osäker" (registration 0.90-0.92
    against 'tak', ambiguity 1.9-2.6x), with the stronger candidate the ball by
@@ -447,117 +485,39 @@ const REF_PNG_VISIONAIRE5_RUM=null;   // the reader uses tools/reader_profiles.m
    the two agree within 0.08.
    Held out first (built from the even ids, unmasked): the odd ids went from
    5 read / 8 "Osäker" to 13 of 13 at 20-93x. */
-/* 'hagtorp' (1.18.2): the EverFlo moved back to Hagtorp on 2026-11-06 (~11:00
-   UTC). The unit is mounted on the machine, so the camera kept nearly the
-   Norrgården pose (frames registered against 'tak' at dx -3, dy +5.7), and
-   the curve and geometry are kept — but the light did not: the references
-   registered 0.77-0.79 and 12 of 14 frames of the day sweep were "Osäker".
-   From test/everflo-sweep-2026-11-06-hagtorp-dag (daylight with the lamps on,
-   11:28-11:30 UTC): aligned twice against its own median, then SHIFTED
-   (-3, +4) onto 'tak'. The shift is the labels', not the references': the
-   ticks said +5.7..+7.3 rows at correlation only 0.68-0.72 and the edges -3.8
-   or +0.8 columns depending on the height, while over the labels the signed
-   error crosses zero at +4 rows (0 rows: -0.07 and 3 refused; +4: mean 0.041,
-   worst 0.10, signed 0.00; +6: +0.04; dx -2..-4 the same) — so those numbers
-   are a fit, not a check; the independent evidence is the live frames, which
-   agree with the pictures (12623 4.32, 12624 2.76, live 2.46). Every frame
-   reads except over_max (contrast 0.08, allowed); `max` reads 5.90, a number.
-   Only daylight with the lamps on is covered at Hagtorp: in the dark 'dag'
-   (an artefact near y 130 that reads ~7) or this reference (a lamp band at
-   y 413-454, 0.3-1.2 L/min) could take the peak, held today only by the
-   ambiguity gate — a lamps-off sweep here would settle it. */
-/* 'hagmork' (1.18.3): Hagtorp as dark as the day allows (lamps off, blind
-   down), test/everflo-sweep-2026-11-06-hagtorp-mork, 12:05-12:06 UTC. With the
-   four references before it the sweep already read (mean 0.063, worst 0.134)
-   but thinly: registration 0.81-0.86, ambiguity down to 3.0x. Aligned twice
-   against its own median, then shifted (-3, +4) onto 'tak' — the SAME shift
-   as 'hagtorp': the two sweeps are one pose, minutes apart. Its own labels
-   would pick +5..+6 (signed error -0.03 at +4, 0.00 near +5.5; the ticks say
-   +5.2..+6.8 at correlation 0.70-0.82), a row or two and ~0.03 L/min away;
-   at +5 the sweep's `max` frame (the ball against the top line) crossed
-   Y_MAX_STATE and said Max. At +4: mean 0.056, worst 0.12. */
-/* 'hagnatt' (1.18.4): Hagtorp at night, the room dark and the LED the main
-   light, which no sweep covers. Both nights (2026-11-06 21:55 to 11-07 06:24
-   UTC, and 11-07 from 20:56) went to 'dag' — Norrgården's afternoon — at
-   registration 0.91-0.94 and ambiguity 1.5-3x, so 47 frames were "Osäker";
-   the operator checked them and the stronger candidate was the ball every
-   time. Built from the 66 UPLOADED night frames 12701-12754 and 12873-12884,
-   the 'morgon' recipe: oriented, aligned against 'hagmork', the median taken,
-   then again against that median, the ball masked out of each frame (rows
-   within 24 of where it was found; 32 and 40 give the same profile, so no
-   ghost ball: the ball stood at y 230-423, 1.0-4.6 L/min, and at least 35
-   frames remain for every row). Not shifted: its ticks sit within 0.0-0.4
-   rows of 'hagmork''s (correlation 0.96) — one pose, and within one pose
-   ticks across lightings are trustworthy. (Its tube edges sit ~2.6 columns
-   from 'hagmork''s and on 'tak''s; a variant moved onto 'hagmork''s edges
-   read the same to 0.02 and was not taken.)
-   Held out first (built from the even ids): the odd ids went from 13 read /
-   20 "Osäker" to 33 of 33. All 66: 66 read at 8-335x, registration 0.99.
-   The checks it has, none of them labelled: 12873-12875 follow a press that
-   'hagtorp' read 4.56 and read 4.59-4.60; the night's 2 L/min span reads
-   1.98 where 'tak', 'hagtorp' and 'hagmork' forced say 1.99-2.00 and 'dag'
-   said 2.02 ('dag' reads its night frames 0.03-0.05 high); and at dawn
-   12755 (best 'hagmork', 2.6x) is answered by this one through the fallback,
-   4.41, where every reference forced says 4.34-4.47.
-   What it carries is the night light itself, not a ghost (it stays at every
-   mask width): 0.11 brighter than 'hagmork' at y 350-365 (~1.9 L/min), where
-   the LED lights the tube, and 0.14-0.17 darker at y 420-460. So forced onto
-   a daylight frame whose ball is weak or absent it finds ~1.9 L/min (the
-   Hagtorp day sweep's 5, 5.5 and max; registration there 0.31-0.38 below the
-   best, so it is never asked). Forced onto the dark sweeps it reads within
-   0.12 where it reads (gap 0.16-0.20 at Hagtorp, 0.05-0.09 on Norrgården's).
-   A dusk where it registers within FALLBACK_REG_GAP of a best that refuses,
-   with the ball weak, is where ~1.9 could appear. Measured on the 191 uploads
-   since 1.18.2 it does not win: it came within the gap of 'hagmork' on nine,
-   all at dusk on 11-06 (13:47-14:32 UTC), and read those within 0.04 of what
-   'hagmork' read; 12755 (dawn) is the one it answers. The near miss is 12654
-   (15:32, the machine just switched back on, the ball weak at ~5.1): 'hagmork'
-   refuses at 2.7x, and this reference's stronger candidate IS the band, 1.84
-   — refused by ambiguity (1.3x, the ball the rival) and 0.064 outside the gap.
-   A frame like it with the ball fainter still, and 0.015 closer, would show
-   ~1.9 for a real 5. Accepted as for 'morgon'; a dusk reference would end it.
-   It also registers the kitchen pose of 2026-08-22 (a night under an LED
-   too) better than anything did: 0.71-0.76 against the 0.75 gate, where the
-   set peaked at 0.72. Two frames reach the gate; both are still refused by
-   two gates each (2.5: registration 0.745 and dy -18.5; 2.75: ambiguity
-   2.4x and dy -18.5) — SHIFT_Y once more. */
-/* 'hagkväll' (1.18.5): Hagtorp in the evening, dusk onward with the lamps on,
-   which 'hagtorp' (a daylight sweep) answered at registration 0.92-0.95 and
-   ambiguity 1.4-3x: on 2026-11-08 from 14:43 UTC 27 frames said "Osäker", the
-   stronger candidate the ball by the operator's check, and 7 on the two
-   evenings before. Built from the 48 UPLOADED frames 12990-13037 (11-08,
-   14:34-19:17 UTC), the 'morgon' recipe: aligned against a first median of
-   all three evenings (itself aligned against 'hagtorp'), the median taken,
-   again against it, the ball masked out (rows within 24 of it; mask 40 gives
-   the same profile within 0.01, so no ghost: the ball stood at y 214-453,
-   and at least 27 frames remain for every row). Not shifted: its ticks sit
-   0.25-0.7 rows from 'hagtorp''s, 0.3-0.4 from 'hagnatt''s (correlation
-   0.96-0.98 in the ball band).
-   THE TWO EARLIER EVENINGS ARE ITS HELD-OUT SET, nothing from them went in:
-   11-06 and 11-07 read 78 of 78 (71 and 7 "Osäker" before) at 4.5x or better,
-   within 0.03 of what 'hagtorp' read where it read. All 408 uploads since
-   1.18.2: 35 "Osäker" -> 1 (12654, the machine just back on, ball weak), none
-   moved more than 0.03. Handovers across a still knob agree: 'hagmork' 4.78 ->
-   this 4.81 (12833/34), this 4.58 -> 'hagnatt' 4.60 (12872/73). It has one
-   labelled check, unlike 'hagnatt': forced onto -hagtorp-dag (a daylight sweep
-   it was not built from) it reads 1..4.5 within 0.11, mean 0.04.
-   One median of all three evenings (126 frames) was tried first and is worse:
-   it left 3 frames of 11-08 "Osäker" at 2.9x. From 16:24 UTC that evening the
-   lower tube is ~0.06 darker than that median (y 420-460), a lamp or the blind; built on
-   11-08 alone every evening stays at 4.3x or better.
-   It carries a milder version of 'hagnatt''s night light (0.08 brighter than
-   'hagtorp' at y 350-360, 0.11 darker at 420-450) but no false ball: forced
-   onto the day sweep's 5 and 5.5 its stronger candidate is still the ball,
-   and on the 14 uploads where it sits within FALLBACK_REG_GAP of the best
-   (13 by day on 11-06, 12917 at night) it reads within 0.04 of the best
-   or says "Osäker". Forced on the dark
-   sweep (2.34 for 2.5, 3.87 for 4) it is 0.13-0.16 low but 0.18-0.25 below
-   the best, so never asked. No checked-in set changes a verdict, and no
-   negative set's registration peak moves. */
-const REF_PNG_EVERFLO_HAGKVALL=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-const REF_PNG_EVERFLO_HAGNATT=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-const REF_PNG_EVERFLO_HAGMORK=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-const REF_PNG_EVERFLO_HAGTORP=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
+/* 'norrdag' and 'norrnatt' (1.19.0): Norrgården again from 2026-11-20 (the
+   unit booted there 11:37 UTC), the camera ~30 px to the side and ~14 px up
+   from the 11-04 pose. With 1.18.5 the day sweep read 6 of 12 labels (the rest
+   "Osäker", 1.1-2.4x) and every frame sat at dy -13.1..-14.8 against
+   SHIFT_Y 15. Two sweeps a few minutes apart, 11:46-11:50 UTC:
+   test/everflo-sweep-2026-11-20-norrgarden-dag (daylight) and -natt (curtains
+   drawn — at midday, so the true night is not covered). Each is the median of
+   its sweep, aligned against the plain median (calibrate.mjs --out), then
+   again against that first pass with --shift into the preset's coordinates:
+   'norrdag' --shift 0.4,0.5, 'norrnatt' --shift 2.1,0 (align_reference.mjs).
+   The pose offset (+30, -14) and these residuals come from the medians
+   registered against the older references of the nearest lighting — the day
+   median at (30.7, -14.2) against 'morgon' and (30.2, -13.7) against 'tak',
+   the dark one at (32.2, -14.1) against 'dag' — with the vertical part chosen
+   by the labels, so it is a fit: over the day sweep the signed error crosses
+   zero between 13.5 and 13 rows (-0.004 at 13.5), over the dark one at 14
+   (-0.002). The two references agree with each other on dy within 0.2 rows
+   (each sweep registered against the other's reference; dx is 1-3 px apart
+   and not trusted that way, registration across these lightings is only
+   0.62-0.74). Every frame reads: day mean 0.040, worst 0.132 (0.5 reads 0.63,
+   the compressed bottom, as on 11-04); dark mean 0.021, worst 0.081, its 0.5
+   at 0.50 says "Under 0,5" (on the boundary, below her flows); `max` 5.94 /
+   5.95, `over_max` Max; ambiguity 6.6x or more, registration 0.98-0.995.
+   The independent checks: the moved 'tak' and 'dag' read the day and dark
+   sweeps alone at 0.047 and 0.044 mean (above), so the old curve holds in
+   the new pose; the one live frame after the sweeps (15065, 11:56) reads 1.91
+   at 31x; and of 151 Hagtorp uploads (11-10..11-20, every twelfth) 84 read,
+   all within 0.144 of what 1.18.5 read there, the rest refused — none wrong.
+   Hagtorp's four references (1.18.2-1.18.5) were dropped: another place's
+   light, and forced onto the dark sweep 'hagmork' reads one frame 0.37 off.
+   Their evidence is in git, at REF_PNG_EVERFLO_HAGTORP before 1.19.0. */
+const REF_PNG_EVERFLO_NORRDAG=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
+const REF_PNG_EVERFLO_NORRNATT=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_MORGON=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_DAG=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_TAK=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
@@ -1144,4 +1104,4 @@ function judge(r){
           reason:"Inom kalibrerat område."};
 }
 export {toGray,flatfield,buildRef,analyze,judge,usePreset,setRefs,isCalibrated,PRESETS,W,H};
-export const ENGINE_VERSION = "ed0b8a90";
+export const ENGINE_VERSION = "fac008e7";

@@ -4,6 +4,8 @@ Sets checked in opposite directions — a sweep must read, an old pose must be
 refused. All run through the same harness so the two directions cannot drift apart:
 
 ```sh
+node tools/validate_engine.mjs test/everflo-sweep-2026-11-20-norrgarden-dag
+node tools/validate_engine.mjs test/everflo-sweep-2026-11-20-norrgarden-natt
 node tools/validate_engine.mjs test/everflo-sweep-2026-10-05-hall
 node tools/validate_engine.mjs test/everflo-sweep-2026-10-05-natt
 node tools/validate_engine.mjs test/everflo-sweep-2026-10-05-rum
@@ -61,7 +63,7 @@ bottom and top labels were corrected with the operator ("0" is 0.5, "0.5" is
 ball past the top line in either. ljus mean 0.020 worst 0.046 (0.026 with 'ljus'); natt mean
 0.025 worst 0.062.
 
-## `everflo-sweep-2026-11-06-hagtorp-dag/` and `-mork/` — the EverFlo at Hagtorp (1.18.2-1.18.3)
+## `everflo-sweep-2026-11-06-hagtorp-dag/` and `-mork/` — the EverFlo at Hagtorp (1.18.2-1.18.3; old pose and references gone since 1.19.0)
 
 Daylight with the lamps on, and lamps off with the blind down; they build
 'hagtorp' and 'hagmork' on the Norrgården curve, both shifted (-3, +4) onto
@@ -72,9 +74,19 @@ checks. Forced onto `-mork/` it reads within 0.12 where it reads. The same goes
 for the evening ('hagkväll', 1.18.5), forced onto `-dag/` within 0.11 from 1 to
 4.5.
 
-## `everflo-sweep-2026-11-04-tak/`, `-dag/` and `-natt/` — the EverFlo in force (Norrgården)
+## `everflo-sweep-2026-11-20-norrgarden-dag/` and `-natt/` — the EverFlo in force (Norrgården, 1.19.0)
 
-The EverFlo's calibration since 1.18.0. `-tak` (the ceiling lamp) carries the
+Daylight and curtains drawn (at midday), 2026-11-20 11:46-11:50 UTC, with the camera ~30 px to the side and
+~14 px up from the 11-04 pose. 1.19.0 moved the whole EverFlo preset by (+30, -14) into this pose; these
+build 'norrdag' and 'norrnatt' on the 11-04 curve (re-expressed). Means 0.040 and 0.021, worst 0.132 and
+0.081, ambiguity 6.6x or more; `over_max` says Max in both. See `LABELS.md` in each.
+
+## `everflo-sweep-2026-11-04-tak/`, `-dag/` and `-natt/` — Norrgården's first pose (old pose since 1.19.0)
+
+The EverFlo's calibration from 1.18.0; since 1.19.0 a pose that is gone, ~30 px to the side of the
+preset's, so every frame may refuse (`ALLOW_REFUSED`) and all do (by dx; the Hagtorp ones by dy) — any that read are held to their
+labels. So are the Hagtorp sweeps above. Its curve lives on, moved, and so do 'tak' and 'dag'. In 1.18:
+`-tak` (the ceiling lamp) carries the
 curve: mean 0.039, worst 0.137 (0.5 L/min, the compressed bottom). `-dag` (the
 lamp off, afternoon) has its own reference: mean 0.035. `-natt` (curtains
 drawn) builds nothing and reads through the other two: mean 0.047 — the
@@ -192,8 +204,10 @@ The kitchen sweeps of 2026-09-29 (41 frames), from two poses 15–22 px and
 24–29 px to the side of the care home's afternoon sweep. Split when the fourth
 pose came, and re-split in 1.13.0.
 
-`platinum9-kitchen-…` (24 frames, in the suite since 1.13.0) must READ, within
-0.35 (`TOLERANCE`). It is the evidence behind `SHIFT_X` 30: with the sideways
+`platinum9-kitchen-…` (24 frames, in the suite since 1.13.0) had to READ, within
+0.35 (`TOLERANCE`), until 1.19.0, when `SHIFT_X` went to 20 (the EverFlo's new pose sits
+next to the care home's; see the constant) and every frame became allowed to refuse — 18 do,
+the 6 that read are within 0.13. It was the evidence behind `SHIFT_X` 30: with the sideways
 gate at 20, 12 of these were refused by dx ALONE, and once allowed they read
 2 → 2.02, 3 → 2.99, 4 → 4.01, 4.5 → 4.47, 7 → 6.99 through 'dag' — a 25 px
 move and 8 px of dy, and the curve still holds on the whole marks. The half

@@ -1,8 +1,28 @@
-# Since 1.14.7 (align() normalised by the correlated window): the 14:41 frame at
-# 4.5 read 4.47 only at a tilt 1 degree off the calibrated one, which the old,
-# inflated registration score preferred by just the TILT_MARGIN (0.034 against
-# 0.026 now). At the calibrated tilt it is "Osäker" (2.6x) — a refusal, not a
-# wrong number. This pose (the kitchen) is gone. Listed by FILE, not by label:
-# the 15:49 frame at 4.5 (dx 26.1) is part of the evidence for SHIFT_X 30 and
-# must still read (4.47).
+# Since 1.19.0 SHIFT_X is 20 (see the constant): this pose sat 22-28 px to the side and was
+# the evidence for the wider gate. The pose is gone; every frame may refuse now, and any that
+# reads is still held to its label. (Before: only the 14:41 frame at 4.5, refused at the
+# calibrated tilt since 1.14.7.)
+bild_0_minL_2026-09-29T15-47-55.jpg
+bild_0.5_approxL_2026-09-29T15-48-07.jpg
+bild_1.5L_2026-09-29T15-48-36.jpg
+bild_1L_2026-09-29T15-48-22.jpg
+bild_2.5L_2026-09-29T15-48-59.jpg
+bild_2L_2026-09-29T15-48-48.jpg
+bild_3.5L_2026-09-29T14-41-29.jpg
+bild_3L_2026-09-29T15-49-11.jpg
 bild_4.5L_2026-09-29T14-41-52.jpg
+bild_4.5L_2026-09-29T15-49-45.jpg
+bild_4L_2026-09-29T14-41-42.jpg
+bild_4L_2026-09-29T15-49-31.jpg
+bild_5.5L_2026-09-29T14-42-33.jpg
+bild_6.5L_2026-09-29T14-42-56.jpg
+bild_6.5L_2026-09-29T15-50-38.jpg
+bild_6L_2026-09-29T14-42-44.jpg
+bild_7.5_approxL_2026-09-29T14-43-22.jpg
+bild_7L_2026-09-29T14-43-08.jpg
+bild_7L_2026-09-29T15-51-00.jpg
+bild_8_approxL_2026-09-29T14-43-41.jpg
+bild_8.5_approxL_2026-09-29T14-44-05.jpg
+bild_8.5_approxL_2026-09-29T15-51-52.jpg
+bild_9_approxL_2026-09-29T14-44-32.jpg
+bild_maxL_2026-09-29T14-45-04.jpg

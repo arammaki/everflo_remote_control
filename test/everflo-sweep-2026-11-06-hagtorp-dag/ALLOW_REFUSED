@@ -1,2 +1,17 @@
-# on the top line the ball merges with it (contrast 0.08). A refusal is fine; a number is not.
+# Since 1.19.0 (2026-11-20) the EverFlo preset sits in the camera's new Norrgården pose, ~30 px
+# to the side of this one: this pose is gone, so every frame may refuse (they do, by dx or dy).
+# Any frame that reads is still held to its label.
+0_min
+0.5
+1
+1.5
+2
+2.5
+3
+3.5
+4
+4.5
+5
+5.5
+max
 over_max

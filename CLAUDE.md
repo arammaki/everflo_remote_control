@@ -15,8 +15,9 @@ the knob on top — and the same cup fits. Everything tuned for one machine is a
 The EverFlo's is kept intact so the unit can go back to it. (It went back to
 the EverFlo in October, on 2026-11-02 to an **AirSep VisionAire 5** — see
 "The AirSep VisionAire 5 calibration" — and on 2026-11-04 back to the EverFlo,
-at a new place: 1.17.0, flashed over USB. Its preset is the care home pose of
-October, so expect a new sweep there.)
+at a new place, Norrgården: 1.17.0, flashed over USB, recalibrated in 1.18.0;
+Hagtorp 11-06..11-20; Norrgården again from 2026-11-20 in a moved camera pose,
+1.19.0 — see "The EverFlo at Norrgården".)
 
 This is assistive/medical-adjacent equipment intended for real daily use —
 not yet deployed (as of Aug 2026). Correctness and predictability beat
@@ -726,7 +727,7 @@ each number is what it is. In order:
 8. **Day and evening references** come afterwards from a day or two of
    uploads, ball positions spread (see "Daylight is a second lighting regime").
 
-### The EverFlo at Norrgården (v1.18.0, 2026-11-04) — in force
+### The EverFlo at Norrgården (v1.18.0, 2026-11-04; moved pose since v1.19.0) — in force
 The EverFlo went back on the unit on 2026-11-04 at a new place, Norrgården
 (1.17.0 over USB, see the WiFi4EU note under Access control). Every earlier
 EverFlo reference refused it (registration 0.55); the camera sits much as at
@@ -827,6 +828,31 @@ since 1.18.2: 35 "Osäker" -> 1, none moved over 0.03. Forced onto the labelled
 day sweep it reads 1..4.5 within 0.11. A median of all three evenings was
 worse (3 left at 2.9x): the lighting of 11-08 differs a little low in the
 tube. No false band like 'hagnatt''s, and no negative set moves.
+**1.19.0: back at Norrgården (2026-11-20), the preset moved into a new pose.**
+The camera came back ~30 px to the side and ~14 px up from the 11-04 pose: with
+1.18.5 the day sweep read 6 of 12 labels and every frame sat at dy -13..-15,
+on SHIFT_Y. Two sweeps, `test/everflo-sweep-2026-11-20-norrgarden-dag/` and
+`-natt/` (curtains drawn at midday — the true night is not covered), read on
+the 11-04 curve once registration removes that offset (signed error -0.005), so
+the pose slid without turning: **every pixel number in the EverFlo preset is
+now the 11-04 one moved by (+30, -14)** (band 321..335, anchor 340..360, window
+116..446, Max at 161, crop x 258, y 96; CAL re-expressed exactly), the gates
+measure from the new pose, and the pixel rows quoted above for 11-04..11-08
+are the old coordinates. References 'norrdag' and 'norrnatt' (aligned medians,
+vertical shift by the labels): means 0.040 / 0.021, worst 0.132 / 0.081,
+ambiguity 6.6x or more. 'tak', 'dag' and 'morgon' are kept, moved by whole
+pixels (forced alone they read the new sweeps at 0.047 / 0.044); Hagtorp's
+four were dropped. **SHIFT_X 38 -> 20**, because the new pose sits next to
+the care home's: its 10-05 and 10-19 sweeps register 0.83-0.91 against the
+new references at dy -4..-7, so the vertical gate no longer holds them, and at
+38 they read ~2.0 for anything (up to 1.5 off); the nearest is at dx -26.3, so
+20 keeps 6.3 px of margin. Costs: the Platinum kitchen set (22-28 px, the old
+SHIFT_X evidence) and the 11-04/11-06 sweeps (old poses now) may refuse, and
+the camera may slide only ~16 px from this pose — it had already moved ~9 px
+an hour after the sweep (15066, dx 9.4). Checked on real frames: of 151
+Hagtorp uploads 84 read, all within 0.144 of 1.18.5, the rest refused.
+**The epoch of this calibration is 2026-11-20T11:37Z** (the boot at Norrgården,
+frame 15062); re-analysing older frames with it shows Hagtorp's as refusals.
 Everything below in this section and in "The EverFlo again" is the care home's
 calibration — history.
 
@@ -1107,7 +1133,7 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
 - **The camera moves when the motor turns the knob** — the operator confirms
   it is how the unit is fastened: dx −5.8 -> +7 px from 0 to max in this
   sweep, the same shape in every sweep at the care home. Registration absorbs
-  it; the dx gate is 30 px since 1.13.0 (20 before — see below), 38 since 1.14.9.
+  it; the dx gate is 30 px since 1.13.0 (20 before — see below), 38 since 1.14.9, 20 again since 1.19.0.
 - **Build references aligned** — `tools/align_reference.mjs --base`, twice
   against the median, then for a second lighting `--shift` by its median's
   offset against the first. Exact commands below. In the morning pose the
@@ -1133,11 +1159,11 @@ Sweep file names carry UTC (`toISOString()`); the times here are local.
   first kitchen pose (`-09-26/`) and 17 of the 41 frames of 2026-09-29
   (`-09-29/`) are refused in full. The other 24 of 2026-09-29 are
   `test/platinum9-kitchen-2026-09-29/`, IN the suite since 1.13.0 and required
-  to read: they are the evidence for `SHIFT_X` (below). The 17 are ambiguity
-  and registration refusals of a pose that reads right where it reads, so they
-  guard the ambiguity gate conservatively; nothing in the suite constrains a
-  sideways move between 30 px and the 40 px search edge (the gate is 38 since
-  1.14.9) — and the EverFlo's
+  to read until 1.19.0: they were the evidence for `SHIFT_X` 30 (below). Since
+  1.19.0 (`SHIFT_X` 20, see "The EverFlo at Norrgården") every frame may
+  refuse and 18 of 24 do; the 6 that read are still held to their labels. The
+  17 are ambiguity and registration refusals of a pose that reads right where
+  it reads, so they guard the ambiguity gate conservatively. The EverFlo's
   34 px slide that read 1.73 for 2.0 is not in any set.
 - **Rebuilding the references**: plain medians with `calibrate.mjs --out`
   (any geometry — the median does not depend on it), then 'dag' =
@@ -1194,7 +1220,7 @@ causes, two fixes:
   the EverFlo case sits under it and is in no test set. The gate is shared by
   both machines, like every gate. Current frames sit at 22-27, so the
   headroom is small: a further creep of a few px refuses again, and says so.
-  (38 since 1.14.9, knowingly above that 34 px case: see 2026-11-02 under
+  (20 since 1.19.0; 38 from 1.14.9, knowingly above that 34 px case: see 2026-11-02 under
   "The EverFlo again".)
 - **The references no longer matched** — reflections in the glass and the
   fitting at the foot look different from the new angle, and read as rivals
@@ -1272,7 +1298,7 @@ against scale ticks (anchor band x 296-320, sampled at the shifted x) -> clipped
 difference vs reference in ball band (x 252-292) -> smoothed profile ->
 peak + centroid -> quadratic calibration. Never remove the quality
 gates (registration >=0.75, contrast >=0.10, ambiguity >=3.0x,
-|dx| <=38 since 1.14.9 (30 from 1.13.0) and |dy| <=15 px since 1.18.0 (20 before), extent <=75 rows): the engine must say "no reading"
+|dx| <=20 since 1.19.0 (38 from 1.14.9, 30 from 1.13.0) and |dy| <=15 px since 1.18.0 (20 before), extent <=75 rows): the engine must say "no reading"
 rather than output a plausible wrong number — it reads oxygen flow for
 a patient. Two states besides a number, and both are measured against the
 checked-in sweep rather than asserted (2026-09-05):
@@ -1366,7 +1392,7 @@ with it in a way no gate can see. Confidence is not accuracy.
 **Order matters**: dx is computed first, because the camera slides sideways
 and every band below is at a fixed x — measured 34 px on 2026-08-16. Sample
 the anchor band at its old x after a sideways slip and dy is meaningless.
-The search runs to +/-40 px while the gate rejects beyond 38 (15 for dy): a big shift
+The search runs to +/-40 px while the gate rejects beyond 20 (15 for dy): a big shift
 should be measured and named in the Swedish reason, not silently saturate
 at the edge of the search and look like noise.
 
