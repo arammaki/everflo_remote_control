@@ -4,6 +4,8 @@ Sets checked in opposite directions — a sweep must read, an old pose must be
 refused. All run through the same harness so the two directions cannot drift apart:
 
 ```sh
+node tools/validate_engine.mjs test/everflo-sweep-2026-11-26-norrgarden-dag
+node tools/validate_engine.mjs test/everflo-sweep-2026-11-26-norrgarden-natt
 node tools/validate_engine.mjs test/everflo-sweep-2026-11-20-norrgarden-dag
 node tools/validate_engine.mjs test/everflo-sweep-2026-11-20-norrgarden-natt
 node tools/validate_engine.mjs test/everflo-sweep-2026-10-05-hall
@@ -74,7 +76,16 @@ checks. Forced onto `-mork/` it reads within 0.12 where it reads. The same goes
 for the evening ('hagkväll', 1.18.5), forced onto `-dag/` within 0.11 from 1 to
 4.5.
 
-## `everflo-sweep-2026-11-20-norrgarden-dag/` and `-natt/` — the EverFlo in force (Norrgården, 1.19.0)
+## `everflo-sweep-2026-11-26-norrgarden-dag/` and `-natt/` — the EverFlo in force (Norrgården, 1.19.2)
+
+The store room lit and dark, 2026-11-26 18:04-18:09 UTC, the camera ~21 px further to the side and ~7 px
+down from the 1.19.1 preset after a week of sliding with the presses. 1.19.2 moved the preset (+12, +4) and
+set `SHIFT_X` to 30; these build 'förrådljus' and 'förrådmörk'. Means 0.029 and 0.025, worst 0.063 and 0.085,
+both rests "Under 0,5", `max` reads 5.91 / 5.95, `over_max` says Max; ambiguity 3.7x or more. The user labels
+0, 6 and 6.5 for the rest, the top line and past it, renamed `0_min`, `max`, `over_max` on import — see
+`LABELS.md` in each.
+
+## `everflo-sweep-2026-11-20-norrgarden-dag/` and `-natt/` — Norrgården, 1.19.0
 
 Daylight and curtains drawn (at midday), 2026-11-20 11:46-11:50 UTC, with the camera ~30 px to the side and
 ~14 px up from the 11-04 pose. 1.19.0 moved the whole EverFlo preset by (+30, -14) into this pose; these
@@ -82,7 +93,8 @@ build 'norrdag' and 'norrnatt' on the 11-04 curve (re-expressed). Means 0.040 an
 0.081, ambiguity 6.6x or more; `over_max` says Max in both. See `LABELS.md` in each.
 Since 1.19.1 the preset sits (+14, +4) further on (the camera moved that afternoon), so these
 frames register at dx -16..-10, dy -5..-3; the dark one reads mean 0.017, worst 0.059 ('förråd'
-answers some of it).
+answers some of it). Since 1.19.2 at dx -28..-22: they still read, identically, because `SHIFT_X` went
+to 30 with that move.
 
 ## `everflo-sweep-2026-11-04-tak/`, `-dag/` and `-natt/` — Norrgården's first pose (old pose since 1.19.0)
 
@@ -209,8 +221,9 @@ pose came, and re-split in 1.13.0.
 
 `platinum9-kitchen-…` (24 frames, in the suite since 1.13.0) had to READ, within
 0.35 (`TOLERANCE`), until 1.19.0, when `SHIFT_X` went to 20 (the EverFlo's new pose sits
-next to the care home's; see the constant) and every frame became allowed to refuse — 18 do,
-the 6 that read are within 0.13. It was the evidence behind `SHIFT_X` 30: with the sideways
+next to the care home's; see the constant) and every frame became allowed to refuse — 18 did,
+the 6 that read were within 0.13. Back at 30 since 1.19.2 (the EverFlo preset moved away from the care
+home's poses again) it reads all but its resting ball: mean 0.092, worst 0.26. It was the evidence behind `SHIFT_X` 30: with the sideways
 gate at 20, 12 of these were refused by dx ALONE, and once allowed they read
 2 → 2.02, 3 → 2.99, 4 → 4.01, 4.5 → 4.47, 7 → 6.99 through 'dag' — a 25 px
 move and 8 px of dy, and the curve still holds on the whole marks. The half
