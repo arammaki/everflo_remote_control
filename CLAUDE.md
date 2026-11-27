@@ -17,7 +17,7 @@ the EverFlo in October, on 2026-11-02 to an **AirSep VisionAire 5** — see
 "The AirSep VisionAire 5 calibration" — and on 2026-11-04 back to the EverFlo,
 at a new place, Norrgården: 1.17.0, flashed over USB, recalibrated in 1.18.0;
 Hagtorp 11-06..11-20; Norrgården again from 2026-11-20 in a moved camera pose,
-1.19.0, recentred as the camera slides (1.19.1, 1.19.2, 1.19.3) — see
+1.19.0, recentred as the camera slides (1.19.1-1.19.4) — see
 "The EverFlo at Norrgården".)
 
 This is assistive/medical-adjacent equipment intended for real daily use —
@@ -913,12 +913,36 @@ read as the originals did in 1.19.2 (every label within 0.09; the dark rest
 becomes "Osäker" at 2.4x, allowed). They pin the preset against a wrong move,
 not against what a real slide changes besides translation. Known limit: the
 horizontal registration's column window (60..420) is fixed in the picture and
-the tube now straddles its right end (see PRESETS.everflo). **The epoch of
+the tube now straddles its right end (see PRESETS.everflo; fixed in 1.19.4). **The epoch of
 this calibration is 2026-11-26T18:00Z** (frames from 15226 read; earlier
 Norrgården frames are refusals under it). The tube's right edge stands at ~450 of
 the 480-px frame: **another slide this way cannot be followed** — the camera
 has to be turned back or fastened. Her crop moved with it and lost 18 px on the left
 (x 342..474), on the user's request, so less of the LED's glow shows.
+**1.19.4: the horizontal registration window follows the preset** — the known
+limit above, which bit the same day: from 12:17 UTC on 11-27 the camera sat
+10-20 px further right, and of the 55 frames since the 1.19.3 boot 14 were
+refused, the afternoon's 4.5 L/min mostly "Osäker" against the LED streak at
+2 (1.5-2.3x). The window (columns 60..420) was fixed in the engine for every
+machine; it is a preset field now, `REGX` — picture geometry, like the bands
+— [60, 420] for the Platinum and the VisionAire (unchanged) and [80, 440] for
+the EverFlo: moved 20 px, and its end plus the ±40 search stays inside the
+480-px picture, as 60..420 always did ([100, 460], 40 px with the last move,
+ran past it for shifts over +20 and spread the spans more; review of 1.19.4).
+Of the 141 uploads since 11-26 18:17 all 141 read (124 before); within each
+span between presses the readings spread 0.021 on average (0.014 before), one
+span by 0.09; readings moved at most ~0.1. On the synthetic -natt-x40 set
+ambiguity went from 2.4-35x to 10-35x, its rest reads "Under 0,5" and its 0.5
+is refused at contrast 0.098 (allowed). The window shrinks the dx of the captured 11-26 dark sweep (40 px from
+this pose) to -29..-31, so 7 of its frames read again, within 0.11 of their
+labels; asked alone over the 331 old-pose and negative frames, the five
+references accept only frames of that sweep (1-9 each, all within 0.12),
+none of the care home, Hagtorp or the negative sets (review of 1.19.4). A first try at a reference from the
+afternoon's uploads came out skewed by ~16 px — the frames' dx against the old
+window was not trustworthy — which is how this was found. **Move `REGX` with
+the preset** at every recentring, keeping its end at 440 or less. dx and
+registration stored before 1.19.4 are measured over the old window and are
+not comparable with later ones (a step of 10-20 px in dx at the boundary).
 Everything below in this section and in "The EverFlo again" is the care home's
 calibration — history.
 
@@ -1360,7 +1384,8 @@ causes, two fixes:
 kitchen calibration's; see the note under "Calibration is baked in".)
 
 Grayscale -> flatfield (3-pass box blur ~ sigma 41) -> horizontal
-registration (column profile of rows 100-460) -> vertical registration
+registration (column profile of rows 100-460, over the preset's `REGX` columns
+since 1.19.4 — 60..420 for every machine before) -> vertical registration
 against scale ticks (anchor band x 296-320, sampled at the shifted x) -> clipped
 difference vs reference in ball band (x 252-292) -> smoothed profile ->
 peak + centroid -> quadratic calibration. Never remove the quality

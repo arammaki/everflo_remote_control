@@ -1,5 +1,6 @@
 # Since 1.19.3 an old pose: the preset moved 40 px with the camera (see PRESETS.everflo).
 # Every frame may refuse; any that reads is still held to its label.
+# (-natt only: since 1.19.4, REGX 80..440, its frames measure dx -29..-31 and seven read, within 0.11.)
 0_min
 0.5
 1.5

@@ -211,8 +211,8 @@ const PRESETS={
        +5..+15, on 11-26 at -1..+23 and the user's sweeps at +20..+23, dy +7,
        refused by SHIFT_X. Moved (+12, +4) more, onto the middle of all that
        (the sweeps at dx +5..+10, dy +2..+5 now), with SHIFT_X 30 (see there).
-       The move is not exact: the registration windows (columns 60..420, rows
-       40..600) are fixed in the picture, not in the preset, so a frame's dx
+       The move is not exact: the registration windows (columns 60..420 then,
+       REGX since 1.19.4; rows 40..600) did not move with the preset, so a frame's dx
        comes out up to ~1 px different from old dx - 12, and a rounded band can
        land a pixel over. On the 164 uploads since 11-20 that moved no reading
        by more than 0.07.
@@ -230,19 +230,16 @@ const PRESETS={
        11-04 place; the unit stands in a store room with the door mostly shut
        now) — each move resamples the older references by whole pixels and
        repeats the edge column into the gap, and they would have carried 96
-       such columns, far into the column window (60..420) the horizontal
-       registration reads. 'norrdag'/'norrnatt' carry 66, 6 columns into it;
+       such columns, far into the column window (60..420 then; 80..440 since 1.19.4) the horizontal
+       registration reads. 'norrdag'/'norrnatt' carry 66 (6 into the old window, short of 80);
        they won none of those 84 frames and are kept only for daylight, which
        no store-room reference covers — drop them at the next move. 'förråd'
        carries 52, the 11-26 pair 40. The frame is 480 wide and the tube's
        right edge now stands at ~450: there is no room for another 40.
-       Known limit: the horizontal registration's column window (60..420) is
-       fixed in the picture, and the tube (left edge ~330, right ~450) now
-       straddles its right end, so dx is measured mostly on the housing and
-       the tube's left edge. It holds — dx stays within ±1.7 all night and the
-       overlap frames read as before — but a change on the left (the LED, a
-       lamp) weighs more than it did. Moving the window with the preset is an
-       algorithm change for every machine, not done here.
+       The horizontal registration's column window, then 60..420 for every
+       machine, left the tube (left edge ~330, right ~450) at its right end;
+       it held that night but not the next day, and 1.19.4 made it a preset
+       field (REGX, below).
        Band: chosen on a grid over the 11-04 sweep (centre 288..304 then,
        width 14..20, lean 0..0.07, six anchor bands): centre 298 (394 now),
        width 14-16, lean 0.035 is the plateau with registration 0.985 and
@@ -287,6 +284,22 @@ const PRESETS={
        edge; 340 still showed a sliver, at 350 the tube's left edge goes). The streak inside the tube
        is a reflection and stays. */
     VIEW_X:342, VIEW_W:132, VIEW_Y:104, VIEW_H:420,
+    /* The columns the horizontal registration compares (rows RY1..RY2): picture
+       columns, [first, last). 60..420 until 1.19.4, fixed in the engine for
+       every machine; by then the camera had slid so far (the preset +96 from
+       11-04) that the tube, left edge ~330 and right ~450, stood at that
+       window's right end and dx was measured on the housing and the LED's
+       glare. On 11-27 that left 14 of 55 daytime frames refused and the
+       afternoon's 4.5 L/min "Osäker" against the LED streak at 2 (1.5-2.3x).
+       Moved 20 px: of the 141 uploads since 11-26 18:17, 141 read (124
+       before); within each span between presses the readings spread 0.021
+       on average (0.014 before), one span by 0.09; readings moved at most
+       ~0.1. The end stays at 440 so that end + SEARCH (40) never passes the
+       480-px picture, as 60..420 never did: align() skips columns past the
+       edge, so a window ending later scores large shifts over fewer columns
+       (100..460, the first try, did, and spread the spans 0.027). Move it
+       with the preset from now on, within that limit. */
+    REGX:[80, 440],
     KNOB:null, BACKLASH:null,   // never measured on the EverFlo: her page keeps the degree buttons
     /* 'förrådmörk' and 'förrådljus' (1.19.2, the 11-26 sweeps, the store
        room dark and lit), see REF_PNG_EVERFLO_FORRADLJUS; 'förråd' (1.19.1,
@@ -374,6 +387,7 @@ const PRESETS={
     MAX_LABEL:'Max', MAX_UNIT:'över skalans slut',
     /* Her page shows the meter alone: x 240..380, y 100..520. */
     VIEW_X:240, VIEW_W:140, VIEW_Y:100, VIEW_H:420,
+    REGX:[60, 420],   // the engine's window before 1.19.4, unchanged
     /* Degrees of knob per flow, measured by "Kalibrera ratten" on the control
        panel 2026-09-29 (18:04-18:23 local, tilt locked at 0, three runs joined
        with "Fortsätt förra", step 10 degrees): [[L/min, degrees from the
@@ -489,6 +503,7 @@ const PRESETS={
     /* Her page shows the tube and its digits, x 140..320, y 180..600: "LPM"
        at x ~160, the tube's right edge at ~300, the LED (left) left out. */
     VIEW_X:140, VIEW_W:180, VIEW_Y:180, VIEW_H:420,
+    REGX:[60, 420],   // the engine's window before 1.19.4, unchanged
     KNOB:null, BACKLASH:null,   // never measured: her page keeps the degree buttons
     /* 'hall' (the hall lamp on), 'natt' (dark) and 'rum' (the hall and room
        lamps), each the aligned median of its own sweep — see
@@ -641,12 +656,12 @@ const REF_PNG_PLATINUM9_DAG2="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAA
    move. Assigned only by usePreset(). */
 const PRESET_KEYS=['XL','XR','AX1','AX2','YTOP','YBOT','RY1','RY2','BASE_TILT',
   'CAL','Y_CAL_MIN','Y_CAL_MAX','Y_MAX_STATE','LOW_FLOW','LOW_LABEL','LOW_REASON','MAX_REASON',
-  'MAX_LABEL','MAX_UNIT','VIEW_X','VIEW_W','VIEW_Y','VIEW_H','KNOB','BACKLASH'];
+  'MAX_LABEL','MAX_UNIT','VIEW_X','VIEW_W','VIEW_Y','VIEW_H','KNOB','BACKLASH','REGX'];
 let PRESET=null;
 let KNOB_ERROR=null;   // why the live preset's knob table was set aside, if it was
 let XL, XR, AX1, AX2, YTOP, YBOT, RY1, RY2, BASE_TILT,
     CAL, Y_CAL_MIN, Y_CAL_MAX, Y_MAX_STATE, LOW_FLOW, LOW_LABEL, LOW_REASON, MAX_REASON,
-    MAX_LABEL, MAX_UNIT, VIEW_X, VIEW_W, VIEW_Y, VIEW_H, KNOB, BACKLASH;
+    MAX_LABEL, MAX_UNIT, VIEW_X, VIEW_W, VIEW_Y, VIEW_H, KNOB, BACKLASH, REGX;
 /* References are built per preset and kept, so the admin page can move between
    frames from two machines without rebuilding them each time. */
 const REF_CACHE={};
@@ -674,6 +689,11 @@ function usePreset(id){
     if(unset.length||!p.refs().length)
       throw new Error('Preset '+id+' has a curve but is incomplete: '+
                       (unset.length?'unset '+unset.join(','):'no references'));
+    const g=p.REGX;
+    // Within the picture even at the ends of the search: align() would
+    // otherwise score large shifts over fewer columns.
+    if(!(Array.isArray(g) && g.length===2 && Number.isInteger(g[0]) && Number.isInteger(g[1]) && g[0]-SEARCH>=0 && g[1]+SEARCH<=W && g[0]+100<=g[1]))
+      throw new Error('Preset '+id+': REGX must be [first, last) picture columns, at least 100 wide and SEARCH inside the picture');
   }
   // A knob table turns the motor from her page: it must be whole, whether or
   // not the preset has a curve yet. At least two rows, strictly rising in both
@@ -691,7 +711,7 @@ function usePreset(id){
   }
   ({XL, XR, AX1, AX2, YTOP, YBOT, RY1, RY2, BASE_TILT,
     CAL, Y_CAL_MIN, Y_CAL_MAX, Y_MAX_STATE, LOW_FLOW, LOW_LABEL, LOW_REASON, MAX_REASON,
-    MAX_LABEL, MAX_UNIT, VIEW_X, VIEW_W, VIEW_Y, VIEW_H, KNOB, BACKLASH}=p);
+    MAX_LABEL, MAX_UNIT, VIEW_X, VIEW_W, VIEW_Y, VIEW_H, KNOB, BACKLASH, REGX}=p);
   if(KNOB_ERROR){ KNOB=null; BACKLASH=null; if(typeof console!=='undefined') console.warn(KNOB_ERROR); }
   PRESET=id;
   REFS=REF_CACHE[id]||[];
@@ -1033,7 +1053,7 @@ function analyzeWith(R, ff, forceTilt, forceDx){
   // Horizontal registration FIRST. The camera slides sideways (measured 34 px
   // on 2026-08-16) and everything below samples fixed x bands, so without
   // this the anchor band lands on the housing and dy is meaningless.
-  const hx=align(centre(colProfile(ff,RY1,RY2)), R.anchorX, SEARCH, 60, 420);
+  const hx=align(centre(colProfile(ff,RY1,RY2)), R.anchorX, SEARCH, REGX[0], REGX[1]);
   const dx=forceDx!==undefined ? forceDx : hx.shift;
   const regx=hx.quality, xo=Math.round(dx);
 

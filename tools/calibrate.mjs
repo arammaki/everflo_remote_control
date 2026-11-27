@@ -192,9 +192,10 @@ if (opt.geometry) {
     console.error(`--geometry ${opt.geometry}: ${e.message}`); process.exit(2);
   }
   const missing = GEOMETRY_KEYS.filter((k) => typeof g[k] !== 'number');
-  const extra = Object.keys(g).filter((k) => !GEOMETRY_KEYS.includes(k));
+  // REGX (the registration window) may come along: it moves with the pose.
+  const extra = Object.keys(g).filter((k) => !GEOMETRY_KEYS.includes(k) && k !== 'REGX');
   if (missing.length || extra.length) {
-    console.error(`--geometry: needs numbers for ${GEOMETRY_KEYS.join(', ')}` +
+    console.error(`--geometry: needs numbers for ${GEOMETRY_KEYS.join(', ')} (REGX optional)` +
                   (missing.length ? `; missing ${missing.join(', ')}` : '') +
                   (extra.length ? `; unknown ${extra.join(', ')}` : ''));
     process.exit(2);
@@ -226,6 +227,9 @@ E.PRESETS.__measure = {
   ...Object.fromEntries(E.PRESET_KEYS.filter((k) => k.startsWith("VIEW_")).map((k) => [k, null])),
   // No knob table: it steers her flow buttons and has nothing to do with y.
   KNOB: null, BACKLASH: null,
+  // The registration window is picture geometry like the bands: the preset's,
+  // or the engine's old fixed one for a preset that has none yet.
+  REGX: preset.REGX ?? [60, 420],
   refs: () => [["placeholder", "natt"]],
 };
 E.usePreset("__measure");
@@ -536,6 +540,9 @@ const measured = {
   CAL: CAL.map((c) => Number(c.toPrecision(9))),
   Y_CAL_MIN: yCalMin, Y_CAL_MAX: yCalMax,
   Y_MAX_STATE: yMaxState ?? null,
+  // The preset's own window, or null so the snippet says "decide": the
+  // measurement's fallback (60..420) is not a choice to paste unseen.
+  REGX: preset.REGX ?? null,
 };
 const candidate = Object.fromEntries(E.PRESET_KEYS.map((k) => [k, k in measured ? measured[k] : preset[k]]));
 const lines = E.PRESET_KEYS.map((k) => {
