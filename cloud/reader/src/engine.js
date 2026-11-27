@@ -131,7 +131,16 @@ const T={contrast:0.10, margin:3.0, reg:0.75, spread:75};
    here: before the move the 11-26 sweeps, 21-23 px off, read through the old
    references within 0.06 where they answered. Every negative set stays
    refused at 30; the Platinum kitchen set reads all but its resting ball
-   again (within 0.26, its tolerance being 0.35). */
+   again (within 0.26, its tolerance being 0.35).
+   1.19.3 moved the preset 40 px further (see PRESETS.everflo); the gate stays
+   30. That puts the 11-26 sweeps at dx -30..-35 (refused by this gate) and
+   the 11-20 ones ~62 px away by the preset's arithmetic (past the search;
+   registration refuses them at 0.47-0.58), so both are refused now
+   (ALLOW_REFUSED) — no captured EverFlo set reads in
+   this pose (the 11-26 sweeps translated 40 px, a synthetic set, do); the evidence is the 10 uploads both engines read alike. Six of
+   them (15226-15231) sit at dx -21.5..-27.8 against this preset and read as
+   they did in 1.19.2, where they sat at 16-19: within 0.06, four exactly —
+   the accuracy at 20-30 px on the current references that 30 relies on. */
 const SHIFT_X=30, SHIFT_Y=15;
 /* How much worse a reference may register than the best one and still answer
    when the best refuses — see the fallback in analyze(). An algorithm
@@ -162,7 +171,8 @@ const TILT_MARGIN=0.03;
    read a Platinum frame with the EverFlo curve and never notice. */
 const PRESETS={
   /* Philips EverFlo at Norrgården (from 2026-11-04), calibrated in 1.18.0 on
-     test/everflo-sweep-2026-11-04-tak (the ceiling lamp on), 14:46-14:48 UTC:
+     test/everflo-sweep-2026-11-04-tak (the ceiling lamp on; its reference
+     'tak' was dropped in 1.19.3, the curve lives on), 14:46-14:48 UTC:
      rest, 0.5..5.5 in halves, the top line ('max') and past it ('over_max').
      The camera sits much as it did at the care home in October, the LED left
      of the tube at 2-2.5 L/min, at 50. Every earlier EverFlo calibration (the
@@ -179,8 +189,8 @@ const PRESETS={
   everflo:{
     name:'Philips EverFlo',
     /* EVERY PIXEL NUMBER IN THIS PRESET IS THE 2026-11-04 CALIBRATION MOVED BY
-       (+56, -6): (+30, -14) in 1.19.0, (+14, +4) more in 1.19.1, (+12, +4) in
-       1.19.2.
+       (+96, -6): (+30, -14) in 1.19.0, (+14, +4) more in 1.19.1, (+12, +4) in
+       1.19.2, (+40, 0) in 1.19.3.
        1.19.0: on 2026-11-20 the unit came back to Norrgården with the camera
        ~30 px to the side and ~14 px up from the pose that calibration was
        measured in, 1 px inside SHIFT_Y. The new sweeps
@@ -207,20 +217,41 @@ const PRESETS={
        comes out up to ~1 px different from old dx - 12, and a rounded band can
        land a pixel over. On the 164 uploads since 11-20 that moved no reading
        by more than 0.07.
-       Do not keep doing this indefinitely: each move resamples the older
-       references by whole pixels and repeats their edge column into the gap,
-       and 'tak', 'dag' and 'morgon' now carry 56 such columns on the left,
-       4 short of the column window (60..420) the horizontal registration
-       reads. Another move of more than ~4 px to the right means rebuilding
-       or dropping those three, not moving them again.
+       1.19.3: during the night of 11-26/27 the camera slid on, slowly and
+       without presses, from dx +17 at 18:17 to +27 at 18:56, +35 at 19:53 and
+       the +40 edge of the search from 20:22 (true offset ~40), and stopped
+       there: from 00:00 every frame sits at dx -1.4..+1.7 against this preset.
+       Moved (+40, 0). Measured over the 84 uploads 15226-15309: 10 read before
+       (dx under 30), and those 10 read the same within 0.06 after (8 of them
+       within 0.01) — the check that the move holds; 81 of 84 read after, 3
+       "Osäker" (2.1-2.5x), each span between presses holds one value for
+       hours (2.05 for 2 h, 1.97 for 3 h), and the readings around the logged
+       turns move the right way (+160: 2.42 -> 4.31, then -160: 2.85).
+       'tak', 'dag' and 'morgon' were dropped (the user: from the room at the
+       11-04 place; the unit stands in a store room with the door mostly shut
+       now) — each move resamples the older references by whole pixels and
+       repeats the edge column into the gap, and they would have carried 96
+       such columns, far into the column window (60..420) the horizontal
+       registration reads. 'norrdag'/'norrnatt' carry 66, 6 columns into it;
+       they won none of those 84 frames and are kept only for daylight, which
+       no store-room reference covers — drop them at the next move. 'förråd'
+       carries 52, the 11-26 pair 40. The frame is 480 wide and the tube's
+       right edge now stands at ~450: there is no room for another 40.
+       Known limit: the horizontal registration's column window (60..420) is
+       fixed in the picture, and the tube (left edge ~330, right ~450) now
+       straddles its right end, so dx is measured mostly on the housing and
+       the tube's left edge. It holds — dx stays within ±1.7 all night and the
+       overlap frames read as before — but a change on the left (the LED, a
+       lamp) weighs more than it did. Moving the window with the preset is an
+       algorithm change for every machine, not done here.
        Band: chosen on a grid over the 11-04 sweep (centre 288..304 then,
-       width 14..20, lean 0..0.07, six anchor bands): centre 298 (354 now),
+       width 14..20, lean 0..0.07, six anchor bands): centre 298 (394 now),
        width 14-16, lean 0.035 is the plateau with registration 0.985 and
        nothing refused; centre 288 at lean 0 has more ambiguity margin but
        registers 0.955 and fits worse. */
-    XL:347, XR:361,
+    XL:387, XR:401,
     /* The digits right of the ball's path. */
-    AX1:366, AX2:386,
+    AX1:406, AX2:426,
     /* The ball lives in y ~176 (the top line) .. 443 (its resting stop);
        YBOT 449 and 459 read the 11-04 sweep identically. */
     YTOP:124, YBOT:454,
@@ -251,24 +282,26 @@ const PRESETS={
     /* What her page shows in the Max state, and under it (1.15.0: per preset,
        because the VisionAire's top is the knob's end, not past the scale). */
     MAX_LABEL:'Max', MAX_UNIT:'över skalans slut',
-    /* Her page shows the tube, its digits and the top line, x 284..434,
-       y 104..524 — the LED (left) and the knob (top) left out. */
-    VIEW_X:284, VIEW_W:150, VIEW_Y:104, VIEW_H:420,
+    /* Her page shows the tube, its digits and the top line, x 342..474,
+       y 104..524 — the LED (left) and the knob (top) left out. 18 px
+       narrower on the left since 1.19.3 (the user: less LED glow at the left
+       edge; 340 still showed a sliver, at 350 the tube's left edge goes). The streak inside the tube
+       is a reflection and stays. */
+    VIEW_X:342, VIEW_W:132, VIEW_Y:104, VIEW_H:420,
     KNOB:null, BACKLASH:null,   // never measured on the EverFlo: her page keeps the degree buttons
-    /* 'norrdag' (daylight) and 'norrnatt' (curtains drawn), the 11-20 sweep,
-       see REF_PNG_EVERFLO_NORRDAG; 'förråd' (1.19.1, the camera where it went
-       that afternoon, from uploads), see REF_PNG_EVERFLO_FORRAD;
-       'förrådljus' and 'förrådmörk' (1.19.2, the 11-26 sweeps, the store
-       room lit and dark), see REF_PNG_EVERFLO_FORRADLJUS; and the
-       earlier Norrgården lightings moved along: 'tak' (the ceiling lamp on) and
-       'dag' (the lamp off, afternoon daylight), see REF_PNG_EVERFLO_TAK, and
-       'morgon' (morning daylight, 1.18.1, from uploads), see
-       REF_PNG_EVERFLO_MORGON. Hagtorp's four ('hagtorp', 'hagmork', 'hagnatt',
-       'hagkväll') went in 1.19.0. */
-    refs:()=>[[REF_PNG_EVERFLO_NORRDAG,'norrdag'], [REF_PNG_EVERFLO_NORRNATT,'norrnatt'],
-              [REF_PNG_EVERFLO_TAK,'tak'], [REF_PNG_EVERFLO_DAG,'dag'],
-              [REF_PNG_EVERFLO_MORGON,'morgon'], [REF_PNG_EVERFLO_FORRAD,'förråd'],
-              [REF_PNG_EVERFLO_FORRADLJUS,'förrådljus'], [REF_PNG_EVERFLO_FORRADMORK,'förrådmörk']],
+    /* 'förrådmörk' and 'förrådljus' (1.19.2, the 11-26 sweeps, the store
+       room dark and lit), see REF_PNG_EVERFLO_FORRADLJUS; 'förråd' (1.19.1,
+       from uploads), see REF_PNG_EVERFLO_FORRAD; 'norrdag' (daylight) and
+       'norrnatt' (curtains drawn), the 11-20 sweep, see
+       REF_PNG_EVERFLO_NORRDAG. First is the one align_reference.mjs aligns
+       against by default, so the store room's own comes first. analyze()
+       ranks by registration; the order only breaks exact ties (the earlier
+       entry wins), which 1.19.3 changed in the store room's favour. 'tak',
+       'dag' and 'morgon' went in 1.19.3 (their evidence is in git, at
+       REF_PNG_EVERFLO_TAK before it), Hagtorp's four in 1.19.0. */
+    refs:()=>[[REF_PNG_EVERFLO_FORRADMORK,'förrådmörk'], [REF_PNG_EVERFLO_FORRADLJUS,'förrådljus'],
+              [REF_PNG_EVERFLO_FORRAD,'förråd'],
+              [REF_PNG_EVERFLO_NORRDAG,'norrdag'], [REF_PNG_EVERFLO_NORRNATT,'norrnatt']],
   },
   /* Invacare Platinum 9 (from 2026-09). 1-9 L/min with a red line above the
      9 mark; by its own front label the machine alarms below 1.0 and loses O2
@@ -482,61 +515,6 @@ const PRESETS={
 const REF_PNG_VISIONAIRE5_HALL=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_VISIONAIRE5_NATT=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_VISIONAIRE5_RUM=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-/* EverFlo at Norrgården, 2026-11-04 14:46-14:48 UTC, the ceiling lamp on
-   ('tak'): per-pixel median of test/everflo-sweep-2026-11-04-tak, each frame
-   first shifted back by its own dx/dy — tools/align_reference.mjs against the
-   sweep's plain median (calibrate.mjs --out), then again against that first
-   pass, with the preset's geometry. 8-bit grayscale.
-   'dag' (the ceiling lamp off, afternoon daylight, 14:54-14:58): the same
-   from test/everflo-sweep-2026-11-04-dag, then SHIFTED (+2.8, -1.5) onto
-   'tak' — its edges sit +2.3..+3.5 columns and its ticks -1.0..-2.0 rows off
-   'tak''s (the camera moved a little with the knob between the sweeps); the
-   labels agree: unshifted, the sweep read +0.04 high over 1.5..5 (mean
-   0.049), shifted 0.035 with the mean signed error 0.01. Against 'tak'
-   alone those frames registered 0.59-0.64 and were refused.
-   MOVED (+30, -14) IN 1.19.0, (+14, +4) more in 1.19.1 and (+12, +4) in
-   1.19.2, like 'morgon' and
-   the 11-20 references, with the preset (see PRESETS.everflo): resampled by
-   whole pixels, the edge rows and columns that come in repeated. Rows and
-   columns quoted in this comment and the next ('morgon') are the 1.18
-   coordinates: add 56 to x and subtract 6 from y for today's. Those in the
-   'norrdag' comment are the 1.19.0 ones: add 26 to x and 8 to y; in the
-   'förråd' comment the 1.19.1 ones: add 12 to x and 4 to y. Moved, they still fit the new pose: forced alone onto the 11-20
-   sweeps, 'tak' reads the day sweep at mean 0.047 (registration 0.82) and
-   'dag' the dark one at 0.044 (0.95, three refused); 'morgon' refuses the day
-   sweep but one frame. */
-/* 'morgon' (1.18.1): morning daylight at Norrgården, which no sweep covers.
-   From 2026-11-05 09:02 UTC most frames were "Osäker" (registration 0.90-0.92
-   against 'tak', ambiguity 1.9-2.6x), with the stronger candidate the ball by
-   the operator's check. Built from the UPLOADED frames 12457-12481 (08:20-09:43
-   UTC), the 1.13.0 recipe: each frame oriented, shifted back by its dx/dy
-   against 'tak', the median taken, then again against that median. Not
-   shifted after: its ticks sit within 0.35 rows and its edges 1.3 columns of
-   'tak''s (correlation 0.90-0.97).
-   THE BALL IS MASKED OUT of each frame before the median (rows within 24 of
-   where the engine found it), because uploads are not a sweep: 17 of the 25
-   had the ball at y 255-295 (it stood at y 213-337 in all), and a plain median
-   kept a ghost ball there (0.07-0.11 darker than 'tak' at y 265-290) that the
-   1.18.1 review found reading the sweeps 0.1 off at 2 and 3 L/min. Masked, at
-   least 6 frames remain for every row and that dip is gone.
-   What remains is the morning light itself (both bands stay with the ball
-   masked 40 rows wide): 0.14-0.17 BRIGHTER than 'tak' at y 295-330 (2.6-3.0
-   L/min) and 0.13-0.18 darker at y 340-370 (the LED's glare, weaker in
-   daylight). Forced onto the non-morning sweeps it reads 2-2.5 +0.08..+0.13
-   and 3.5 -0.14..-0.15, and the bright band becomes a candidate of its own
-   near 2.85 with a real ball's contrast (0.20-0.24): where the ball is weak
-   or elsewhere (0.5-1.5, 5.5, over_max) the forced reading IS ~2.85, refused
-   only by ambiguity (1.0-1.5x) and spread. So the risk is a non-morning frame
-   that 'morgon' answers — best registration, or the fallback within 0.05 of a
-   best that refuses (on the 'tak' sweep the gap is 0.06-0.09) — with the ball
-   hidden or weak and no rival: then ~2.85 whatever the ball shows. Untested;
-   the operator accepted the ~0.1 case (2026-11-05). Not
-   verified on labelled morning frames: a short morning sweep (2, 2.5, 3, 3.5)
-   would settle it. On the uploads where the ratten did not move between a
-   frame 'tak' read well and one 'morgon' reads (12464 -> 12465/66; 12470/71)
-   the two agree within 0.08.
-   Held out first (built from the even ids, unmasked): the odd ids went from
-   5 read / 8 "Osäker" to 13 of 13 at 20-93x. */
 /* 'norrdag' and 'norrnatt' (1.19.0): Norrgården again from 2026-11-20 (the
    unit booted there 11:37 UTC), the camera ~30 px to the side and ~14 px up
    from the 11-04 pose. With 1.18.5 the day sweep read 6 of 12 labels (the rest
@@ -560,7 +538,7 @@ const REF_PNG_VISIONAIRE5_RUM=null;   // the reader uses tools/reader_profiles.m
    the compressed bottom, as on 11-04); dark mean 0.021, worst 0.081, its 0.5
    at 0.50 says "Under 0,5" (on the boundary, below her flows); `max` 5.94 /
    5.95, `over_max` Max; ambiguity 6.6x or more, registration 0.98-0.995.
-   The independent checks: the moved 'tak' and 'dag' read the day and dark
+   The independent checks: the moved 'tak' and 'dag' (dropped in 1.19.3) read the day and dark
    sweeps alone at 0.047 and 0.044 mean (above), so the old curve holds in
    the new pose; the one live frame after the sweeps (15065, 11:56) reads 1.91
    at 31x; and of 151 Hagtorp uploads (11-10..11-20, every twelfth) 84 read,
@@ -581,7 +559,7 @@ const REF_PNG_VISIONAIRE5_RUM=null;   // the reader uses tools/reader_profiles.m
    masked (rows within 24 of it; mask 40 differs by at most 3.8 grey levels
    in the ball band, so no ghost: the ball stood at 2.7..6, and at least 11
    frames remain for every pixel), the median taken, again against that
-   median; then moved (+14, +4) with everything else, and (+12, +4) in 1.19.2. Not shifted onto the
+   median; then moved (+14, +4) with everything else, (+12, +4) in 1.19.2 and (+40, 0) in 1.19.3. Not shifted onto the
    other references: it is in their coordinates by construction.
    Held out first (built from the even ids): the odd ids went from 8 read /
    1 "Osäker" / 3 refused to 12 of 12 at registration 0.90-0.99, ambiguity
@@ -626,9 +604,6 @@ const REF_PNG_EVERFLO_FORRADMORK=null;   // the reader uses tools/reader_profile
 const REF_PNG_EVERFLO_FORRAD=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_NORRDAG=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 const REF_PNG_EVERFLO_NORRNATT=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-const REF_PNG_EVERFLO_MORGON=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-const REF_PNG_EVERFLO_DAG=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
-const REF_PNG_EVERFLO_TAK=null;   // the reader uses tools/reader_profiles.mjs's profiles instead
 /* Platinum 9 at the care home (fourth pose), the hall lamp on: median of the
    21-frame sweep of 2026-09-30 14:21-14:26 local, each frame shifted back by
    its own dx/dy, twice (tools/align_reference.mjs --base, --geometry
@@ -1212,4 +1187,4 @@ function judge(r){
           reason:"Inom kalibrerat område."};
 }
 export {toGray,flatfield,buildRef,analyze,judge,usePreset,setRefs,isCalibrated,PRESETS,W,H};
-export const ENGINE_VERSION = "427edb47";
+export const ENGINE_VERSION = "25964728";

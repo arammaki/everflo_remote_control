@@ -17,7 +17,7 @@ the EverFlo in October, on 2026-11-02 to an **AirSep VisionAire 5** — see
 "The AirSep VisionAire 5 calibration" — and on 2026-11-04 back to the EverFlo,
 at a new place, Norrgården: 1.17.0, flashed over USB, recalibrated in 1.18.0;
 Hagtorp 11-06..11-20; Norrgården again from 2026-11-20 in a moved camera pose,
-1.19.0, recentred as the camera slides with the presses (1.19.1, 1.19.2) — see
+1.19.0, recentred as the camera slides (1.19.1, 1.19.2, 1.19.3) — see
 "The EverFlo at Norrgården".)
 
 This is assistive/medical-adjacent equipment intended for real daily use —
@@ -890,10 +890,35 @@ uploads since then at -21..+4, today's sweeps at +5..+10. Every negative set
 stays refused, and no single reference, asked alone, reads any old-pose
 frame: over the 275 frames of the negative sets and the old EverFlo sweeps,
 each of the eight references alone reads none, and where dx is inside the
-search the best registration is 0.589 (0.16 under the gate). The next move to the right of more
-than ~4 px runs the repeated edge columns of 'tak', 'dag' and 'morgon' into
-the registration window: rebuild or drop them then. Morning daylight is still thin (11-21 09:24-09:58: ambiguity
+search the best registration is 0.589 (0.16 under the gate). (The repeated edge columns of 'tak', 'dag' and 'morgon' were the limit of
+this; 1.19.3 dropped them.) Morning daylight is still thin (11-21 09:24-09:58: ambiguity
 2.3-3.7x through 'norrdag').
+**1.19.3: the camera slid ~40 px more overnight, without presses, and
+stopped.** From dx +17 at 18:17 UTC on 11-26 to the +40 search edge from
+20:22; from midnight every frame sits at -1.4..+1.7 against the preset moved
+(+40, 0) — (+96, -6) from 11-04. Of the 84 uploads 15226-15309, 10 read before
+(dx under 30) and read the same within 0.06 after; 81 of 84 read after, 3
+"Osäker"; the spans hold one value for hours and the readings follow the
+logged turns. 'tak', 'dag' and 'morgon' were dropped (the user: the old room;
+the unit stands in a store room with the door mostly shut) — moved again they
+would have carried 96 repeated edge columns, deep into the registration
+window. 'norrdag'/'norrnatt' carry 66 (6 into it), won none of the 84, and are
+kept only for daylight; drop them at the next move. No labelled EverFlo set
+reads in this pose as captured: the 11-20 and 11-26 sweeps are old poses now
+(ALLOW_REFUSED; the 11-20 ones refused by registration, ~62 px away by the
+preset's arithmetic, past the search). So the 11-26 sweeps translated 40 px
+in the picture are in the suite as a SYNTHETIC set,
+`test/everflo-sweep-2026-11-26-norrgarden-dag-x40/` and `-natt-x40/`: they
+read as the originals did in 1.19.2 (every label within 0.09; the dark rest
+becomes "Osäker" at 2.4x, allowed). They pin the preset against a wrong move,
+not against what a real slide changes besides translation. Known limit: the
+horizontal registration's column window (60..420) is fixed in the picture and
+the tube now straddles its right end (see PRESETS.everflo). **The epoch of
+this calibration is 2026-11-26T18:00Z** (frames from 15226 read; earlier
+Norrgården frames are refusals under it). The tube's right edge stands at ~450 of
+the 480-px frame: **another slide this way cannot be followed** — the camera
+has to be turned back or fastened. Her crop moved with it and lost 18 px on the left
+(x 342..474), on the user's request, so less of the LED's glow shows.
 Everything below in this section and in "The EverFlo again" is the care home's
 calibration — history.
 

@@ -1,0 +1,16 @@
+# Since 1.19.3 an old pose: the preset moved 40 px with the camera (see PRESETS.everflo).
+# Every frame may refuse; any that reads is still held to its label.
+0_min
+0.5
+1.5
+1
+2.5
+2
+3.5
+3
+4.5
+4
+5.5
+5
+max
+over_max

@@ -4,6 +4,8 @@ Sets checked in opposite directions — a sweep must read, an old pose must be
 refused. All run through the same harness so the two directions cannot drift apart:
 
 ```sh
+node tools/validate_engine.mjs test/everflo-sweep-2026-11-26-norrgarden-dag-x40
+node tools/validate_engine.mjs test/everflo-sweep-2026-11-26-norrgarden-natt-x40
 node tools/validate_engine.mjs test/everflo-sweep-2026-11-26-norrgarden-dag
 node tools/validate_engine.mjs test/everflo-sweep-2026-11-26-norrgarden-natt
 node tools/validate_engine.mjs test/everflo-sweep-2026-11-20-norrgarden-dag
@@ -76,7 +78,7 @@ checks. Forced onto `-mork/` it reads within 0.12 where it reads. The same goes
 for the evening ('hagkväll', 1.18.5), forced onto `-dag/` within 0.11 from 1 to
 4.5.
 
-## `everflo-sweep-2026-11-26-norrgarden-dag/` and `-natt/` — the EverFlo in force (Norrgården, 1.19.2)
+## `everflo-sweep-2026-11-26-norrgarden-dag/` and `-natt/` — Norrgården, 1.19.2 (old pose since 1.19.3)
 
 The store room lit and dark, 2026-11-26 18:04-18:09 UTC, the camera ~21 px further to the side and ~7 px
 down from the 1.19.1 preset after a week of sliding with the presses. 1.19.2 moved the preset (+12, +4) and
@@ -84,6 +86,15 @@ set `SHIFT_X` to 30; these build 'förrådljus' and 'förrådmörk'. Means 0.029
 both rests "Under 0,5", `max` reads 5.91 / 5.95, `over_max` says Max; ambiguity 3.7x or more. The user labels
 0, 6 and 6.5 for the rest, the top line and past it, renamed `0_min`, `max`, `over_max` on import — see
 `LABELS.md` in each.
+Since 1.19.3 the camera has slid ~40 px further and the preset with it, so these frames sit at
+dx -30..-35 and every one may refuse (`ALLOW_REFUSED`; all do, by dx) — any that reads is held to its
+label. Translated 40 px in the picture they still read as before: that copy is the synthetic set below.
+
+## `everflo-sweep-2026-11-26-norrgarden-dag-x40/` and `-natt-x40/` — SYNTHETIC, the EverFlo in force (1.19.3)
+
+The 11-26 sweeps translated 40 px to the right, so one labelled EverFlo set reads in the pose the unit runs
+in. Means 0.029 / 0.027, worst 0.063 / 0.086; the dark rest is "Osäker" (allowed). Not a capture: it
+pins the preset's bands, curve and references, not what a real camera move changes. See `LABELS.md`.
 
 ## `everflo-sweep-2026-11-20-norrgarden-dag/` and `-natt/` — Norrgården, 1.19.0
 
@@ -94,7 +105,8 @@ build 'norrdag' and 'norrnatt' on the 11-04 curve (re-expressed). Means 0.040 an
 Since 1.19.1 the preset sits (+14, +4) further on (the camera moved that afternoon), so these
 frames register at dx -16..-10, dy -5..-3; the dark one reads mean 0.017, worst 0.059 ('förråd'
 answers some of it). Since 1.19.2 at dx -28..-22: they still read, identically, because `SHIFT_X` went
-to 30 with that move.
+to 30 with that move. Since 1.19.3 ~62 px away by the preset's arithmetic (past the search): refused by
+registration, `ALLOW_REFUSED`.
 
 ## `everflo-sweep-2026-11-04-tak/`, `-dag/` and `-natt/` — Norrgården's first pose (old pose since 1.19.0)
 
